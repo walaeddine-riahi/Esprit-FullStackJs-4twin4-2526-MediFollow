@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![MediFollow Banner](https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/React-Dark.svg)
+![MediFollow Banner](https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=300&fit=crop)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
@@ -40,19 +40,19 @@
 MediFollow is an innovative web platform designed for post-hospitalization remote monitoring. The system enables patients to record their vital signs and symptoms from home, while healthcare professionals can track patient status in real-time, receive automated alerts for critical conditions, and analyze comprehensive data through interactive dashboards. This proactive approach helps improve follow-up care quality and significantly reduces the risk of complications and hospital readmissions.
 
 <div align="center">
-  <img src="https://img.freepik.com/free-vector/telemedicine-concept-illustration_114360-5236.jpg" alt="Telemedicine Concept" width="600"/>
+  <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80" alt="Telemedicine Concept" width="600"/>
 </div>
 
 ---
 
 ## 🎯 Project Objectives
 
-- 🏥 **Continuous Care**: Ensure uninterrupted medical follow-up after hospital discharge  
-- 🛡️ **Risk Reduction**: Minimize complications and preventable readmissions  
-- 📊 **Data Centralization**: Consolidate all patient follow-up data in one secure location  
-- ⚡ **Real-time Monitoring**: Provide instant alerts for critical health indicators  
-- 💬 **Enhanced Communication**: Improve interaction between patients and healthcare teams  
-- 📈 **Data-Driven Insights**: Enable evidence-based decision making through analytics  
+- 🏥 **Continuous Care**: Ensure uninterrupted medical follow-up after hospital discharge
+- 🛡️ **Risk Reduction**: Minimize complications and preventable readmissions
+- 📊 **Data Centralization**: Consolidate all patient follow-up data in one secure location
+- ⚡ **Real-time Monitoring**: Provide instant alerts for critical health indicators
+- 💬 **Enhanced Communication**: Improve interaction between patients and healthcare teams
+- 📈 **Data-Driven Insights**: Enable evidence-based decision making through analytics
 
 ---
 
@@ -61,30 +61,30 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 <table>
   <tr>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/patient.png" width="60"/><br/>
-      <b>Patients</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=patient&backgroundColor=b6e3f4" width="80"/><br/>
+      <b>🧑‍⚕️ Patients</b>
     </td>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/doctor-male.png" width="60"/><br/>
-      <b>Physicians</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=doctor&backgroundColor=c0aede" width="80"/><br/>
+      <b>👨‍⚕️ Physicians</b>
     </td>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/nurse.png" width="60"/><br/>
-      <b>Nurses</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=nurse&backgroundColor=ffd5dc" width="80"/><br/>
+      <b>👩‍⚕️ Nurses</b>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/coordinator-male.png" width="60"/><br/>
-      <b>Coordinators</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=coordinator&backgroundColor=d1d4f9" width="80"/><br/>
+      <b>👔 Coordinators</b>
     </td>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/admin-settings-male.png" width="60"/><br/>
-      <b>Administrators</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin&backgroundColor=ffdfbf" width="80"/><br/>
+      <b>⚙️ Administrators</b>
     </td>
     <td align="center">
-      <img src="https://img.icons8.com/color/96/000000/business-report.png" width="60"/><br/>
-      <b>Auditors</b>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=auditor&backgroundColor=d4f1f4" width="80"/><br/>
+      <b>📊 Auditors</b>
     </td>
   </tr>
 </table>
@@ -94,21 +94,24 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 ## ⚙️ Key Features
 
 ### 🔐 Authentication & Security
+
 - Secure multi-factor authentication (MFA)
 - Role-based access control (RBAC)
 - Session management and token refresh
 
 ### 👤 Patient Management
+
 - Comprehensive patient profiles
 - Medical history tracking
 - Treatment plans and medication management
 - Appointment scheduling
 
 <div align="center">
-  <img src="https://www.medicalweb.com.co/wp-content/uploads/2020/06/health-monitoring-app.png" alt="Patient Dashboard" width="700"/>
+  <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&q=80" alt="Patient Dashboard" width="700"/>
 </div>
 
 ### 📊 Vital Signs Monitoring
+
 - Blood pressure tracking
 - Heart rate monitoring
 - Temperature logs
@@ -117,12 +120,14 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 - Oxygen saturation (SpO2)
 
 ### 🩺 Symptom Tracking
+
 - Daily symptom reports
 - Pain scale assessment
 - Symptom severity tracking
 - Trend analysis and visualization
 
 ### 🔔 Alerts & Notifications
+
 - Real-time critical alerts
 - Automated threshold-based notifications
 - Email and SMS alerts
@@ -130,16 +135,18 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 - Escalation protocols
 
 <div align="center">
-  <img src="https://miro.medium.com/max/1400/1*-mHDAqP-_kXYvqQZqKqK_A.png" alt="Alert System" width="700"/>
+  <img src="https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=900&q=80" alt="Alert System" width="700"/>
 </div>
 
 ### 📝 Questionnaire Management
+
 - Post-discharge questionnaires
 - Quality of life assessments
 - Patient satisfaction surveys
 - Custom form builder
 
 ### 📈 Dashboards & Analytics
+
 - Interactive data visualization
 - Real-time statistics
 - Trend analysis
@@ -147,6 +154,7 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 - Export functionality (PDF, Excel)
 
 ### 🔍 Audit & Traceability
+
 - Complete activity logs
 - User action tracking
 - Data access audit trails
@@ -157,7 +165,7 @@ MediFollow is an innovative web platform designed for post-hospitalization remot
 ## 🏗️ Project Architecture
 
 <div align="center">
-  <img src="https://miro.medium.com/max/1400/1*XdZvpq_9cJp2XqYxEVKVeg.png" alt="System Architecture" width="800"/>
+  <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1000&q=80" alt="System Architecture" width="800"/>
 </div>
 
 ### System Components
@@ -210,6 +218,7 @@ main                                    # Production-ready code
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 <p align="left">
   <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" />
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
@@ -219,6 +228,7 @@ main                                    # Production-ready code
 </p>
 
 ### Backend
+
 <p align="left">
   <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" />
@@ -227,6 +237,7 @@ main                                    # Production-ready code
 </p>
 
 ### Database
+
 <p align="left">
   <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
@@ -234,6 +245,7 @@ main                                    # Production-ready code
 </p>
 
 ### DevOps & Tools
+
 <p align="left">
   <img src="https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" />
@@ -322,23 +334,27 @@ docker-compose up -d
 ## 📸 Screenshots
 
 ### Dashboard Overview
+
 <div align="center">
-  <img src="https://miro.medium.com/max/1400/1*8aOWJlQ5Y0ZPVV8F7GQKng.png" alt="Dashboard" width="800"/>
+  <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000&q=80" alt="Dashboard" width="800"/>
 </div>
 
 ### Patient Monitoring
+
 <div align="center">
-  <img src="https://cdn.dribbble.com/users/2483669/screenshots/14432270/media/3c3e1d0e3f8e9a24f0d9d3f7a9b8f6d7.png" alt="Patient Monitoring" width="800"/>
+  <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1000&q=80" alt="Patient Monitoring" width="800"/>
 </div>
 
 ### Vital Signs Tracking
+
 <div align="center">
-  <img src="https://miro.medium.com/max/1400/1*R8kQaS2eSvZ7rKqY5v5oYw.png" alt="Vital Signs" width="800"/>
+  <img src="https://images.unsplash.com/photo-1504813184591-01572f98c85f?w=1000&q=80" alt="Vital Signs" width="800"/>
 </div>
 
 ### Alert Management
+
 <div align="center">
-  <img src="https://cdn.dribbble.com/users/2323680/screenshots/6659595/dribbble-shot.png" alt="Alerts" width="800"/>
+  <img src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1000&q=80" alt="Alerts" width="800"/>
 </div>
 
 ---
@@ -355,7 +371,7 @@ docker-compose up -d
 - ✅ **Rate Limiting** – Protection against brute force attacks
 
 <div align="center">
-  <img src="https://www.cloudflare.com/img/learning/security/glossary/what-is-zero-trust/zero-trust-security.svg" alt="Security" width="600"/>
+  <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=80" alt="Security" width="600"/>
 </div>
 
 ---

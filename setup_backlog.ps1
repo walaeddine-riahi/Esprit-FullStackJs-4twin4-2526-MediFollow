@@ -8,9 +8,10 @@ Write-Host ""
 # Vérifier si winget est disponible
 Write-Host "📦 Vérification de winget..." -ForegroundColor Yellow
 if (Get-Command winget -ErrorAction SilentlyContinue) {
-    Write-Host "✅ winget est disponible" -ForegroundColor Green
-} else {
-    Write-Host "❌ winget n'est pas disponible. Veuillez installer App Installer depuis le Microsoft Store" -ForegroundColor Red
+    Write-Host "winget est disponible" -ForegroundColor Green
+}
+else {
+    Write-Host "winget n'est pas disponible. Veuillez installer App Installer depuis le Microsoft Store" -ForegroundColor Red
     exit 1
 }
 
@@ -72,13 +73,13 @@ $labels = @(
     @{name="feature/patient-followup"; color="0075ca"; description="Patient Follow-up Module"},
     @{name="feature/vitals-management"; color="0075ca"; description="Vitals Management Module"},
     @{name="feature/symptom-tracking"; color="0075ca"; description="Symptom Tracking Module"},
-    @{name="feature/alerts-and-notifications"; color="0075ca"; description="Alerts & Notifications Module"},
+    @{name="feature/alerts-and-notifications"; color="0075ca"; description="Alerts and Notifications Module"},
     @{name="feature/questionnaire-management"; color="0075ca"; description="Questionnaire Management Module"},
     @{name="feature/dashboards"; color="0075ca"; description="Dashboards Module"},
-    @{name="feature/audit-and-traceability"; color="0075ca"; description="Audit & Traceability Module"},
+    @{name="feature/audit-and-traceability"; color="0075ca"; description="Audit and Traceability Module"},
     @{name="backend"; color="fbca04"; description="Backend Development"},
     @{name="frontend"; color="1d76db"; description="Frontend Development"},
-    @{name="devops"; color="5319e7"; description="DevOps & Infrastructure"},
+    @{name="devops"; color="5319e7"; description="DevOps and Infrastructure"},
     @{name="documentation"; color="0e8a16"; description="Documentation"},
     @{name="testing"; color="c2e0c6"; description="Testing"}
 )
@@ -96,8 +97,8 @@ Write-Host "🎯 Création des milestones (Sprints)..." -ForegroundColor Yellow
 
 $milestones = @(
     @{title="Sprint 1: Foundation"; dueDate=(Get-Date).AddDays(14).ToString("yyyy-MM-dd"); description="Setup infrastructure and basic authentication"},
-    @{title="Sprint 2: Patient & Vitals"; dueDate=(Get-Date).AddDays(28).ToString("yyyy-MM-dd"); description="Patient management and vital signs tracking"},
-    @{title="Sprint 3: Alerts & Symptoms"; dueDate=(Get-Date).AddDays(42).ToString("yyyy-MM-dd"); description="Alert system and symptom tracking"},
+    @{title="Sprint 2: Patient and Vitals"; dueDate=(Get-Date).AddDays(28).ToString("yyyy-MM-dd"); description="Patient management and vital signs tracking"},
+    @{title="Sprint 3: Alerts and Symptoms"; dueDate=(Get-Date).AddDays(42).ToString("yyyy-MM-dd"); description="Alert system and symptom tracking"},
     @{title="Sprint 4: Enhanced Features"; dueDate=(Get-Date).AddDays(56).ToString("yyyy-MM-dd"); description="Dashboards, questionnaires, and analytics"}
 )
 

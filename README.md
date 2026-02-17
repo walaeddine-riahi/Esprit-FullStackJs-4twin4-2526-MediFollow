@@ -26,24 +26,29 @@ Built with Next.js • MongoDB • Docker • Aptos Blockchain
    - [The Healthcare Challenge](#the-healthcare-challenge)
    - [Our Solution](#our-solution)
    - [Why Blockchain](#why-blockchain)
-2. [System Architecture](#-system-architecture)
-3. [Docker Deployment Architecture](#-docker-deployment-architecture)
-4. [Database Schema](#-database-schema)
-5. [RBAC Permission Flow](#-rbac-permission-flow)
-6. [Alert System Workflow](#-alert-system-workflow)
-7. [Blockchain Integration](#-blockchain-integration)
-8. [Key Features](#-key-features)
-9. [Tech Stack](#-tech-stack)
-10. [Folder Structure](#-folder-structure)
-11. [Quick Start](#-quick-start)
-12. [Environment Configuration](#-environment-configuration)
-13. [Docker Setup](#-docker-setup)
-14. [Security Architecture](#-security-architecture)
-15. [Production Deployment](#-production-deployment)
-16. [Project Timeline](#-project-timeline)
-17. [API Documentation](#-api-documentation)
-18. [Contributing](#-contributing)
-19. [License](#-license)
+2. [UML Diagrams](#-uml-diagrams)
+   - [Use Case Diagram](#use-case-diagram)
+   - [Class Diagram](#class-diagram)
+   - [Activity Diagram](#activity-diagram)
+   - [Component Diagram](#component-diagram)
+3. [System Architecture](#-system-architecture)
+4. [Docker Deployment Architecture](#-docker-deployment-architecture)
+5. [Database Schema](#-database-schema)
+6. [RBAC Permission Flow](#-rbac-permission-flow)
+7. [Alert System Workflow](#-alert-system-workflow)
+8. [Blockchain Integration](#-blockchain-integration)
+9. [Key Features](#-key-features)
+10. [Tech Stack](#-tech-stack)
+11. [Folder Structure](#-folder-structure)
+12. [Quick Start](#-quick-start)
+13. [Environment Configuration](#-environment-configuration)
+14. [Docker Setup](#-docker-setup)
+15. [Security Architecture](#-security-architecture)
+16. [Production Deployment](#-production-deployment)
+17. [Project Timeline](#-project-timeline)
+18. [API Documentation](#-api-documentation)
+19. [Contributing](#-contributing)
+20. [License](#-license)
 
 ---
 
@@ -116,6 +121,432 @@ Medical data integrity and audit trails are critical for:
   <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=80" alt="Blockchain Technology" width="700"/>
   <p><em>Aptos blockchain ensures data integrity and immutable audit trails</em></p>
 </div>
+
+---
+
+## 📐 UML Diagrams
+
+### Use Case Diagram
+
+This diagram illustrates the main actors and their interactions with the MediFollow system:
+
+```mermaid
+graph TB
+    subgraph "MediFollow System"
+        UC1[Record Vital Signs]
+        UC2[View Health Dashboard]
+        UC3[Report Symptoms]
+        UC4[Manage Profile]
+        UC5[Monitor Patients]
+        UC6[View Alerts]
+        UC7[Acknowledge Alerts]
+        UC8[Validate Alerts]
+        UC9[Generate Reports]
+        UC10[Manage Users]
+        UC11[Configure System]
+        UC12[View Audit Logs]
+        UC13[Manage Thresholds]
+        UC14[Send Notifications]
+        UC15[Store Blockchain Proof]
+    end
+
+    Patient([👤 Patient])
+    Doctor([👨‍⚕️ Doctor])
+    Admin([👨‍💼 Administrator])
+    System([🤖 System])
+    Blockchain([⛓️ Blockchain])
+
+    Patient --> UC1
+    Patient --> UC2
+    Patient --> UC3
+    Patient --> UC4
+
+    Doctor --> UC5
+    Doctor --> UC6
+    Doctor --> UC7
+    Doctor --> UC8
+    Doctor --> UC9
+    Doctor --> UC13
+
+    Admin --> UC10
+    Admin --> UC11
+    Admin --> UC12
+    Admin --> UC9
+
+    UC1 -.-> System
+    System -.-> UC6
+    System -.-> UC14
+    System -.-> UC15
+    UC15 -.-> Blockchain
+
+    style Patient fill:#e1f5ff
+    style Doctor fill:#e1f5ff
+    style Admin fill:#e1f5ff
+    style System fill:#ffd700
+    style Blockchain fill:#00d4aa
+```
+
+**Use Cases Description:**
+
+| Actor             | Use Cases              | Description                                                       |
+| ----------------- | ---------------------- | ----------------------------------------------------------------- |
+| **Patient**       | Record Vital Signs     | Submit daily vital parameters (BP, heart rate, temperature, etc.) |
+|                   | View Health Dashboard  | Visualize personal health trends and history                      |
+|                   | Report Symptoms        | Log symptoms and medication side effects                          |
+|                   | Manage Profile         | Update personal and emergency contact information                 |
+| **Doctor**        | Monitor Patients       | View real-time status of all assigned patients                    |
+|                   | View Alerts            | Access critical patient alerts requiring attention                |
+|                   | Acknowledge Alerts     | Confirm receipt and review of alert notifications                 |
+|                   | Validate Alerts        | Assess and resolve patient health alerts                          |
+|                   | Generate Reports       | Create medical reports and analytics                              |
+|                   | Manage Thresholds      | Configure patient-specific vital sign thresholds                  |
+| **Administrator** | Manage Users           | Create, update, and deactivate user accounts                      |
+|                   | Configure System       | Set system-wide parameters and alert rules                        |
+|                   | View Audit Logs        | Access complete system activity history                           |
+|                   | Generate Reports       | Create system usage and performance reports                       |
+| **System**        | Send Notifications     | Automated email/SMS alerts for critical events                    |
+|                   | Store Blockchain Proof | Save cryptographic audit trail to Aptos blockchain                |
+
+---
+
+### Class Diagram
+
+Core domain model showing the main entities and their relationships:
+
+```mermaid
+classDiagram
+    class User {
+        -ObjectId _id
+        -string email
+        -string passwordHash
+        -string firstName
+        -string lastName
+        -Role role
+        -string phoneNumber
+        -boolean isActive
+        -Date lastLogin
+        +authenticate()
+        +hashPassword()
+        +generateToken()
+        +hasPermission()
+    }
+
+    class Patient {
+        -ObjectId _id
+        -ObjectId userId
+        -string medicalRecordNumber
+        -Date dateOfBirth
+        -string gender
+        -string bloodType
+        -Address address
+        -Date dischargeDate
+        -string diagnosis
+        -Medication[] medications
+        -VitalThresholds thresholds
+        +getAge()
+        +isVitalInRange()
+        +updateThresholds()
+    }
+
+    class VitalRecord {
+        -ObjectId _id
+        -ObjectId patientId
+        -number systolicBP
+        -number diastolicBP
+        -number heartRate
+        -number temperature
+        -number oxygenSaturation
+        -Date recordedAt
+        -string blockchainTxHash
+        +checkThresholds()
+        +calculateRisk()
+        +storeOnBlockchain()
+    }
+
+    class Alert {
+        -ObjectId _id
+        -ObjectId patientId
+        -AlertType type
+        -Severity severity
+        -string message
+        -AlertStatus status
+        -ObjectId acknowledgedBy
+        -Date acknowledgedAt
+        +acknowledge()
+        +resolve()
+        +escalate()
+        +sendNotification()
+    }
+
+    class AuditLog {
+        -ObjectId _id
+        -ObjectId userId
+        -string action
+        -string entityType
+        -ObjectId entityId
+        -object changes
+        -string blockchainTxHash
+        -Date timestamp
+        +logAction()
+        +verifyIntegrity()
+    }
+
+    class Service {
+        -ObjectId _id
+        -string serviceName
+        -string description
+        -number consultationFee
+        -number averageDuration
+        -boolean isActive
+        +calculateCost()
+        +checkAvailability()
+    }
+
+    class Questionnaire {
+        -ObjectId _id
+        -ObjectId patientId
+        -string type
+        -object responses
+        -number overallScore
+        -Date completedAt
+        +calculateScore()
+        +generateReport()
+    }
+
+    class BlockchainProof {
+        -ObjectId _id
+        -string dataHash
+        -string txHash
+        -string network
+        -number blockNumber
+        -Date timestamp
+        +verify()
+        +getBlockDetails()
+    }
+
+    class NotificationService {
+        <<service>>
+        +sendEmail()
+        +sendSMS()
+        +sendInApp()
+    }
+
+    class BlockchainService {
+        <<service>>
+        +storeHash()
+        +verifyHash()
+        +getTransaction()
+    }
+
+    User "1" --> "0..1" Patient : has
+    Patient "1" --> "*" VitalRecord : records
+    Patient "1" --> "*" Alert : triggers
+    Patient "1" --> "*" Questionnaire : completes
+    User "1" --> "*" AuditLog : creates
+    Alert "1" --> "1" Patient : belongs to
+    Alert "*" --> "1" User : acknowledged by
+    VitalRecord "1" --> "0..1" BlockchainProof : backed by
+    AuditLog "1" --> "0..1" BlockchainProof : backed by
+    Alert ..> NotificationService : uses
+    VitalRecord ..> BlockchainService : uses
+    AuditLog ..> BlockchainService : uses
+```
+
+**Design Patterns Applied:**
+
+- **Repository Pattern**: Data access layer abstraction (Mongoose models)
+- **Service Layer Pattern**: Business logic separation (services)
+- **Observer Pattern**: Alert system with notification subscribers
+- **Strategy Pattern**: Multiple notification channels (email, SMS, in-app)
+- **Factory Pattern**: User and patient creation with role-specific initialization
+
+---
+
+### Activity Diagram
+
+Workflow for vital signs recording and alert generation:
+
+```mermaid
+stateDiagram-v2
+    [*] --> PatientLogin
+    PatientLogin --> Dashboard
+    Dashboard --> SelectRecordVitals
+
+    SelectRecordVitals --> EnterVitalData
+    EnterVitalData --> ValidateInput
+
+    ValidateInput --> CheckValidation : Valid
+    ValidateInput --> ShowError : Invalid
+    ShowError --> EnterVitalData
+
+    CheckValidation --> SaveToDatabase
+    SaveToDatabase --> CheckThresholds
+
+    CheckThresholds --> WithinRange : Normal
+    CheckThresholds --> OutOfRange : Abnormal
+
+    WithinRange --> GenerateHash
+    OutOfRange --> CreateAlert
+
+    CreateAlert --> DetermineSeverity
+    DetermineSeverity --> SaveAlert
+    SaveAlert --> NotifyDoctor
+
+    NotifyDoctor --> SendEmail : High/Critical
+    NotifyDoctor --> SendSMS : Critical Only
+    NotifyDoctor --> InAppNotification : All Levels
+
+    SendEmail --> GenerateHash
+    SendSMS --> GenerateHash
+    InAppNotification --> GenerateHash
+
+    GenerateHash --> StoreOnBlockchain
+    StoreOnBlockchain --> UpdateRecord
+    UpdateRecord --> ShowSuccess
+    ShowSuccess --> Dashboard
+    Dashboard --> [*]
+
+    note right of CheckThresholds
+        Compare against
+        patient-specific
+        threshold configuration
+    end note
+
+    note right of DetermineSeverity
+        Low: 5-10% deviation
+        Medium: 10-20% deviation
+        High: 20%+ deviation
+        Critical: Multiple params
+    end note
+```
+
+**Activity Flow Description:**
+
+1. **Patient Authentication**: Secure login with JWT token
+2. **Data Entry**: User-friendly form with input validation
+3. **Validation**: Client-side and server-side data validation
+4. **Threshold Check**: Automated comparison against personalized thresholds
+5. **Alert Generation**: Intelligent alert creation for abnormal values
+6. **Severity Assessment**: Risk-based severity level calculation
+7. **Multi-Channel Notification**: Email, SMS, and in-app notifications
+8. **Blockchain Recording**: Immutable audit trail on Aptos blockchain
+9. **Confirmation**: User feedback and dashboard update
+
+---
+
+### Component Diagram
+
+High-level architecture showing system components and their interactions:
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        UI[React Components]
+        Pages[Next.js Pages]
+        Forms[Form Management]
+        Charts[Data Visualization]
+    end
+
+    subgraph "Application Layer"
+        API[API Routes]
+        ServerActions[Server Actions]
+        Middleware[Middleware Chain]
+        Auth[Auth Module]
+    end
+
+    subgraph "Business Logic Layer"
+        PatientService[Patient Service]
+        VitalService[Vital Service]
+        AlertService[Alert Service]
+        AuditService[Audit Service]
+        NotificationService[Notification Service]
+    end
+
+    subgraph "Data Access Layer"
+        UserRepo[User Repository]
+        PatientRepo[Patient Repository]
+        VitalRepo[Vital Repository]
+        AlertRepo[Alert Repository]
+        AuditRepo[Audit Repository]
+    end
+
+    subgraph "External Services"
+        MongoDB[(MongoDB)]
+        Redis[(Redis Cache)]
+        SMTP[Email Service]
+        SMS[SMS Gateway]
+        Aptos[Aptos Blockchain]
+    end
+
+    subgraph "Infrastructure"
+        Docker[Docker Containers]
+        Network[Private Network]
+        Volumes[Persistent Volumes]
+    end
+
+    UI --> Pages
+    Pages --> Forms
+    Pages --> Charts
+    Pages --> API
+
+    API --> Middleware
+    Middleware --> Auth
+    API --> ServerActions
+
+    ServerActions --> PatientService
+    ServerActions --> VitalService
+    ServerActions --> AlertService
+    ServerActions --> AuditService
+
+    PatientService --> PatientRepo
+    VitalService --> VitalRepo
+    VitalService --> AlertService
+    AlertService --> AlertRepo
+    AlertService --> NotificationService
+    AuditService --> AuditRepo
+
+    PatientRepo --> MongoDB
+    VitalRepo --> MongoDB
+    AlertRepo --> MongoDB
+    AuditRepo --> MongoDB
+
+    Auth --> Redis
+    NotificationService --> SMTP
+    NotificationService --> SMS
+    VitalService --> Aptos
+    AuditService --> Aptos
+
+    MongoDB -.-> Docker
+    Redis -.-> Docker
+    API -.-> Docker
+    Docker -.-> Network
+    Docker -.-> Volumes
+
+    style UI fill:#61dafb
+    style API fill:#0070f3
+    style MongoDB fill:#00ed64
+    style Redis fill:#dc382d
+    style Aptos fill:#00d4aa
+    style Docker fill:#2496ed
+```
+
+**Component Responsibilities:**
+
+| Layer              | Components                 | Responsibilities                                |
+| ------------------ | -------------------------- | ----------------------------------------------- |
+| **Frontend**       | React Components, Pages    | User interface, routing, state management       |
+| **Application**    | API Routes, Middleware     | Request handling, authentication, authorization |
+| **Business Logic** | Services                   | Core business rules, validation, orchestration  |
+| **Data Access**    | Repositories               | Database operations, query optimization         |
+| **External**       | MongoDB, Redis, Blockchain | Data persistence, caching, audit storage        |
+| **Infrastructure** | Docker, Network            | Containerization, isolation, deployment         |
+
+**Communication Patterns:**
+
+- **Synchronous**: REST API calls between frontend and backend
+- **Asynchronous**: Blockchain transactions, notification dispatch
+- **Event-Driven**: Alert system with real-time notifications
+- **Caching**: Redis layer for session and frequently accessed data
 
 ---
 

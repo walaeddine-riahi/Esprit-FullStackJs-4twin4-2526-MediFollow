@@ -56,7 +56,7 @@ Built with Next.js • MongoDB • Docker • Aptos Blockchain
 
 ### The Healthcare Challenge
 
-In Algeria and across developing healthcare systems, post-hospitalization care faces critical challenges:
+In Algeria, Tunisia, and across the Arab Maghreb region, post-hospitalization care faces critical challenges:
 
 - **Limited Hospital Capacity**: Overcrowded facilities necessitate early patient discharge
 - **Geographical Barriers**: Remote areas lack access to specialized healthcare facilities
@@ -88,9 +88,9 @@ These challenges result in preventable complications, emergency readmissions, an
   <p><em>Remote patient monitoring enables continuous care from home</em></p>
 </div>
 
-### Value Proposition for Algeria
+### Value Proposition for the Arab Maghreb Region
 
-MediFollow addresses Algeria's specific healthcare needs:
+MediFollow addresses the specific healthcare needs of Algeria, Tunisia, and the broader Maghreb region:
 
 ✅ **Reduces Hospital Burden**: Enables safe early discharge by ensuring continuous monitoring  
 ✅ **Extends Healthcare Reach**: Bridges urban-rural healthcare divide through remote monitoring  
@@ -2002,7 +2002,7 @@ MediFollow implements multiple security layers:
 
 - **HIPAA Alignment**: Technical safeguards implemented
 - **GDPR Compliance**: Data protection and privacy rights
-- **Algerian Health Regulations**: Compliant with local healthcare data laws
+- **Maghreb Health Regulations**: Compliant with Algerian, Tunisian, and regional healthcare data laws
 - **SOC 2 Readiness**: Security controls documented
 
 ---
@@ -2691,6 +2691,7 @@ This project was developed as part of an engineering thesis at:
 
 **University**: École Nationale Supérieure d'Informatique (ESI), Algiers, Algeria  
 **Program**: Master's in Software Engineering  
+**Regional Scope**: Algeria, Tunisia, and Arab Maghreb Countries  
 **Academic Year**: 2025-2026  
 **Supervisor**: Dr. [Supervisor Name]
 
@@ -2702,7 +2703,7 @@ This project was developed as part of an engineering thesis at:
 - [Docker Documentation](https://docs.docker.com/)
 
 **Inspiration:**
-MediFollow was inspired by the need to improve post-hospitalization care in Algeria's healthcare system, addressing real challenges faced by patients and healthcare providers.
+MediFollow was inspired by the need to improve post-hospitalization care across the Arab Maghreb region, addressing real challenges faced by patients and healthcare providers in Algeria, Tunisia, and neighboring countries.
 
 ---
 
@@ -2726,7 +2727,7 @@ MediFollow was inspired by the need to improve post-hospitalization care in Alge
 
 **⭐ If you find this project useful, please consider giving it a star on GitHub! ⭐**
 
-Made with ❤️ in Algeria for better healthcare
+Made with ❤️ in the Arab Maghreb (Algeria, Tunisia & Region) for better healthcare
 
 **[Back to Top](#-medifollow--post-hospitalization-remote-monitoring-platform)**
 

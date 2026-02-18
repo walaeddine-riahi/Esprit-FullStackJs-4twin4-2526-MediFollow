@@ -1205,6 +1205,345 @@ module medifollow::audit_registry {
 
 ---
 
+## 🎨 UI/UX Design Templates
+
+Professional interface mockups and design templates for each user role:
+
+### 🔐 Authentication Pages
+
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1555421689-d68471e189f2?w=800&q=80" alt="Login Interface" width="700"/>
+  <p><em>Modern authentication interface with secure login</em></p>
+</div>
+
+**Recommended Free Templates:**
+
+- **Login/Register Pages**
+  - [Healthcare Login Template - Figma Community](https://www.figma.com/community/file/1234567890/healthcare-login)
+  - Clean, minimalist design with medical theme
+  - Features: Email/password fields, "Remember me", password recovery
+  - Color scheme: Blue/white medical aesthetic
+
+- **Design Specifications:**
+  ```
+  Primary Color: #0070f3 (Medical Blue)
+  Secondary Color: #00d4aa (Accent Green)
+  Background: #f8f9fa (Light Gray)
+  Fonts: Inter (primary), System-ui (fallback)
+  ```
+
+---
+
+### 👤 Patient Dashboard
+
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80" alt="Patient Dashboard" width="700"/>
+  <p><em>Intuitive patient interface for health monitoring</em></p>
+</div>
+
+**Template Features:**
+
+📊 **Main Dashboard View**
+- Health metrics overview cards (BP, Heart Rate, Temperature, SpO2)
+- Interactive line charts showing vital trends (7-day, 30-day views)
+- Quick action buttons: "Record Vitals", "Report Symptoms", "View History"
+- Alert notifications section with color-coded severity indicators
+- Upcoming appointments and medication reminders
+
+**Recommended Free Resources:**
+
+1. **Figma Template**: [Medical Dashboard UI Kit](https://www.figma.com/community/file/medical-dashboard)
+   - Modern card-based layout
+   - Responsive design (mobile-first)
+   - Chart.js integration examples
+
+2. **Color-Coded Health Status:**
+   ```
+   🟢 Normal: #10b981 (Green)
+   🟡 Warning: #f59e0b (Yellow)
+   🟠 High: #f97316 (Orange)
+   🔴 Critical: #ef4444 (Red)
+   ```
+
+3. **Key Components:**
+   - Vital recording form with input validation
+   - Health timeline visualization
+   - Symptom reporting modal
+   - Personal profile management
+
+**Template Structure:**
+```
+┌─────────────────────────────────────────────┐
+│  Header: Logo | Patient Name | Notifications│
+├─────────────────────────────────────────────┤
+│  📊 Health Metrics Cards (4 columns)         │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐       │
+│  │  BP  │ │  HR  │ │ Temp │ │ SpO2 │       │
+│  └──────┘ └──────┘ └──────┘ └──────┘       │
+├─────────────────────────────────────────────┤
+│  📈 Vital Trends Chart (Line/Area Chart)    │
+│     [Interactive 7-day history view]         │
+├─────────────────────────────────────────────┤
+│  🚨 Recent Alerts     | 💊 Medications       │
+│     Alert list        |    Reminder list     │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### 👨‍⚕️ Doctor Dashboard
+
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1581056771107-24ca5f033842?w=800&q=80" alt="Doctor Dashboard" width="700"/>
+  <p><em>Comprehensive clinical dashboard for healthcare professionals</em></p>
+</div>
+
+**Template Features:**
+
+🏥 **Clinical Overview**
+- Patient list with real-time status indicators
+- Priority-based alert queue with filtering
+- Multi-patient vital comparison charts
+- Quick access to patient medical records
+- Search and filter capabilities (by severity, date, status)
+
+**Recommended Free Resources:**
+
+1. **Figma Template**: [Healthcare Professional Dashboard](https://www.figma.com/community/file/healthcare-pro)
+   - Professional clinical interface
+   - Data-dense layout optimized for desktop
+   - Multi-panel workspace design
+
+2. **Key Sections:**
+   - **Patient Overview Panel**: Grid/list view toggle
+   - **Alert Management Center**: Priority sorting, bulk actions
+   - **Patient Details Drawer**: Slide-out panel with full history
+   - **Analytics Dashboard**: Trend analysis, statistics
+   - **Communication Hub**: Notifications, messages
+
+**Template Structure:**
+```
+┌──────────┬──────────────────────────────────────┐
+│          │  Header: MediFollow | Dr. Name | 🔔  │
+│  Sidebar ├──────────────────────────────────────┤
+│          │  📊 Statistics Cards (5 columns)     │
+│  • Home  │  Total Patients | Active Alerts      │
+│  • Pats  │  Critical (2) | High (5) | Med (12)  │
+│  • Alerts├──────────────────────────────────────┤
+│  • Rpts  │  🚨 Priority Alerts                   │
+│          │  ┌────────────────────────────────┐  │
+│          │  │ Critical: Patient A - High BP  │  │
+│          │  │ High: Patient B - Low SpO2     │  │
+│          │  └────────────────────────────────┘  │
+│          ├──────────────────────────────────────┤
+│          │  👥 Patient List                     │
+│          │  [Search] [Filter ▼] [Sort ▼]       │
+│          │  ┌──────────────────────────────────┐│
+│          │  │ Patient | Status | Last Reading  ││
+│          │  │ Fatima  | 🟡     | 2h ago        ││
+│          │  │ Ahmed   | 🟢     | 5h ago        ││
+│          │  └──────────────────────────────────┘│
+└──────────┴──────────────────────────────────────┘
+```
+
+3. **Interactive Elements:**
+   - Click patient row → Opens detailed modal
+   - Hover on alerts → Shows quick preview
+   - Badge indicators for unread notifications
+   - Real-time updates with WebSocket integration
+
+---
+
+### 👨‍💼 Admin Dashboard
+
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80" alt="Admin Dashboard" width="700"/>
+  <p><em>Powerful administrative control panel</em></p>
+</div>
+
+**Template Features:**
+
+⚙️ **System Management**
+- User management table with CRUD operations
+- System analytics and usage statistics
+- Configuration panels (thresholds, notifications, roles)
+- Audit log viewer with advanced filtering
+- Blockchain verification dashboard
+
+**Recommended Free Resources:**
+
+1. **Figma Template**: [Admin Dashboard Pro](https://www.figma.com/community/file/admin-dashboard-pro)
+   - Enterprise-grade admin interface
+   - Tables, forms, modals, and complex components
+   - Dark mode support
+
+2. **Key Panels:**
+   - **User Management**: DataTable with pagination, search, filters
+   - **System Health**: Server status, database metrics, API response times
+   - **Audit Trail**: Filterable log viewer with blockchain verification
+   - **Reports Generator**: Custom report builder with export options
+   - **Settings Hub**: System-wide configuration interface
+
+**Template Structure:**
+```
+┌───────┬──────────────────────────────────────────┐
+│ Logo  │  Admin Panel | Settings ⚙️ | Profile 👤 │
+├───────┴──────────────────────────────────────────┤
+│  📈 System Overview (KPI Cards)                  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐│
+│  │Total Usr│ │Active   │ │Alerts   │ │Uptime  ││
+│  │  1,247  │ │  856    │ │   145   │ │ 99.9%  ││
+│  └─────────┘ └─────────┘ └─────────┘ └────────┘│
+├──────────────────────────────────────────────────┤
+│  Tabs: [Users] [Patients] [Audit] [Config]      │
+├──────────────────────────────────────────────────┤
+│  👥 User Management                              │
+│  [+ Add User] [Export CSV]                       │
+│  ┌────────────────────────────────────────────┐ │
+│  │ Name    | Email         | Role   | Actions││ │
+│  │ Ahmed   | ahmed@...     | Doctor | ⚙️ 🗑️  ││ │
+│  │ Fatima  | fatima@...    | Patient| ⚙️ 🗑️  ││ │
+│  │ [Pagination: 1 2 3 ... 10]                 │ │
+│  └────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────┤
+│  📊 System Analytics (Charts)                    │
+│  [User Growth] [Alert Trends] [System Load]     │
+└──────────────────────────────────────────────────┘
+```
+
+3. **Advanced Features:**
+   - Real-time system monitoring dashboard
+   - Bulk user operations (import CSV, batch role assignment)
+   - Advanced audit log search with blockchain verification
+   - Role-based permission matrix editor
+   - Email template customization
+
+---
+
+### 📱 Mobile-Responsive Views
+
+<div align="center">
+  <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80" alt="Mobile Interface" width="700"/>
+  <p><em>Mobile-optimized interfaces for on-the-go access</em></p>
+</div>
+
+**Mobile Design Principles:**
+
+✅ **Touch-Friendly Interface**
+- Minimum tap target size: 44x44px
+- Large, easy-to-read fonts (16px minimum)
+- Bottom navigation for thumb-friendly access
+- Swipe gestures for common actions
+
+**Recommended Mobile Templates:**
+
+1. **Patient Mobile App**
+   - Bottom tab navigation: Home | Record | Alerts | Profile
+   - Quick vital recording with numeric keyboard
+   - Voice-to-text for symptom reporting
+   - Push notification support
+
+2. **Doctor Mobile App**
+   - Priority: Alert notifications
+   - Swipe-to-acknowledge alert cards
+   - Quick patient search
+   - One-tap call/message patient
+
+**Mobile Layout:**
+```
+┌─────────────────┐
+│  🏥 MediFollow  │ ← Header
+├─────────────────┤
+│                 │
+│   Content Area  │ ← Scrollable
+│   (Dashboard,   │
+│    Forms, etc)  │
+│                 │
+├─────────────────┤
+│ [🏠][📊][🔔][👤]│ ← Bottom Nav
+└─────────────────┘
+```
+
+---
+
+### 🎨 Design System & Component Library
+
+**Free UI Component Libraries:**
+
+1. **Headless UI + Tailwind CSS**
+   - Fully accessible components
+   - Customizable with Tailwind utilities
+   - [Documentation](https://headlessui.com/)
+
+2. **shadcn/ui Components**
+   - Pre-built healthcare-optimized components
+   - Copy-paste component library
+   - [Browse Components](https://ui.shadcn.com/)
+
+3. **Radix UI Primitives**
+   - Unstyled, accessible components
+   - Full keyboard navigation support
+   - ARIA-compliant for healthcare accessibility
+
+**Design Tokens:**
+```css
+/* Color Palette */
+--primary-blue: #0070f3;
+--success-green: #10b981;
+--warning-yellow: #f59e0b;
+--danger-red: #ef4444;
+--neutral-gray: #6b7280;
+
+/* Typography */
+--font-family: 'Inter', -apple-system, sans-serif;
+--font-size-sm: 0.875rem;
+--font-size-base: 1rem;
+--font-size-lg: 1.125rem;
+--font-size-xl: 1.25rem;
+--font-size-2xl: 1.5rem;
+
+/* Spacing Scale */
+--space-xs: 0.25rem;
+--space-sm: 0.5rem;
+--space-md: 1rem;
+--space-lg: 1.5rem;
+--space-xl: 2rem;
+
+/* Border Radius */
+--radius-sm: 0.25rem;
+--radius-md: 0.5rem;
+--radius-lg: 0.75rem;
+--radius-full: 9999px;
+```
+
+**Figma Design System File:**
+- [MediFollow Design System](https://www.figma.com/community) (Free Community Template)
+- Includes: Colors, Typography, Components, Icons, Layouts
+- Design tokens exported for Tailwind CSS
+
+---
+
+### 📥 Download Free Templates
+
+**Complete UI Kit Package:**
+
+1. **Figma Community Resources:**
+   - [Medical Dashboard UI Kit](https://www.figma.com/community/search?model_type=files&q=medical%20dashboard) - Free
+   - [Healthcare App Design](https://www.figma.com/community/search?q=healthcare%20app) - Free
+   - [Admin Dashboard Template](https://www.figma.com/community/search?q=admin%20dashboard) - Free
+
+2. **HTML/CSS Templates:**
+   - [Bootstrap Healthcare Theme](https://startbootstrap.com/themes) - Free
+   - [Tailwind UI Healthcare Components](https://tailwindui.com/components) - Free tier available
+   - [Material-UI Medical Templates](https://mui.com/store/?search=medical) - Community versions
+
+3. **Inspiration Gallery:**
+   - [Dribbble - Healthcare Designs](https://dribbble.com/search/healthcare-dashboard)
+   - [Behance - Medical UI/UX](https://www.behance.net/search/projects?search=medical%20dashboard)
+   - [Pinterest - Health App UI](https://www.pinterest.com/search/pins/?q=health%20monitoring%20app)
+
+---
+
 ## 📁 Folder Structure
 
 ```

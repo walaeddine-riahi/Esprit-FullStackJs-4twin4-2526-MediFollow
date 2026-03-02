@@ -319,7 +319,9 @@ export default async function PatientDetailPage({
                         {alert.severity}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{alert.alertType}</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {alert.alertType}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {new Date(alert.createdAt).toLocaleString("fr-FR")}
                     </p>

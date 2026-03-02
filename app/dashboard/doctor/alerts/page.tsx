@@ -132,8 +132,7 @@ export default async function DoctorAlertsPage() {
         {alert.resolution && (
           <div className="mt-3 pt-3 border-t">
             <p className="text-sm text-gray-600">
-              <span className="font-medium">Notes:</span>{" "}
-              {alert.resolution}
+              <span className="font-medium">Notes:</span> {alert.resolution}
             </p>
             {alert.resolvedBy && (
               <p className="text-xs text-gray-500 mt-1">

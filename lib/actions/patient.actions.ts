@@ -362,3 +362,172 @@ export async function searchPatients(
     return [];
   }
 }
+
+/**
+ * Get comprehensive dashboard statistics
+ */
+export async function getDashboardStats() {
+  try {
+    // Get current date boundaries
+    const now = new Date();
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+    const startOfWeek = new Date(now.setDate(now.getDate() - 7));
+    const startOfMonth = new Date(now.setMonth(now.getMonth() - 1));
+
+    // Total patients
+    const totalPatients = await prisma.patient.count({
+      where: {
+        user: {
+          isActive: true,
+        },
+      },
+    });
+
+    // New patients this week
+    const newPatientsWeek = await prisma.patient.count({
+      where: {
+        createdAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // New patients this month
+    const newPatientsMonth = await prisma.patient.count({
+      where: {
+        createdAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    // Vital records today
+    const vitalsToday = await prisma.vitalRecord.count({
+      where: {
+        recordedAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    // Vital records this week
+    const vitalsWeek = await prisma.vitalRecord.count({
+      where: {
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // Active patients (with vitals in last 7 days)
+    const activePatientsIds = await prisma.vitalRecord.findMany({
+      where: {
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+      select: {
+        patientId: true,
+      },
+      distinct: ["patientId"],
+    });
+    const activePatients = activePatientsIds.length;
+
+    // Alert statistics
+    const totalAlerts = await prisma.alert.count();
+    const openAlerts = await prisma.alert.count({
+      where: { status: "OPEN" },
+    });
+    const criticalAlerts = await prisma.alert.count({
+      where: { severity: "CRITICAL", status: "OPEN" },
+    });
+    const resolvedAlerts = await prisma.alert.count({
+      where: { status: "RESOLVED" },
+    });
+
+    // Alert resolution rate
+    const resolutionRate =
+      totalAlerts > 0 ? Math.round((resolvedAlerts / totalAlerts) * 100) : 0;
+
+    // Average response time (in hours) for resolved alerts
+    const resolvedAlertsWithTime = await prisma.alert.findMany({
+      where: {
+        status: "RESOLVED",
+        resolvedAt: { not: null },
+      },
+      select: {
+        createdAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    let avgResponseTime = 0;
+    if (resolvedAlertsWithTime.length > 0) {
+      const totalTime = resolvedAlertsWithTime.reduce((sum, alert) => {
+        const diff = alert.resolvedAt!.getTime() - alert.createdAt.getTime();
+        return sum + diff;
+      }, 0);
+      avgResponseTime = Math.round(
+        totalTime / resolvedAlertsWithTime.length / (1000 * 60 * 60)
+      ); // Convert to hours
+    }
+
+    // Patients by blood type
+    const patientsByBloodType = await prisma.patient.groupBy({
+      by: ["bloodType"],
+      _count: {
+        id: true,
+      },
+      where: {
+        bloodType: { not: null },
+      },
+    });
+
+    // Recent symptoms count
+    const symptomsToday = await prisma.symptom.count({
+      where: {
+        reportedAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      stats: {
+        patients: {
+          total: totalPatients,
+          active: activePatients,
+          newThisWeek: newPatientsWeek,
+          newThisMonth: newPatientsMonth,
+        },
+        vitals: {
+          today: vitalsToday,
+          thisWeek: vitalsWeek,
+        },
+        alerts: {
+          total: totalAlerts,
+          open: openAlerts,
+          critical: criticalAlerts,
+          resolved: resolvedAlerts,
+          resolutionRate: resolutionRate,
+          avgResponseTime: avgResponseTime,
+        },
+        symptoms: {
+          today: symptomsToday,
+        },
+        bloodTypeDistribution: patientsByBloodType.map((bt) => ({
+          bloodType: bt.bloodType,
+          count: bt._count.id,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des statistiques",
+      stats: null,
+    };
+  }
+}

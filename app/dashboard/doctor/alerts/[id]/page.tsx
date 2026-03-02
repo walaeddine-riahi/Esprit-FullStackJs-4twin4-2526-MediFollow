@@ -29,7 +29,7 @@ async function getAlert(alertId: string) {
 
 async function acknowledgeAlert(alertId: string, userId: string) {
   "use server";
-  
+
   try {
     await prisma.alert.update({
       where: { id: alertId },
@@ -48,7 +48,7 @@ async function acknowledgeAlert(alertId: string, userId: string) {
 
 async function resolveAlert(alertId: string, userId: string, notes: string) {
   "use server";
-  
+
   try {
     await prisma.alert.update({
       where: { id: alertId },
@@ -72,13 +72,13 @@ export default async function AlertDetailPage({
   params: { id: string };
 }) {
   const user = await getCurrentUser();
-  
+
   if (!user || user.role !== "DOCTOR") {
     redirect("/login");
   }
 
   const alert = await getAlert(params.id);
-  
+
   if (!alert) {
     notFound();
   }
@@ -113,22 +113,26 @@ export default async function AlertDetailPage({
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <Link 
+        <Link
           href="/dashboard/doctor/alerts"
           className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Retour aux alertes
         </Link>
-        
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Détails de l'Alerte</h1>
+
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Détails de l'Alerte
+        </h1>
         <p className="text-gray-600">ID: {alert.id}</p>
       </div>
 
       {/* Alert Card */}
-      <div className={`bg-white border-2 rounded-lg p-6 mb-6 ${
-        alert.severity === "CRITICAL" ? "border-red-300" : "border-gray-200"
-      }`}>
+      <div
+        className={`bg-white border-2 rounded-lg p-6 mb-6 ${
+          alert.severity === "CRITICAL" ? "border-red-300" : "border-gray-200"
+        }`}
+      >
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -139,10 +143,12 @@ export default async function AlertDetailPage({
                 {alert.status}
               </Badge>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{alert.message}</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {alert.message}
+            </h2>
             <p className="text-gray-600">{alert.alertType}</p>
           </div>
-          
+
           {alert.severity === "CRITICAL" && (
             <AlertCircle className="w-12 h-12 text-red-600" />
           )}
@@ -152,13 +158,15 @@ export default async function AlertDetailPage({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-gray-50 rounded-lg">
           <div>
             <p className="text-sm text-gray-600 mb-1">Patient</p>
-            <Link 
+            <Link
               href={`/dashboard/doctor/patients/${alert.patient.id}`}
               className="font-medium text-blue-600 hover:underline"
             >
               {patientName}
             </Link>
-            <p className="text-sm text-gray-500">MRN: {alert.patient.medicalRecordNumber}</p>
+            <p className="text-sm text-gray-500">
+              MRN: {alert.patient.medicalRecordNumber}
+            </p>
           </div>
 
           <div>
@@ -172,8 +180,10 @@ export default async function AlertDetailPage({
 
       {/* Timeline */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Chronologie</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Chronologie
+        </h3>
+
         <div className="space-y-4">
           {/* Created */}
           <div className="flex gap-4">
@@ -192,7 +202,8 @@ export default async function AlertDetailPage({
               </p>
               {alert.triggeredBy && (
                 <p className="text-sm text-gray-500">
-                  Par: {alert.triggeredBy.firstName} {alert.triggeredBy.lastName}
+                  Par: {alert.triggeredBy.firstName}{" "}
+                  {alert.triggeredBy.lastName}
                 </p>
               )}
             </div>
@@ -216,7 +227,8 @@ export default async function AlertDetailPage({
                 </p>
                 {alert.acknowledgedBy && (
                   <p className="text-sm text-gray-500">
-                    Par: Dr. {alert.acknowledgedBy.firstName} {alert.acknowledgedBy.lastName}
+                    Par: Dr. {alert.acknowledgedBy.firstName}{" "}
+                    {alert.acknowledgedBy.lastName}
                   </p>
                 )}
               </div>
@@ -236,7 +248,8 @@ export default async function AlertDetailPage({
                 </p>
                 {alert.resolvedBy && (
                   <p className="text-sm text-gray-500">
-                    Par: Dr. {alert.resolvedBy.firstName} {alert.resolvedBy.lastName}
+                    Par: Dr. {alert.resolvedBy.firstName}{" "}
+                    {alert.resolvedBy.lastName}
                   </p>
                 )}
                 {alert.resolution && (
@@ -254,20 +267,22 @@ export default async function AlertDetailPage({
       {alert.status !== "RESOLVED" && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-          
-          <form action={async (formData: FormData) => {
-            "use server";
-            const action = formData.get("action");
-            
-            if (action === "acknowledge") {
-              await acknowledgeAlert(alert.id, user.id);
-              redirect(`/dashboard/doctor/alerts/${alert.id}`);
-            } else if (action === "resolve") {
-              const notes = formData.get("notes") as string;
-              await resolveAlert(alert.id, user.id, notes);
-              redirect("/dashboard/doctor/alerts");
-            }
-          }}>
+
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              const action = formData.get("action");
+
+              if (action === "acknowledge") {
+                await acknowledgeAlert(alert.id, user.id);
+                redirect(`/dashboard/doctor/alerts/${alert.id}`);
+              } else if (action === "resolve") {
+                const notes = formData.get("notes") as string;
+                await resolveAlert(alert.id, user.id, notes);
+                redirect("/dashboard/doctor/alerts");
+              }
+            }}
+          >
             {alert.status === "OPEN" && (
               <div className="mb-4">
                 <button
@@ -284,7 +299,10 @@ export default async function AlertDetailPage({
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="notes"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Notes de résolution
                 </label>
                 <textarea
@@ -314,7 +332,8 @@ export default async function AlertDetailPage({
       {/* Related Info */}
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-900">
-          <strong>Conseil:</strong> Assurez-vous de contacter le patient et de documenter toutes les actions prises dans les notes de résolution.
+          <strong>Conseil:</strong> Assurez-vous de contacter le patient et de
+          documenter toutes les actions prises dans les notes de résolution.
         </p>
       </div>
     </div>

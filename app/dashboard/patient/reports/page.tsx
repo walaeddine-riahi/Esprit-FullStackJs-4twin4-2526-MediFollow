@@ -51,7 +51,8 @@ export default function ReportsPage() {
           category: "Analyses",
           date: new Date("2026-02-20"),
           doctor: "Dr. Marie Dubois",
-          description: "Bilan sanguin de routine - Tous les résultats sont normaux",
+          description:
+            "Bilan sanguin de routine - Tous les résultats sont normaux",
           fileSize: "2.3 MB",
           fileType: "PDF",
           status: "normal",
@@ -84,7 +85,8 @@ export default function ReportsPage() {
           category: "Cardiologie",
           date: new Date("2026-01-15"),
           doctor: "Dr. Pierre Laurent",
-          description: "Test d'effort sur tapis roulant - Capacité cardiaque excellente",
+          description:
+            "Test d'effort sur tapis roulant - Capacité cardiaque excellente",
           fileSize: "3.1 MB",
           fileType: "PDF",
           status: "normal",
@@ -147,8 +149,7 @@ export default function ReportsPage() {
   const categories = ["Analyses", "Cardiologie", "Imagerie", "Radiologie"];
   const totalReports = reports.length;
   const recentReports = reports.filter(
-    (r) =>
-      new Date(r.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    (r) => new Date(r.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   ).length;
 
   if (loading) {

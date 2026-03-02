@@ -91,9 +91,9 @@ export default function NewVitalRecordPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-50">
             <Save className="text-green-600" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Enregistré !</h2>
@@ -106,29 +106,34 @@ export default function NewVitalRecordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-3xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <Link
-            href="/dashboard/patient"
-            className="rounded-lg p-2 hover:bg-gray-200"
-          >
-            <ArrowLeft size={24} />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Enregistrer les signes vitaux
-            </h1>
-            <p className="text-gray-600">
-              Remplissez les mesures que vous avez prises
-            </p>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/patient"
+              className="rounded-lg p-2 hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={24} />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Enregistrer les signes vitaux
+              </h1>
+              <p className="mt-2 text-gray-600">
+                Remplissez les mesures que vous avez prises
+              </p>
+            </div>
           </div>
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="mx-auto max-w-3xl px-6 py-8">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
             {error}
           </div>
         )}
@@ -136,7 +141,7 @@ export default function NewVitalRecordPage() {
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg bg-white p-6 shadow-sm"
+          className="rounded-xl border border-gray-200 bg-white p-8"
         >
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Systolic BP */}
@@ -153,7 +158,7 @@ export default function NewVitalRecordPage() {
                 name="systolicBP"
                 value={formData.systolicBP}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-gray-400 focus:outline-none transition-colors"
                 placeholder="120"
                 step="1"
                 min="50"
@@ -310,27 +315,27 @@ export default function NewVitalRecordPage() {
           </div>
 
           {/* Buttons */}
-          <div className="mt-6 flex gap-4">
+          <div className="mt-8 flex gap-3">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-full bg-gray-900 px-6 py-3 font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 inline animate-spin" size={20} />
+                  <Loader2 className="animate-spin" size={20} />
                   Enregistrement...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 inline" size={20} />
+                  <Save size={20} />
                   Enregistrer
                 </>
               )}
             </button>
             <Link
               href="/dashboard/patient"
-              className="rounded-lg border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
+              className="rounded-full border border-gray-200 bg-white px-6 py-3 font-medium text-gray-700 transition hover:bg-gray-50 flex items-center justify-center"
             >
               Annuler
             </Link>

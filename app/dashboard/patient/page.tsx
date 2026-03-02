@@ -390,9 +390,7 @@ export default function PatientDashboard() {
                         <div className="flex-shrink-0">
                           <div
                             className={`h-20 w-20 rounded-xl flex items-center justify-center ${
-                              hasAbnormal
-                                ? "bg-red-100"
-                                : "bg-green-100"
+                              hasAbnormal ? "bg-red-100" : "bg-green-100"
                             }`}
                           >
                             {hasAbnormal ? (
@@ -420,9 +418,7 @@ export default function PatientDashboard() {
                                 >
                                   {hasAbnormal ? "Anormal" : "Normal"}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  •
-                                </span>
+                                <span className="text-xs text-gray-500">•</span>
                                 <span className="text-xs text-gray-500">
                                   {formatDateTime(vital.recordedAt)}
                                 </span>
@@ -466,7 +462,10 @@ export default function PatientDashboard() {
                               title="Plus d'options"
                               aria-label="Plus d'options"
                             >
-                              <MoreVertical size={16} className="text-gray-600" />
+                              <MoreVertical
+                                size={16}
+                                className="text-gray-600"
+                              />
                             </button>
                           </div>
                         </div>

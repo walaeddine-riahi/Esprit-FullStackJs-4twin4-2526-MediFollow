@@ -70,12 +70,25 @@ export default function SettingsPage() {
         firstName: currentUser.firstName || "",
         lastName: currentUser.lastName || "",
         email: currentUser.email || "",
-        phone: currentUser.patient?.phone || "",
-        dateOfBirth: currentUser.patient?.dateOfBirth || "",
-        address: currentUser.patient?.address || "",
+        phone: "", // TODO: Add phone field to user model
+        dateOfBirth: currentUser.patient?.dateOfBirth
+          ? new Date(currentUser.patient.dateOfBirth)
+              .toISOString()
+              .slice(0, 10)
+          : "",
+        address:
+          typeof currentUser.patient?.address === "object"
+            ? currentUser.patient.address.street || ""
+            : currentUser.patient?.address || "",
         bloodType: currentUser.patient?.bloodType || "",
-        emergencyContact: currentUser.patient?.emergencyContactName || "",
-        emergencyPhone: currentUser.patient?.emergencyContactPhone || "",
+        emergencyContact:
+          typeof currentUser.patient?.emergencyContact === "object"
+            ? currentUser.patient.emergencyContact.name || ""
+            : "",
+        emergencyPhone:
+          typeof currentUser.patient?.emergencyContact === "object"
+            ? currentUser.patient.emergencyContact.phone || ""
+            : "",
       });
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -379,10 +392,8 @@ export default function SettingsPage() {
                           {key === "smsAlerts" && "Alertes par SMS"}
                           {key === "appointmentReminders" &&
                             "Rappels de rendez-vous"}
-                          {key === "vitalAlerts" &&
-                            "Alertes signes vitaux"}
-                          {key === "medicalReports" &&
-                            "Rapports médicaux"}
+                          {key === "vitalAlerts" && "Alertes signes vitaux"}
+                          {key === "medicalReports" && "Rapports médicaux"}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
                           Recevoir des notifications pour cette catégorie
@@ -433,7 +444,8 @@ export default function SettingsPage() {
                           Modifier le mot de passe
                         </h3>
                         <p className="text-sm text-gray-600 mb-4">
-                          Changez votre mot de passe régulièrement pour plus de sécurité
+                          Changez votre mot de passe régulièrement pour plus de
+                          sécurité
                         </p>
                         <button className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors">
                           Changer le mot de passe
@@ -499,7 +511,8 @@ export default function SettingsPage() {
                       Zone de danger
                     </h3>
                     <p className="text-sm text-red-700 mb-4">
-                      Supprimer définitivement votre compte et toutes vos données
+                      Supprimer définitivement votre compte et toutes vos
+                      données
                     </p>
                     <button className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors">
                       Supprimer mon compte

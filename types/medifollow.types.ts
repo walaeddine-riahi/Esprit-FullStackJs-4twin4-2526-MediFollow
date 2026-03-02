@@ -207,6 +207,9 @@ export type Patient = {
 
 export type PatientWithUser = Patient & {
   user: SafeUser;
+  vitalRecords?: VitalRecord[];
+  alerts?: Alert[];
+  symptoms?: Symptom[];
 };
 
 export type UserWithPatient = User & {

@@ -5,22 +5,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Users,
+  Activity,
   Bell,
-  BarChart3,
+  Calendar,
+  FileText,
   Settings,
   LogOut,
   Menu,
   X,
-  User,
-  AlertCircle,
-  Activity,
-  FileText,
   Heart,
+  Clock,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
-import ChatBot from "@/components/ChatBot";
 
 interface NavItem {
   icon: React.ElementType;
@@ -29,7 +26,7 @@ interface NavItem {
   badge?: number;
 }
 
-export default function DoctorLayout({ children }: { children: ReactNode }) {
+export default function PatientLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -53,33 +50,32 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
     {
       icon: LayoutDashboard,
       label: "Tableau de bord",
-      href: "/dashboard/doctor",
-    },
-    {
-      icon: Users,
-      label: "Patients",
-      href: "/dashboard/doctor/patients",
-    },
-    {
-      icon: Bell,
-      label: "Alertes",
-      href: "/dashboard/doctor/alerts",
-      badge: 3,
+      href: "/dashboard/patient",
     },
     {
       icon: Activity,
       label: "Signes vitaux",
-      href: "/dashboard/doctor/vitals",
+      href: "/dashboard/patient/vitals",
     },
     {
-      icon: BarChart3,
-      label: "Analyses",
-      href: "/dashboard/doctor/analytics",
+      icon: Bell,
+      label: "Alertes",
+      href: "/dashboard/patient/alerts",
+    },
+    {
+      icon: Calendar,
+      label: "Rendez-vous",
+      href: "/dashboard/patient/appointments",
     },
     {
       icon: FileText,
-      label: "Rapports",
-      href: "/dashboard/doctor/reports",
+      label: "Rapports médicaux",
+      href: "/dashboard/patient/reports",
+    },
+    {
+      icon: Clock,
+      label: "Historique",
+      href: "/dashboard/patient/history",
     },
   ];
 
@@ -143,14 +139,14 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
           {/* Settings */}
           <div className="mt-6 pt-6 border-t border-gray-100">
             <Link
-              href="/dashboard/doctor/settings"
+              href="/dashboard/patient/settings"
               className={`group flex items-center gap-4 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                pathname === "/dashboard/doctor/settings"
+                pathname === "/dashboard/patient/settings"
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-700 hover:bg-gray-50"
               }`}
             >
-              {pathname === "/dashboard/doctor/settings" && (
+              {pathname === "/dashboard/patient/settings" && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-gray-900 rounded-r-full"></div>
               )}
               <Settings className="size-5" />
@@ -168,7 +164,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
-                Dr. {user?.firstName} {user?.lastName}
+                {user?.firstName} {user?.lastName}
               </p>
               <p className="truncate text-xs text-gray-500">{user?.email}</p>
             </div>
@@ -214,9 +210,6 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* AI ChatBot Assistant */}
-      <ChatBot />
     </div>
   );
 }

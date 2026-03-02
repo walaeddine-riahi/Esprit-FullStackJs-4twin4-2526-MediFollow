@@ -12,6 +12,12 @@ import {
   Database,
   Clock,
   CheckCircle,
+  Search,
+  ChevronRight,
+  Settings,
+  TrendingUp,
+  FileText,
+  BarChart3,
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
@@ -55,8 +61,7 @@ export default function AdminDashboard() {
         }));
       }
 
-      // Note: Dans une vraie application, vous auriez des actions pour récupérer
-      // les statistiques des utilisateurs depuis la base de données
+      // Note: Add actual user stats API calls here
     } catch (error) {
       console.error("Error loading dashboard:", error);
     } finally {
@@ -66,113 +71,231 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <div className="relative mb-4 mx-auto">
+            <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900"></div>
+          </div>
+          <p className="text-sm font-medium text-gray-600">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Tableau de bord Administrateur
+    <div className="min-h-screen bg-white">
+      {/* YouTube-style Top Bar */}
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-4">
+          <div className="flex items-center gap-6">
+            {/* Search Bar */}
+            <div className="flex-1 max-w-2xl">
+              <div className="relative">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Rechercher utilisateurs, alertes, journaux..."
+                  className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-all"
+                />
+              </div>
+            </div>
+
+           {/* Quick Stats */}
+            <div className="hidden lg:flex items-center gap-6">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Users size={16} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Utilisateurs</p>
+                  <p className="font-semibold text-gray-900">
+                    {stats.totalUsers || 0}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle size={16} className="text-red-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Critiques</p>
+                  <p className="font-semibold text-gray-900">
+                    {stats.criticalAlerts || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 py-6">
+        {/* Welcome Section */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Administration MediFollow 🛡️
           </h1>
-          <p className="mt-1 text-gray-600">
-            Gestion et supervision de la plateforme MediFollow
+          <p className="text-sm text-gray-600 mt-1">
+            Gestion et supervision de la plateforme
           </p>
         </div>
 
-        {/* Main Stats */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Main Stats Grid - Minimal Style */}
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Total Users */}
-          <div className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-100">Utilisateurs</p>
-                <p className="mt-2 text-3xl font-bold">{stats.totalUsers}</p>
-                <p className="mt-1 text-xs text-blue-100">Total inscrits</p>
+          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Users size={20} className="text-blue-600" />
               </div>
-              <Users size={40} className="opacity-80" />
+              <ChevronRight
+                size={18}
+                className="text-gray-400 group-hover:text-gray-600 transition-colors"
+              />
             </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">
+              {stats.totalUsers || 0}
+            </p>
+            <p className="text-sm text-gray-600">Utilisateurs inscrits</p>
           </div>
 
           {/* Total Patients */}
-          <div className="rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-100">Patients</p>
-                <p className="mt-2 text-3xl font-bold">{stats.totalPatients}</p>
-                <p className="mt-1 text-xs text-green-100">Patients actifs</p>
+          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <Activity size={20} className="text-green-600" />
               </div>
-              <Activity size={40} className="opacity-80" />
+              <ChevronRight
+                size={18}
+                className="text-gray-400 group-hover:text-gray-600 transition-colors"
+              />
             </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">
+              {stats.totalPatients || 0}
+            </p>
+            <p className="text-sm text-gray-600">Patients actifs</p>
           </div>
 
           {/* Total Doctors */}
-          <div className="rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-100">Médecins</p>
-                <p className="mt-2 text-3xl font-bold">{stats.totalDoctors}</p>
-                <p className="mt-1 text-xs text-purple-100">Professionnels</p>
+          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                <UserCog size={20} className="text-purple-600" />
               </div>
-              <UserCog size={40} className="opacity-80" />
+              <ChevronRight
+                size={18}
+                className="text-gray-400 group-hover:text-gray-600 transition-colors"
+              />
             </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">
+              {stats.totalDoctors || 0}
+            </p>
+            <p className="text-sm text-gray-600">Médecins</p>
           </div>
 
           {/* Critical Alerts */}
-          <div className="rounded-lg bg-gradient-to-br from-red-500 to-red-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-red-100">Alertes Critiques</p>
-                <p className="mt-2 text-3xl font-bold">{stats.criticalAlerts}</p>
-                <p className="mt-1 text-xs text-red-100">Nécessitent une action</p>
+          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <AlertCircle size={20} className="text-red-600" />
               </div>
-              <AlertCircle size={40} className="opacity-80" />
+              <ChevronRight
+                size={18}
+                className="text-gray-400 group-hover:text-gray-600 transition-colors"
+              />
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">
+              {stats.criticalAlerts || 0}
+            </p>
+            <p className="text-sm text-gray-600">Alertes critiques</p>
+          </div>
+        </div>
+
+        {/* System Health - Secondary Stats */}
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Database Status */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <Database size={20} className="text-green-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Base de données</h3>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Statut</span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <CheckCircle size={12} />
+                Opérationnelle
+              </span>
+            </div>
+          </div>
+
+          {/* API Status */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Activity size={20} className="text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">API</h3>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Statut</span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <CheckCircle size={12} />
+                Fonctionnelle
+              </span>
+            </div>
+          </div>
+
+          {/* Blockchain Status */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+                <Shield size={20} className="text-yellow-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Blockchain</h3>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Statut</span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                <Clock size={12} />
+                En attente
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Secondary Stats */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Total Alerts */}
-          <div className="rounded-lg bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
+        {/* Alert Stats Detailed */}
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Statistiques des alertes
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
               <div>
-                <p className="text-sm text-gray-600">Total Alertes</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {stats.totalAlerts}
+                <p className="text-sm text-gray-600">Total</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalAlerts || 0}
                 </p>
               </div>
-              <AlertCircle size={32} className="text-orange-500" />
+              <AlertCircle size={32} className="text-gray-400" />
             </div>
-          </div>
-
-          {/* Open Alerts */}
-          <div className="rounded-lg bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50">
               <div>
-                <p className="text-sm text-gray-600">Alertes Ouvertes</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {stats.openAlerts}
+                <p className="text-sm text-orange-700">Ouvertes</p>
+                <p className="text-2xl font-bold text-orange-900">
+                  {stats.openAlerts || 0}
                 </p>
               </div>
-              <Clock size={32} className="text-yellow-500" />
+              <Clock size={32} className="text-orange-500" />
             </div>
-          </div>
-
-          {/* Resolved Alerts */}
-          <div className="rounded-lg bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-green-50">
               <div>
-                <p className="text-sm text-gray-600">Alertes Résolues</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
+                <p className="text-sm text-green-700">Résolues</p>
+                <p className="text-2xl font-bold text-green-900">
                   {stats.resolvedAlerts || 0}
                 </p>
               </div>
@@ -181,90 +304,129 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
-            Actions rapides
-          </h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href="/dashboard/admin/users"
-              className="rounded-lg border border-gray-200 bg-white p-6 text-center transition hover:border-blue-500 hover:shadow-md"
-            >
-              <Users className="mx-auto mb-3 text-blue-600" size={36} />
-              <h3 className="font-semibold text-gray-900">
-                Gestion Utilisateurs
-              </h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Créer et gérer les comptes
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/admin/alerts"
-              className="rounded-lg border border-gray-200 bg-white p-6 text-center transition hover:border-blue-500 hover:shadow-md"
-            >
-              <AlertCircle className="mx-auto mb-3 text-orange-600" size={36} />
-              <h3 className="font-semibold text-gray-900">Supervision Alertes</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Surveiller toutes les alertes
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/admin/audit"
-              className="rounded-lg border border-gray-200 bg-white p-6 text-center transition hover:border-blue-500 hover:shadow-md"
-            >
-              <Database className="mx-auto mb-3 text-purple-600" size={36} />
-              <h3 className="font-semibold text-gray-900">Journal d&apos;Audit</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Historique des actions
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/admin/blockchain"
-              className="rounded-lg border border-gray-200 bg-white p-6 text-center transition hover:border-blue-500 hover:shadow-md"
-            >
-              <Shield className="mx-auto mb-3 text-green-600" size={36} />
-              <h3 className="font-semibold text-gray-900">Blockchain</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Preuves et vérifications
-              </p>
-            </Link>
-          </div>
+        {/* Quick Actions - YouTube Chips Style */}
+        <div className="mb-6 flex items-center gap-3 overflow-x-auto pb-2">
+          <Link href="/dashboard/admin/users">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <Users size={16} />
+              Utilisateurs
+            </button>
+          </Link>
+          <Link href="/dashboard/admin/alerts">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <AlertCircle size={16} />
+              Alertes
+            </button>
+          </Link>
+          <Link href="/dashboard/admin/audit">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <FileText size={16} />
+              Audit
+            </button>
+          </Link>
+          <Link href="/dashboard/admin/blockchain">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <Shield size={16} />
+              Blockchain
+            </button>
+          </Link>
+          <Link href="/dashboard/admin/analytics">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <BarChart3 size={16} />
+              Analytiques
+            </button>
+          </Link>
+          <Link href="/dashboard/admin/settings">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <Settings size={16} />
+              Paramètres
+            </button>
+          </Link>
         </div>
 
-        {/* System Status */}
-        <div className="rounded-lg bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
-            État du système
-          </h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
-              <CheckCircle className="text-green-600" size={24} />
-              <div>
-                <p className="font-medium text-gray-900">Base de données</p>
-                <p className="text-sm text-gray-600">Opérationnelle</p>
+        {/* Management Modules - Card Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* User Management */}
+          <Link href="/dashboard/admin/users" className="group">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Users size={24} className="text-blue-600" />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="text-gray-400 group-hover:text-gray-600 transition-colors"
+                />
               </div>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                Gestion Utilisateurs
+              </h3>
+              <p className="text-sm text-gray-600">
+                Créer et gérer les comptes
+              </p>
             </div>
+          </Link>
 
-            <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
-              <CheckCircle className="text-green-600" size={24} />
-              <div>
-                <p className="font-medium text-gray-900">API</p>
-                <p className="text-sm text-gray-600">Fonctionnelle</p>
+          {/* Alert Supervision */}
+          <Link href="/dashboard/admin/alerts" className="group">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-lg bg-orange-50 flex items-center justify-center">
+                  <AlertCircle size={24} className="text-orange-600" />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="text-gray-400 group-hover:text-gray-600 transition-colors"
+                />
               </div>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                Supervision Alertes
+              </h3>
+              <p className="text-sm text-gray-600">
+                Surveiller toutes les alertes
+              </p>
             </div>
+          </Link>
 
-            <div className="flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-              <Clock className="text-yellow-600" size={24} />
-              <div>
-                <p className="font-medium text-gray-900">Blockchain</p>
-                <p className="text-sm text-gray-600">En attente config</p>
+          {/* Audit Log */}
+          <Link href="/dashboard/admin/audit" className="group">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-lg bg-purple-50 flex items-center justify-center">
+                  <Database size={24} className="text-purple-600" />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="text-gray-400 group-hover:text-gray-600 transition-colors"
+                />
               </div>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                Journal d&apos;Audit
+              </h3>
+              <p className="text-sm text-gray-600">
+                Historique des actions
+              </p>
             </div>
-          </div>
+          </Link>
+
+          {/* Blockchain */}
+          <Link href="/dashboard/admin/blockchain" className="group">
+            <div className="rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
+                  <Shield size={24} className="text-green-600" />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="text-gray-400 group-hover:text-gray-600 transition-colors"
+                />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">Blockchain</h3>
+              <p className="text-sm text-gray-600">
+                Preuves et vérifications
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

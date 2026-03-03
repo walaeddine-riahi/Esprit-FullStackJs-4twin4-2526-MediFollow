@@ -9,7 +9,14 @@ import {
   User,
   Loader2,
   Sparkles,
+  UserCircle,
+  ChevronDown,
+  AlertCircle,
 } from "lucide-react";
+import {
+  getPatientMedicalContext,
+  getDoctorPatientsList,
+} from "@/lib/actions/medassist.actions";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,11 +24,22 @@ interface Message {
   timestamp: Date;
 }
 
+interface PatientOption {
+  id: string;
+  nom: string;
+  numeroDossier: string;
+  alertesActives: number;
+}
+
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [patientContext, setPatientContext] = useState<any>(null);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -38,6 +56,50 @@ export default function ChatBot() {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Load patients list when chat opens
+  useEffect(() => {
+    if (isOpen && patients.length === 0) {
+      loadPatients();
+    }
+  }, [isOpen]);
+
+  const loadPatients = async () => {
+    try {
+      const result = await getDoctorPatientsList();
+      if (result.success && result.patients) {
+        setPatients(result.patients);
+      }
+    } catch (error) {
+      console.error("Error loading patients:", error);
+    }
+  };
+
+  const handlePatientSelect = async (patientId: string) => {
+    setSelectedPatient(patientId);
+    setShowPatientDropdown(false);
+    setIsLoading(true);
+
+    try {
+      const result = await getPatientMedicalContext(patientId);
+      if (result.success && result.context) {
+        setPatientContext(result.context);
+
+        // Add system message indicating patient context loaded
+        const patientName = result.context.patient.nom;
+        const contextMessage: Message = {
+          role: "assistant",
+          content: `✅ Contexte médical chargé pour ${patientName}. Je peux maintenant vous assister avec ce dossier patient.`,
+          timestamp: new Date(),
+        };
+        setMessages([contextMessage]);
+      }
+    } catch (error) {
+      console.error("Error loading patient context:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -62,6 +124,7 @@ export default function ChatBot() {
           messages: messages
             .concat(userMessage)
             .map(({ role, content }) => ({ role, content })),
+          patientContext: patientContext, // Send patient context
         }),
       });
 
@@ -100,7 +163,9 @@ export default function ChatBot() {
   };
 
   const welcomeMessage =
-    "Bonjour! 👋 Je suis votre assistant médical IA. Je peux vous aider avec l'analyse des signes vitaux, l'interprétation des symptômes et des suggestions cliniques. Comment puis-je vous aider aujourd'hui?";
+    "Bonjour! 👋 Je suis MedAssist AI, votre assistant médical intelligent. Sélectionnez un patient pour que je puisse accéder à son dossier médical et vous assister avec l'analyse de ses données cliniques.";
+
+  const selectedPatientData = patients.find((p) => p.id === selectedPatient);
 
   return (
     <>
@@ -109,10 +174,10 @@ export default function ChatBot() {
         <button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 group h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center"
-          aria-label="Open AI Assistant"
+          aria-label="Open MedAssist AI"
         >
           <div className="relative">
-            <MessageCircle
+            <Bot
               size={24}
               className="group-hover:scale-110 transition-transform"
             />
@@ -128,34 +193,90 @@ export default function ChatBot() {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col w-96 h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-purple-600">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Bot size={20} className="text-white" />
+          <div className="flex flex-col bg-gradient-to-r from-blue-600 to-purple-600">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Bot size={20} className="text-white" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></div>
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 border-2 border-white"></div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-white">MedAssist AI</h3>
+                    <Sparkles
+                      size={14}
+                      className="text-yellow-300 animate-pulse"
+                    />
+                  </div>
+                  <p className="text-xs text-blue-100">
+                    Assistant médical intelligent
+                  </p>
+                </div>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white">
-                    Assistant Médical IA
-                  </h3>
-                  <Sparkles
-                    size={14}
-                    className="text-yellow-300 animate-pulse"
-                  />
-                </div>
-                <p className="text-xs text-blue-100">Propulsé par GPT-4o</p>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="rounded-lg p-1.5 text-white hover:bg-white/20 transition-colors"
+                aria-label="Close chat"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Patient Selector */}
+            <div className="px-4 pb-3">
+              <div className="relative">
+                <button
+                  onClick={() => setShowPatientDropdown(!showPatientDropdown)}
+                  className="w-full flex items-center justify-between bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 text-white hover:bg-white/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserCircle size={16} />
+                    <span className="text-sm font-medium">
+                      {selectedPatientData
+                        ? selectedPatientData.nom
+                        : "Sélectionner un patient"}
+                    </span>
+                  </div>
+                  <ChevronDown size={16} />
+                </button>
+
+                {/* Dropdown */}
+                {showPatientDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-60 overflow-y-auto z-10">
+                    {patients.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        Aucun patient disponible
+                      </div>
+                    ) : (
+                      patients.map((patient) => (
+                        <button
+                          key={patient.id}
+                          onClick={() => handlePatientSelect(patient.id)}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {patient.nom}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {patient.numeroDossier}
+                            </div>
+                          </div>
+                          {patient.alertesActives > 0 && (
+                            <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                              <AlertCircle size={12} />
+                              {patient.alertesActives}
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1.5 text-white hover:bg-white/20 transition-colors"
-              aria-label="Close chat"
-            >
-              <X size={20} />
-            </button>
           </div>
 
           {/* Messages */}
@@ -231,7 +352,7 @@ export default function ChatBot() {
                   <div className="flex items-center gap-2">
                     <Loader2 size={16} className="animate-spin text-blue-600" />
                     <span className="text-sm text-gray-500">
-                      En train de réfléchir...
+                      Analyse en cours...
                     </span>
                   </div>
                 </div>
@@ -243,20 +364,30 @@ export default function ChatBot() {
 
           {/* Input */}
           <div className="p-4 bg-white border-t border-gray-200">
+            {!selectedPatient && (
+              <div className="mb-3 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <AlertCircle size={14} />
+                <span>Sélectionnez un patient pour commencer</span>
+              </div>
+            )}
             <div className="flex gap-2">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Posez votre question médicale..."
+                placeholder={
+                  selectedPatient
+                    ? "Posez votre question médicale..."
+                    : "Sélectionnez d'abord un patient..."
+                }
                 className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[44px] max-h-32"
                 rows={1}
-                disabled={isLoading}
+                disabled={isLoading || !selectedPatient}
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || !selectedPatient}
                 className="flex-shrink-0 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-2.5 text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                 aria-label="Send message"
               >
@@ -268,7 +399,7 @@ export default function ChatBot() {
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-2 text-center">
-              Assistant IA - toujours vérifier avec un professionnel
+              MedAssist AI - Assistance médicale basée sur les données
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Activity, Heart, Thermometer, Droplets, Wind } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { getAllPatients } from "@/lib/actions/patient.actions";
+import { getAllPatientsWithAllVitals } from "@/lib/actions/patient.actions";
 
 export default async function DoctorVitalsPage() {
   const user = await getCurrentUser();
@@ -10,7 +10,7 @@ export default async function DoctorVitalsPage() {
     redirect("/login");
   }
 
-  const patients = await getAllPatients();
+  const patients = await getAllPatientsWithAllVitals();
 
   // Get all recent vitals from all patients
   const allVitals = patients

@@ -16,6 +16,7 @@ import {
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getPatientWithRelations } from "@/lib/actions/patient.actions";
 import { Badge } from "@/components/ui/badge";
+import PatientDocumentsViewer from "@/components/PatientDocumentsViewer";
 
 export default async function PatientDetailPage({
   params,
@@ -431,6 +432,12 @@ export default async function PatientDetailPage({
               </div>
             </div>
           )}
+
+          {/* Medical Documents */}
+          <PatientDocumentsViewer
+            patientId={patient.id}
+            doctorUserId={user.id}
+          />
         </div>
       </div>
     </div>

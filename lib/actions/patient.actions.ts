@@ -147,6 +147,18 @@ export async function getAllPatients(): Promise<PatientWithUser[]> {
             updatedAt: true,
           },
         },
+        vitalRecords: {
+          orderBy: { recordedAt: "desc" },
+          take: 1, // Only the most recent vital record for performance
+        },
+        alerts: {
+          where: { status: "OPEN" }, // Only active alerts
+          orderBy: { createdAt: "desc" },
+        },
+        symptoms: {
+          orderBy: { occurredAt: "desc" },
+          take: 3, // Latest 3 symptoms
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -154,6 +166,59 @@ export async function getAllPatients(): Promise<PatientWithUser[]> {
     return patients;
   } catch (error) {
     console.error("Error fetching all patients:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all patients with ALL their vital records (for vitals page)
+ */
+export async function getAllPatientsWithAllVitals(): Promise<
+  PatientWithUser[]
+> {
+  try {
+    const patients = await prisma.patient.findMany({
+      where: {
+        isActive: true,
+        user: {
+          isActive: true,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        vitalRecords: {
+          orderBy: { recordedAt: "desc" },
+          take: 100, // Last 100 vital records per patient
+        },
+        alerts: {
+          where: { status: "OPEN" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+        symptoms: {
+          orderBy: { occurredAt: "desc" },
+          take: 3,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return patients;
+  } catch (error) {
+    console.error("Error fetching patients with vitals:", error);
     return [];
   }
 }
@@ -486,7 +551,7 @@ export async function getDashboardStats() {
     // Recent symptoms count
     const symptomsToday = await prisma.symptom.count({
       where: {
-        reportedAt: {
+        occurredAt: {
           gte: startOfToday,
         },
       },

@@ -16,17 +16,18 @@ datasource db {
 // ============================================
 
 model User {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  email         String   @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  role          Role     @default(PATIENT)
-  phoneNumber   String?
-  isActive      Boolean  @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  email             String   @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  role              Role     @default(PATIENT)
+  phoneNumber       String?
+  blockchainAddress String?  // Aptos wallet address for blockchain access control
+  isActive          Boolean  @default(true)
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   patient       Patient?
@@ -72,6 +73,7 @@ model Patient {
   symptoms              Symptom[]
   alerts                Alert[]
   questionnaires        Questionnaire[]
+  medicalDocuments      MedicalDocument[]
 
   @@map("patients")
 }
@@ -282,6 +284,45 @@ model Questionnaire {
   @@index([patientId])
   @@index([completedAt])
   @@map("questionnaires")
+}
+
+// ============================================
+// MEDICAL DOCUMENTS
+// ============================================
+
+model MedicalDocument {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String         @db.ObjectId
+  fileName        String
+  originalName    String
+  fileType        String
+  fileSize        Int            // in bytes
+  category        DocumentCategory
+  description     String?
+  azureBlobUrl    String
+  azureContainerName String
+  azureBlobName   String
+  uploadedAt      DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([uploadedAt])
+  @@index([category])
+  @@map("medical_documents")
+}
+
+enum DocumentCategory {
+  ANALYSIS
+  IMAGING
+  PRESCRIPTION
+  REPORT
+  DISCHARGE_SUMMARY
+  CONSULTATION
+  OTHER
 }
 
 // ============================================

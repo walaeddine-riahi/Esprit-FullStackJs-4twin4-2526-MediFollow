@@ -1,6 +1,27 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Mark Node.js-specific modules as external for server builds
+      config.externals = config.externals || [];
+
+      // Handle got as ESM module
+      if (Array.isArray(config.externals)) {
+        config.externals.push("got");
+      } else {
+        config.externals = [...config.externals, "got"];
+      }
+    }
+    return config;
+  },
+  // Ensure experimental features are enabled for server actions
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
+};
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:

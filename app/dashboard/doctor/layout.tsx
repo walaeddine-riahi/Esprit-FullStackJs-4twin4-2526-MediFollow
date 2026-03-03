@@ -168,7 +168,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
-                Dr. {user?.firstName} {user?.lastName}
+                {user?.firstName} {user?.lastName}
               </p>
               <p className="truncate text-xs text-gray-500">{user?.email}</p>
             </div>
@@ -185,7 +185,40 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile Header - Minimal */}
+        {/* Desktop Header - Dynamic */}
+        <header className="hidden lg:flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
+          <div className="flex items-center gap-4">
+            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-sm font-bold text-white shadow-md">
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">
+                {user?.firstName} {user?.lastName}
+              </h1>
+              <p className="text-sm text-gray-500">{user?.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {user?.blockchainAddress && (
+              <div className="flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-1.5 border border-purple-200">
+                <div className="size-2 rounded-full bg-purple-600 animate-pulse"></div>
+                <span className="text-xs font-medium text-purple-900">
+                  Blockchain Active
+                </span>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <LogOut className="size-4" />
+              Déconnexion
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Header - Dynamic */}
         <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -194,13 +227,24 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
           >
             <Menu className="size-6" />
           </button>
-          <Link href="/" className="flex items-center space-x-2">
-            <Heart className="size-6 text-gray-900" />
-            <span className="text-lg font-semibold text-gray-900">
-              MediFollow
-            </span>
-          </Link>
-          <div className="size-10"></div>
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-xs font-bold text-white">
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-900">
+                {user?.firstName || "..."} {user?.lastName || "..."}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Déconnexion"
+          >
+            <LogOut className="size-5" />
+          </button>
         </header>
 
         {/* Page Content */}

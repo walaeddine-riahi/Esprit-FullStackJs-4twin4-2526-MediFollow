@@ -162,7 +162,7 @@ export default function DoctorDashboard() {
               />
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">
-              {stats?.totalAlerts || 0}
+              {stats?.total || 0}
             </p>
             <p className="text-sm text-gray-600">Total des alertes</p>
           </div>
@@ -179,7 +179,7 @@ export default function DoctorDashboard() {
               />
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">
-              {stats?.openAlerts || 0}
+              {stats?.open || 0}
             </p>
             <p className="text-sm text-gray-600">Alertes ouvertes</p>
           </div>
@@ -196,7 +196,7 @@ export default function DoctorDashboard() {
               />
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">
-              {stats?.criticalAlerts || 0}
+              {stats?.critical || 0}
             </p>
             <p className="text-sm text-gray-600">Alertes critiques</p>
           </div>
@@ -213,7 +213,7 @@ export default function DoctorDashboard() {
               />
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">
-              {stats?.resolvedAlerts || 0}
+              {stats?.resolved || 0}
             </p>
             <p className="text-sm text-gray-600">Alertes résolues</p>
           </div>

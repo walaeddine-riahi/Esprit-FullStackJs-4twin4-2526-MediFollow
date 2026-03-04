@@ -16,12 +16,15 @@ import {
   Pill,
   ClipboardList,
   FolderOpen,
+  Shield,
+  ShieldAlert,
 } from "lucide-react";
 
 import {
   getDoctorPatientDocuments,
   getDocumentDownloadUrl,
 } from "@/lib/actions/azure-storage.actions";
+import DocumentActions from "@/components/DocumentActions";
 
 interface PatientDocumentsViewerProps {
   patientId: string;
@@ -57,6 +60,7 @@ export default function PatientDocumentsViewer({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [blockchainVerified, setBlockchainVerified] = useState<boolean>(false);
 
   useEffect(() => {
     loadDocuments();
@@ -68,6 +72,7 @@ export default function PatientDocumentsViewer({
       const result = await getDoctorPatientDocuments(patientId, doctorUserId);
       if (result.success && result.data) {
         setDocuments(result.data);
+        setBlockchainVerified(result.blockchainVerified || false);
       } else {
         console.error("Error loading documents:", result.error);
       }
@@ -139,9 +144,24 @@ export default function PatientDocumentsViewer({
     <>
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Documents Médicaux
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Documents Médicaux
+            </h2>
+            {blockchainVerified ? (
+              <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
+                <Shield className="w-4 h-4" />
+                <span className="text-xs font-medium">Blockchain Activée</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full border border-yellow-200">
+                <ShieldAlert className="w-4 h-4" />
+                <span className="text-xs font-medium">
+                  Blockchain Désactivée
+                </span>
+              </div>
+            )}
+          </div>
           <span className="text-sm text-gray-500">
             {documents.length} document(s)
           </span>
@@ -239,6 +259,13 @@ export default function PatientDocumentsViewer({
                     >
                       <Download className="w-4 h-4" />
                     </button>
+                    <DocumentActions
+                      document={{
+                        id: doc.id,
+                        fileName: doc.originalName,
+                        description: doc.description || "",
+                      }}
+                    />
                   </div>
                 </div>
               );

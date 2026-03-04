@@ -297,8 +297,16 @@ export async function getDoctorPatientDocuments(
 
     // 6. Log access on blockchain (audit trail)
     if (blockchainEnabled) {
-      await logDataAccess(doctorUser.blockchainAddress!, patientId);
-      console.log(`📝 Access logged on blockchain`);
+      try {
+        await logDataAccess(doctorUser.blockchainAddress!, patientId);
+        console.log(`📝 Access logged on blockchain`);
+      } catch (logError) {
+        // Logging is non-critical - don't fail the entire operation
+        console.warn(
+          "⚠️  Failed to log access on blockchain (non-blocking):",
+          logError instanceof Error ? logError.message : logError
+        );
+      }
     }
 
     return {
@@ -363,6 +371,48 @@ export async function deleteDocument(documentId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Delete failed",
+    };
+  }
+}
+
+/**
+ * Update document metadata (filename, description)
+ */
+export async function updateDocumentMetadata(
+  documentId: string,
+  updates: {
+    fileName?: string;
+    description?: string;
+  }
+) {
+  try {
+    // Get document info
+    const document = await prisma.medicalDocument.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!document) {
+      return { success: false, error: "Document not found" };
+    }
+
+    // Update database record
+    const updatedDocument = await prisma.medicalDocument.update({
+      where: { id: documentId },
+      data: {
+        fileName: updates.fileName || document.fileName,
+        description: updates.description,
+      },
+    });
+
+    return {
+      success: true,
+      data: updatedDocument,
+    };
+  } catch (error) {
+    console.error("Error updating document:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Update failed",
     };
   }
 }

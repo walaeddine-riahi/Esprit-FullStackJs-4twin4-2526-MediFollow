@@ -22,10 +22,18 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
       oxygenSaturation: formData.get("oxygenSaturation") as string,
       weight: formData.get("weight") as string,
       notes: formData.get("notes") as string,
-      recordedAt: formData.get("recordedAt") as string,
+      recordedAt: formData.get("recordedAt") as string | null,
     };
 
-    const validated = VitalRecordSchema.parse(rawData);
+    // Convert null to undefined for optional fields so Zod treats them as missing
+    const cleanedData = Object.fromEntries(
+      Object.entries(rawData).map(([key, value]) => [
+        key,
+        value === null ? undefined : value,
+      ])
+    );
+
+    const validated = VitalRecordSchema.parse(cleanedData);
 
     // Convert string values to numbers
     const vitalData: any = {
@@ -65,6 +73,7 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
+    revalidatePath("/dashboard/doctor/vitals");
 
     return {
       success: true,
@@ -145,11 +154,81 @@ export async function deleteVitalRecord(id: string) {
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
+    revalidatePath("/dashboard/doctor/vitals");
 
     return { success: true, message: "Enregistrement supprimé" };
   } catch (error) {
     console.error("Delete vital record error:", error);
     return { success: false, error: "Erreur lors de la suppression" };
+  }
+}
+
+export async function updateVitalRecord(id: string, formData: FormData) {
+  try {
+    const rawData = {
+      systolicBP: formData.get("systolicBP") as string,
+      diastolicBP: formData.get("diastolicBP") as string,
+      heartRate: formData.get("heartRate") as string,
+      temperature: formData.get("temperature") as string,
+      oxygenSaturation: formData.get("oxygenSaturation") as string,
+      weight: formData.get("weight") as string,
+      notes: formData.get("notes") as string,
+    };
+
+    // Convert null to undefined for optional fields so Zod treats them as missing
+    const cleanedData = Object.fromEntries(
+      Object.entries(rawData).map(([key, value]) => [
+        key,
+        value === null ? undefined : value,
+      ])
+    );
+
+    const validated = VitalRecordSchema.parse(cleanedData);
+
+    // Convert string values to numbers
+    const vitalData: any = {};
+
+    if (validated.systolicBP)
+      vitalData.systolicBP = parseFloat(validated.systolicBP);
+    if (validated.diastolicBP)
+      vitalData.diastolicBP = parseFloat(validated.diastolicBP);
+    if (validated.heartRate)
+      vitalData.heartRate = parseFloat(validated.heartRate);
+    if (validated.temperature)
+      vitalData.temperature = parseFloat(validated.temperature);
+    if (validated.oxygenSaturation)
+      vitalData.oxygenSaturation = parseFloat(validated.oxygenSaturation);
+    if (validated.weight) vitalData.weight = parseFloat(validated.weight);
+    if (validated.notes !== undefined) vitalData.notes = validated.notes;
+
+    // Update vital record
+    const vitalRecord = await prisma.vitalRecord.update({
+      where: { id },
+      data: vitalData,
+      include: {
+        patient: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    // Re-check thresholds
+    await checkVitalThresholds(vitalRecord);
+
+    revalidatePath("/dashboard/patient");
+    revalidatePath("/dashboard/doctor");
+    revalidatePath("/dashboard/doctor/vitals");
+
+    return {
+      success: true,
+      message: "Constantes vitales modifiées",
+      vitalRecord,
+    };
+  } catch (error: any) {
+    console.error("Update vital record error:", error);
+    return { success: false, error: "Erreur lors de la modification" };
   }
 }
 

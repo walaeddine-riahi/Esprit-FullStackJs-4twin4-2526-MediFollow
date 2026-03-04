@@ -1,8 +1,20 @@
 import { redirect } from "next/navigation";
-import { BarChart3, TrendingUp, Users, AlertCircle } from "lucide-react";
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  AlertCircle,
+  FlaskConical,
+} from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getAllPatients } from "@/lib/actions/patient.actions";
 import { getAllAlerts } from "@/lib/actions/alert.actions";
+import { getAllMedicalAnalyses } from "@/lib/actions/analysis.actions";
+import AddAnalysisButton from "@/components/AddAnalysisButton";
+import AnalysisTableActions from "@/components/AnalysisTableActions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DoctorAnalyticsPage() {
   const user = await getCurrentUser();
@@ -13,6 +25,7 @@ export default async function DoctorAnalyticsPage() {
 
   const patients = await getAllPatients();
   const { alerts } = await getAllAlerts();
+  const { analyses } = await getAllMedicalAnalyses();
 
   // Calculate analytics
   const totalPatients = patients.length;
@@ -326,6 +339,170 @@ export default async function DoctorAnalyticsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Medical Analyses Section */}
+      <div className="mt-8 bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FlaskConical className="w-6 h-6 text-blue-600" />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Analyses Médicales
+              </h2>
+              <p className="text-sm text-gray-600">
+                Gestion des analyses de laboratoire et examens d'imagerie
+              </p>
+            </div>
+          </div>
+          <AddAnalysisButton patients={patients} />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patient
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type d'analyse
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nom du test
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Laboratoire
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Statut
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {analyses?.map((analysis: any) => {
+                const analysisTypeLabels: Record<string, string> = {
+                  BLOOD_TEST: "Test sanguin",
+                  URINE_TEST: "Test urinaire",
+                  IMAGING_XRAY: "Radiographie",
+                  IMAGING_CT_SCAN: "Scanner",
+                  IMAGING_MRI: "IRM",
+                  IMAGING_ULTRASOUND: "Échographie",
+                  IMAGING_PET_SCAN: "TEP Scan",
+                  ECG: "ECG",
+                  ECHOCARDIOGRAPHY: "Échocardiographie",
+                  SPIROMETRY: "Spirométrie",
+                  BIOPSY: "Biopsie",
+                  CULTURE: "Culture",
+                  OTHER: "Autre",
+                };
+
+                const analysisTypeLabel =
+                  analysisTypeLabels[analysis.analysisType] ||
+                  analysis.analysisType;
+
+                const statusLabels: Record<string, string> = {
+                  PENDING: "En attente",
+                  IN_PROGRESS: "En cours",
+                  COMPLETED: "Terminé",
+                  CANCELLED: "Annulé",
+                };
+
+                const statusLabel =
+                  statusLabels[analysis.status] || analysis.status;
+
+                const statusColors: Record<string, string> = {
+                  PENDING: "bg-yellow-100 text-yellow-800",
+                  IN_PROGRESS: "bg-blue-100 text-blue-800",
+                  COMPLETED: "bg-green-100 text-green-800",
+                  CANCELLED: "bg-gray-100 text-gray-800",
+                };
+
+                const statusColor =
+                  statusColors[analysis.status] || "bg-gray-100 text-gray-800";
+
+                return (
+                  <tr
+                    key={analysis.id}
+                    className={`hover:bg-gray-50 ${analysis.isAbnormal ? "bg-red-50" : ""}`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {analysis.patient.user.firstName}{" "}
+                          {analysis.patient.user.lastName}
+                        </div>
+                        {analysis.isAbnormal && (
+                          <div className="text-xs text-red-600 font-medium">
+                            ⚠️ Résultat anormal
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {analysisTypeLabel}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {analysis.testName}
+                      </div>
+                      {analysis.resultSummary && (
+                        <div className="text-xs text-gray-500 truncate max-w-xs">
+                          {analysis.resultSummary}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {new Date(analysis.analysisDate).toLocaleDateString(
+                        "fr-FR",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        }
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {analysis.laboratory || (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor}`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <AnalysisTableActions
+                        analysis={analysis}
+                        patientName={`${analysis.patient.user.firstName} ${analysis.patient.user.lastName}`}
+                        patientId={analysis.patientId}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {(!analyses || analyses.length === 0) && (
+          <div className="text-center py-12">
+            <FlaskConical className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500">Aucune analyse disponible</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Cliquez sur "Ajouter une analyse" pour commencer
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -16,18 +16,20 @@ datasource db {
 // ============================================
 
 model User {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  email             String   @unique
-  passwordHash      String
-  firstName         String
-  lastName          String
-  role              Role     @default(PATIENT)
-  phoneNumber       String?
-  blockchainAddress String?  // Aptos wallet address for blockchain access control
-  isActive          Boolean  @default(true)
-  lastLogin         DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
+  email                   String    @unique
+  passwordHash            String
+  firstName               String
+  lastName                String
+  role                    Role      @default(PATIENT)
+  phoneNumber             String?
+  blockchainAddress       String?   // Aptos wallet address for blockchain access control
+  isActive                Boolean   @default(true)
+  lastLogin               DateTime?
+  resetPasswordToken      String?   // Token for password reset
+  resetPasswordExpires    DateTime? // Expiration date for reset token
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   // Relations
   patient       Patient?
@@ -74,6 +76,7 @@ model Patient {
   alerts                Alert[]
   questionnaires        Questionnaire[]
   medicalDocuments      MedicalDocument[]
+  medicalAnalyses       MedicalAnalysis[]
 
   @@map("patients")
 }
@@ -323,6 +326,59 @@ enum DocumentCategory {
   DISCHARGE_SUMMARY
   CONSULTATION
   OTHER
+}
+
+// ============================================
+// MEDICAL ANALYSES
+// ============================================
+
+model MedicalAnalysis {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  patientId         String           @db.ObjectId
+  analysisType      AnalysisType
+  testName          String           // Ex: "Numération Formule Sanguine", "Radiographie thorax"
+  results           Json?            // Structured results (values, units, reference ranges)
+  resultSummary     String?          // Text summary of results
+  analysisDate      DateTime         @default(now())
+  laboratory        String?          // Name of lab or medical center
+  doctorNotes       String?
+  status            AnalysisStatus   @default(PENDING)
+  isAbnormal        Boolean          @default(false)
+  documentIds       String[]         @db.ObjectId // Links to MedicalDocument for PDFs/images
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([analysisDate])
+  @@index([analysisType])
+  @@index([status])
+  @@map("medical_analyses")
+}
+
+enum AnalysisType {
+  BLOOD_TEST
+  URINE_TEST
+  IMAGING_XRAY
+  IMAGING_CT_SCAN
+  IMAGING_MRI
+  IMAGING_ULTRASOUND
+  IMAGING_PET_SCAN
+  ECG
+  ECHOCARDIOGRAPHY
+  SPIROMETRY
+  BIOPSY
+  CULTURE
+  OTHER
+}
+
+enum AnalysisStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 // ============================================

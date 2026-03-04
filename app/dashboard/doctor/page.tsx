@@ -14,10 +14,11 @@ import {
   ChevronRight,
   Stethoscope,
   HeartPulse,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { getAllAlerts, getAlertStats } from "@/lib/actions/alert.actions";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
@@ -31,6 +32,31 @@ export default function DoctorDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter alerts based on search query
+  const filteredAlerts = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return recentAlerts;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return recentAlerts.filter((alert: any) => {
+      const patientName = alert.patient?.user
+        ? `${alert.patient.user.firstName} ${alert.patient.user.lastName}`.toLowerCase()
+        : "";
+      const message = alert.message?.toLowerCase() || "";
+      const severity = alert.severity?.toLowerCase() || "";
+      const status = alert.status?.toLowerCase() || "";
+
+      return (
+        patientName.includes(query) ||
+        message.includes(query) ||
+        severity.includes(query) ||
+        status.includes(query)
+      );
+    });
+  }, [recentAlerts, searchQuery]);
 
   useEffect(() => {
     loadDashboard();
@@ -102,8 +128,20 @@ export default function DoctorDashboard() {
                 <input
                   type="text"
                   placeholder="Rechercher un patient, une alerte..."
-                  className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-10 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-all"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Effacer la recherche"
+                    aria-label="Effacer la recherche"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -404,9 +442,18 @@ export default function DoctorDashboard() {
         {/* Recent Alerts - YouTube Video List Style */}
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Alertes récentes
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Alertes récentes
+              </h2>
+              {searchQuery && (
+                <span className="text-sm text-gray-500">
+                  {filteredAlerts.length} résultat
+                  {filteredAlerts.length !== 1 ? "s" : ""} trouvé
+                  {filteredAlerts.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
             <Link
               href="/dashboard/doctor/alerts"
               className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
@@ -416,21 +463,27 @@ export default function DoctorDashboard() {
             </Link>
           </div>
 
-          {recentAlerts.length === 0 ? (
+          {filteredAlerts.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
-                <CheckCircle size={32} className="text-gray-400" />
+                {searchQuery ? (
+                  <Search size={32} className="text-gray-400" />
+                ) : (
+                  <CheckCircle size={32} className="text-gray-400" />
+                )}
               </div>
               <p className="text-base font-medium text-gray-900 mb-1">
-                Aucune alerte active
+                {searchQuery ? "Aucun résultat trouvé" : "Aucune alerte active"}
               </p>
               <p className="text-sm text-gray-500">
-                Toutes les alertes sont résolues
+                {searchQuery
+                  ? "Essayez avec d'autres mots-clés"
+                  : "Toutes les alertes sont résolues"}
               </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {recentAlerts.map((alert: any) => (
+              {filteredAlerts.map((alert: any) => (
                 <Link
                   key={alert.id}
                   href={`/dashboard/doctor/alerts/${alert.id}`}

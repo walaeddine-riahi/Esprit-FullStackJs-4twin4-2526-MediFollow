@@ -10,10 +10,14 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "blockchain:test": "node scripts/test-blockchain.js",
+    "blockchain:compile": "cd aptos && aptos move compile --named-addresses medifollow_addr=0x43f2e7420983c87eb131d936c18237d68f19952aeac6fd49778c7507062347f1",
+    "blockchain:publish": "cd aptos && aptos move publish --named-addresses medifollow_addr=0x43f2e7420983c87eb131d936c18237d68f19952aeac6fd49778c7507062347f1 --assume-yes"
   },
   "dependencies": {
     "@aptos-labs/ts-sdk": "^6.1.0",
+    "@azure/communication-email": "^1.1.0",
     "@azure/storage-blob": "^12.31.0",
     "@hookform/resolvers": "^3.3.4",
     "@prisma/client": "^5.10.0",
@@ -36,6 +40,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.3.1",
+    "dotenv": "^17.3.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-tailwindcss": "^3.15.1",

@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { Activity, Heart, Thermometer, Droplets, Wind } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getAllPatientsWithAllVitals } from "@/lib/actions/patient.actions";
+import AddVitalButton from "@/components/AddVitalButton";
+import VitalsTableActions from "@/components/VitalsTableActions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DoctorVitalsPage() {
   const user = await getCurrentUser();
@@ -48,11 +53,14 @@ export default async function DoctorVitalsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Signes Vitaux</h1>
-        <p className="text-gray-600 mt-1">
-          Vue d'ensemble des signes vitaux de tous vos patients
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Signes Vitaux</h1>
+          <p className="text-gray-600 mt-1">
+            Vue d'ensemble des signes vitaux de tous vos patients
+          </p>
+        </div>
+        <AddVitalButton patients={patients} />
       </div>
 
       {/* Stats Cards */}
@@ -136,6 +144,12 @@ export default async function DoctorVitalsPage() {
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Poids (kg)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Notes
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -236,6 +250,24 @@ export default async function DoctorVitalsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
                       {vital.weight ? vital.weight.toFixed(1) : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[200px] truncate">
+                      {vital.notes ? (
+                        <span title={vital.notes} className="cursor-help">
+                          {vital.notes}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic">
+                          Aucune note
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <VitalsTableActions
+                        vital={vital}
+                        patientName={vital.patient.name}
+                        patientId={vital.patient.id}
+                      />
                     </td>
                   </tr>
                 );

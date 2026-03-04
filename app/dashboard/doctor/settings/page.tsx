@@ -1,12 +1,171 @@
-import { redirect } from "next/navigation";
-import { User, Bell, Lock, Shield, Database, Moon, Globe } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  User,
+  Bell,
+  Lock,
+  Shield,
+  Database,
+  Moon,
+  Globe,
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import {
+  updateUserProfile,
+  changePassword,
+  deactivateAccount,
+} from "@/lib/actions/settings.actions";
 
-export default async function DoctorSettingsPage() {
-  const user = await getCurrentUser();
+export default function DoctorSettingsPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!user || user.role !== "DOCTOR") {
-    redirect("/login");
+  // Profile form states
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Password form states
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Deactivate account states
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [deactivatePassword, setDeactivatePassword] = useState("");
+  const [deactivateError, setDeactivateError] = useState("");
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  async function loadUser() {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || currentUser.role !== "DOCTOR") {
+        router.push("/login");
+        return;
+      }
+      setUser(currentUser);
+    } catch (error) {
+      console.error("Load user error:", error);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleProfileSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setProfileError("");
+    setProfileSuccess("");
+    setProfileLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const result = await updateUserProfile(formData);
+
+      if (result.success) {
+        setProfileSuccess(result.message || "Profil mis à jour avec succès");
+        if (result.user) {
+          setUser({
+            ...user,
+            firstName: result.user.firstName,
+            lastName: result.user.lastName,
+            email: result.user.email,
+            phoneNumber: result.user.phoneNumber,
+          });
+        }
+      } else {
+        setProfileError(result.error || "Erreur lors de la mise à jour");
+      }
+    } catch (error) {
+      setProfileError("Une erreur est survenue");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  async function handlePasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+    setPasswordLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const result = await changePassword(formData);
+
+      if (result.success) {
+        setPasswordSuccess(
+          result.message || "Mot de passe modifié avec succès"
+        );
+        // Reset form
+        (e.target as HTMLFormElement).reset();
+      } else {
+        setPasswordError(result.error || "Erreur lors du changement");
+      }
+    } catch (error) {
+      setPasswordError("Une erreur est survenue");
+    } finally {
+      setPasswordLoading(false);
+    }
+  }
+
+  async function handleDeactivateAccount() {
+    if (!deactivatePassword) {
+      setDeactivateError("Veuillez entrer votre mot de passe");
+      return;
+    }
+
+    setDeactivateError("");
+    setDeactivateLoading(true);
+
+    const formData = new FormData();
+    formData.append("password", deactivatePassword);
+
+    try {
+      const result = await deactivateAccount(formData);
+
+      if (result.success) {
+        // Redirect to login
+        router.push("/login");
+      } else {
+        setDeactivateError(result.error || "Erreur lors de la désactivation");
+      }
+    } catch (error) {
+      setDeactivateError("Une erreur est survenue");
+    } finally {
+      setDeactivateLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 mx-auto size-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -32,83 +191,100 @@ export default async function DoctorSettingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Prénom
-            </label>
-            <input
-              type="text"
-              defaultValue={user.firstName}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {/* Profile Success/Error Messages */}
+        {profileSuccess && (
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 bg-green-50 p-4">
+            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" />
+            <p className="text-sm text-green-800">{profileSuccess}</p>
+          </div>
+        )}
+
+        {profileError && (
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
+            <p className="text-sm text-red-800">{profileError}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleProfileSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prénom
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                defaultValue={user.firstName}
+                required
+                title="Prénom"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nom
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                defaultValue={user.lastName}
+                required
+                title="Nom"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                defaultValue={user.email}
+                required
+                title="Email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Téléphone
+              </label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                defaultValue={user.phoneNumber || ""}
+                placeholder="+33 6 12 34 56 78"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nom
-            </label>
-            <input
-              type="text"
-              defaultValue={user.lastName}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                setProfileSuccess("");
+                setProfileError("");
+                loadUser();
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={profileLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {profileLoading ? "Enregistrement..." : "Enregistrer"}
+            </button>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              defaultValue={user.email}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Téléphone
-            </label>
-            <input
-              type="tel"
-              defaultValue={user.phoneNumber || ""}
-              placeholder="+33 6 12 34 56 78"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Spécialité
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: Cardiologie, Médecine Générale..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Numéro RPPS
-            </label>
-            <input
-              type="text"
-              placeholder="Numéro d'identification professionnel"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            Annuler
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Enregistrer
-          </button>
-        </div>
+        </form>
       </div>
 
       {/* Notification Settings */}
@@ -136,7 +312,12 @@ export default async function DoctorSettingsPage() {
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
+              <input
+                type="checkbox"
+                defaultChecked
+                title="Alertes Critiques"
+                className="sr-only peer"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
@@ -151,7 +332,12 @@ export default async function DoctorSettingsPage() {
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
+              <input
+                type="checkbox"
+                defaultChecked
+                title="Nouvelles Mesures Vitales"
+                className="sr-only peer"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
@@ -164,20 +350,29 @@ export default async function DoctorSettingsPage() {
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" />
+              <input
+                type="checkbox"
+                title="Alertes par Email"
+                className="sr-only peer"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">SMS d'urgence</p>
+              <p className="font-medium text-gray-900">SMS d&apos;urgence</p>
               <p className="text-sm text-gray-500">
-                Recevoir des SMS pour les situations d'urgence
+                Recevoir des SMS pour les situations d&apos;urgence
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
+              <input
+                type="checkbox"
+                defaultChecked
+                title="SMS d'urgence"
+                className="sr-only peer"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
@@ -198,45 +393,118 @@ export default async function DoctorSettingsPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mot de passe actuel
-            </label>
-            <input
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {/* Password Success/Error Messages */}
+        {passwordSuccess && (
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 bg-green-50 p-4">
+            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" />
+            <p className="text-sm text-green-800">{passwordSuccess}</p>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {passwordError && (
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
+            <p className="text-sm text-red-800">{passwordError}</p>
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordSubmit}>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nouveau mot de passe
+                Mot de passe actuel
               </label>
-              <input
-                type="password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  name="currentPassword"
+                  required
+                  title="Mot de passe actuel"
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={showCurrentPassword ? "Masquer" : "Afficher"}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmer le mot de passe
-              </label>
-              <input
-                type="password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    name="newPassword"
+                    required
+                    title="Nouveau mot de passe"
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title={showNewPassword ? "Masquer" : "Afficher"}
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    required
+                    title="Confirmer le mot de passe"
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title={showConfirmPassword ? "Masquer" : "Afficher"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Le mot de passe doit contenir au moins 8 caractères, une
+              majuscule, une minuscule, un chiffre et un caractère spécial.
+            </p>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordLoading ? "Changement..." : "Changer le mot de passe"}
+              </button>
             </div>
           </div>
-
-          <div className="flex justify-end">
-            <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-              Changer le mot de passe
-            </button>
-          </div>
-        </div>
+        </form>
 
         <div className="border-t border-gray-200 mt-6 pt-6">
           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
@@ -275,7 +543,10 @@ export default async function DoctorSettingsPage() {
               <Globe className="w-4 h-4 inline mr-2" />
               Langue
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              title="Langue"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="fr">Français</option>
               <option value="en">English</option>
               <option value="es">Español</option>
@@ -287,7 +558,10 @@ export default async function DoctorSettingsPage() {
               <Moon className="w-4 h-4 inline mr-2" />
               Thème
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              title="Thème"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="light">Clair</option>
               <option value="dark">Sombre</option>
               <option value="auto">Automatique</option>
@@ -299,7 +573,10 @@ export default async function DoctorSettingsPage() {
               <Database className="w-4 h-4 inline mr-2" />
               Format de date
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              title="Format de date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="dd/mm/yyyy">DD/MM/YYYY</option>
               <option value="mm/dd/yyyy">MM/DD/YYYY</option>
               <option value="yyyy-mm-dd">YYYY-MM-DD</option>
@@ -317,7 +594,10 @@ export default async function DoctorSettingsPage() {
           Ces actions sont irréversibles. Procédez avec prudence.
         </p>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors">
+          <button
+            onClick={() => setShowDeactivateModal(true)}
+            className="px-4 py-2 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+          >
             Désactiver le compte
           </button>
           <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
@@ -325,6 +605,79 @@ export default async function DoctorSettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Deactivate Account Modal */}
+      {showDeactivateModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeactivateModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Désactiver le compte
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Cette action peut être annulée
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-700 mb-4">
+                Votre compte sera désactivé et vous serez déconnecté. Vous
+                pourrez réactiver votre compte en vous reconnectant plus tard.
+              </p>
+
+              {deactivateError && (
+                <div className="mb-4 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
+                  <p className="text-sm text-red-800">{deactivateError}</p>
+                </div>
+              )}
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Entrez votre mot de passe pour confirmer
+              </label>
+              <input
+                type="password"
+                value={deactivatePassword}
+                onChange={(e) => setDeactivatePassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Mot de passe"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeactivateModal(false);
+                  setDeactivatePassword("");
+                  setDeactivateError("");
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={deactivateLoading}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeactivateAccount}
+                disabled={deactivateLoading || !deactivatePassword}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deactivateLoading ? "Désactivation..." : "Désactiver"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

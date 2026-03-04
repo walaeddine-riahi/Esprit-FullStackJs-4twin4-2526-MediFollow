@@ -6,14 +6,23 @@ import {
   Network,
   Account,
   Ed25519PrivateKey,
+  PrivateKey,
 } from "@aptos-labs/ts-sdk";
 
-// Initialize Aptos client
+// Check if blockchain is enabled (for development)
+const isBlockchainEnabled = process.env.BLOCKCHAIN_ENABLED !== "false";
+
+// Initialize Aptos client with custom timeout
 const config = new AptosConfig({
   network:
     process.env.BLOCKCHAIN_NETWORK === "aptos-mainnet"
       ? Network.MAINNET
       : Network.TESTNET,
+  clientConfig: {
+    HEADERS: {
+      "Content-Type": "application/json",
+    },
+  },
 });
 const aptos = new Aptos(config);
 
@@ -26,12 +35,10 @@ function getPlatformAccount(): Account {
     throw new Error("APTOS_PRIVATE_KEY not configured");
   }
 
-  // Remove 0x prefix if present
-  const cleanKey = privateKeyHex.startsWith("0x")
-    ? privateKeyHex.slice(2)
-    : privateKeyHex;
+  // Format the private key to be AIP-80 compliant
+  const formattedKey = PrivateKey.formatPrivateKey(privateKeyHex, "ed25519");
 
-  const privateKey = new Ed25519PrivateKey(cleanKey);
+  const privateKey = new Ed25519PrivateKey(formattedKey);
   return Account.fromPrivateKey({ privateKey });
 }
 
@@ -50,33 +57,69 @@ function getModuleAddress(): string {
  * Initialize the access control system on blockchain
  */
 export async function initializeAccessControl() {
+  // Check if blockchain is disabled
+  if (!isBlockchainEnabled) {
+    console.log("ℹ️ Blockchain is disabled for development");
+    return {
+      success: false,
+      error:
+        "Blockchain is disabled. Set BLOCKCHAIN_ENABLED=true in .env to enable.",
+    };
+  }
+
   try {
     const account = getPlatformAccount();
     const moduleAddress = getModuleAddress();
 
-    const transaction = await aptos.transaction.build.simple({
-      sender: account.accountAddress,
-      data: {
-        function: `${moduleAddress}::access_control::initialize`,
-        functionArguments: [],
-      },
-    });
+    // Add timeout wrapper
+    const initPromise = async () => {
+      const transaction = await aptos.transaction.build.simple({
+        sender: account.accountAddress,
+        data: {
+          function: `${moduleAddress}::access_control::initialize`,
+          functionArguments: [],
+        },
+      });
 
-    const committedTxn = await aptos.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    });
+      const committedTxn = await aptos.signAndSubmitTransaction({
+        signer: account,
+        transaction,
+      });
 
-    const executedTransaction = await aptos.waitForTransaction({
-      transactionHash: committedTxn.hash,
-    });
+      const executedTransaction = await aptos.waitForTransaction({
+        transactionHash: committedTxn.hash,
+      });
 
-    return {
-      success: true,
-      transactionHash: executedTransaction.hash,
+      return {
+        success: true,
+        transactionHash: executedTransaction.hash,
+      };
     };
+
+    // Execute with timeout (30 seconds)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Transaction timeout (30s)")), 30000)
+    );
+
+    return (await Promise.race([initPromise(), timeoutPromise])) as any;
   } catch (error) {
     console.error("Error initializing access control:", error);
+
+    // Check for network errors
+    const isNetworkError =
+      error instanceof Error &&
+      (error.message.includes("ECONNRESET") ||
+        error.message.includes("timeout") ||
+        error.message.includes("ETIMEDOUT"));
+
+    if (isNetworkError) {
+      return {
+        success: false,
+        error:
+          "Erreur réseau: Le testnet Aptos est temporairement indisponible. Veuillez réessayer dans quelques minutes ou désactivez la blockchain avec BLOCKCHAIN_ENABLED=false dans .env",
+      };
+    }
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Initialization failed",

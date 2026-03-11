@@ -64,19 +64,49 @@ export async function requestPasswordReset(formData: FormData) {
       },
     });
 
-    // Send email with reset link
-    const emailResult = await sendPasswordResetEmail({
-      email: user.email,
-      firstName: user.firstName,
-      resetToken,
-    });
+    // Send email with reset link (with timeout handling)
+    console.log(`📧 Tentative d'envoi d'email à ${user.email}...`);
+    let emailResult;
 
-    if (!emailResult.success) {
-      console.error("Failed to send reset email:", emailResult.error);
+    try {
+      emailResult = await sendPasswordResetEmail({
+        email: user.email,
+        firstName: user.firstName,
+        resetToken,
+      });
+
+      if (!emailResult.success) {
+        console.error("❌ Failed to send reset email:", emailResult.error);
+
+        // If timeout, still return success to user (token is already saved)
+        if (emailResult.error?.includes("timeout")) {
+          console.warn(
+            "⚠️  Email timeout but token saved - user can try again"
+          );
+          return {
+            success: true,
+            message:
+              "Si cette adresse email existe, vous recevrez un lien de réinitialisation.",
+          };
+        }
+
+        return {
+          success: false,
+          error:
+            "Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.",
+        };
+      }
+
+      console.log(
+        `✅ Email envoyé avec succès! Message ID: ${emailResult.messageId}`
+      );
+    } catch (error: any) {
+      console.error("❌ Email send exception:", error.message);
+      // Token is saved, so return success anyway
       return {
-        success: false,
-        error:
-          "Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.",
+        success: true,
+        message:
+          "Si cette adresse email existe, vous recevrez un lien de réinitialisation.",
       };
     }
 

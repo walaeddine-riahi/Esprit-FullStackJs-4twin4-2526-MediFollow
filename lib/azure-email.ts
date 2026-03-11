@@ -1,15 +1,37 @@
 /**
- * MediFollow - Azure Communication Services Email Utility
- * Handles email sending via Azure Communication Services
+ * MediFollow - Email Utility
+ * Handles email sending via Gmail SMTP (nodemailer)
  */
 
-import { EmailClient, EmailMessage } from "@azure/communication-email";
+import nodemailer from "nodemailer";
 
-const connectionString = process.env.AZURE_COMMUNICATION_CONNECTION_STRING!;
-const senderAddress = process.env.AZURE_COMMUNICATION_EMAIL_FROM!;
+// Gmail SMTP configuration
+const gmailEmail = process.env.GMAIL_EMAIL!;
+const gmailPassword = process.env.GMAIL_PASSWORD!;
 
 /**
- * Send email using Azure Communication Services
+ * Create nodemailer transporter for Gmail
+ */
+const createTransporter = () => {
+  if (!gmailEmail || !gmailPassword) {
+    throw new Error(
+      "Gmail configuration is missing in .env (GMAIL_EMAIL, GMAIL_PASSWORD)"
+    );
+  }
+
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: gmailEmail,
+      pass: gmailPassword,
+    },
+  });
+};
+
+/**
+ * Send email using Gmail SMTP
  */
 export async function sendEmail({
   to,
@@ -23,35 +45,30 @@ export async function sendEmail({
   text?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    if (!connectionString || !senderAddress) {
-      throw new Error(
-        "Azure Communication Services configuration is missing in .env"
-      );
-    }
+    const transporter = createTransporter();
 
-    const emailClient = new EmailClient(connectionString);
+    console.log(`📤 Envoi d'email via Gmail SMTP à ${to}...`);
 
-    const emailMessage: EmailMessage = {
-      senderAddress,
-      content: {
-        subject,
-        plainText: text || subject,
-        html,
-      },
-      recipients: {
-        to: [{ address: to }],
-      },
-    };
+    const info = await transporter.sendMail({
+      from: `"MediFollow" <${gmailEmail}>`,
+      to,
+      subject,
+      text: text || subject,
+      html,
+    });
 
-    const poller = await emailClient.beginSend(emailMessage);
-    const result = await poller.pollUntilDone();
+    console.log(`✅ Email envoyé! Message ID: ${info.messageId}`);
 
     return {
       success: true,
-      messageId: result.id,
+      messageId: info.messageId,
     };
   } catch (error: any) {
-    console.error("Azure email error:", error);
+    console.error("❌ Gmail SMTP error:", {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+    });
     return {
       success: false,
       error: error.message || "Failed to send email",
@@ -70,7 +87,7 @@ export async function sendPasswordResetEmail({
   email: string;
   firstName: string;
   resetToken: string;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password/${resetToken}`;
 
   const html = `

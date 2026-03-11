@@ -23,16 +23,19 @@ model User {
   lastName                String
   role                    Role      @default(PATIENT)
   phoneNumber             String?
-  blockchainAddress       String?   // Aptos wallet address for blockchain access control
+  blockchainAddress       String?   // Aptos wallet address (public) for blockchain access control
+  blockchainPrivateKey    String?   // Aptos wallet private key (encrypted at rest)
   isActive                Boolean   @default(true)
   lastLogin               DateTime?
   resetPasswordToken      String?   // Token for password reset
   resetPasswordExpires    DateTime? // Expiration date for reset token
+  faceDescriptor          Json?     // 128-dim float array for facial recognition login
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
   // Relations
   patient       Patient?
+  doctorProfile DoctorProfile?
   auditLogs     AuditLog[]
   alertsCreated Alert[]    @relation("AlertCreatedBy")
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
@@ -61,6 +64,8 @@ model Patient {
   bloodType             BloodType?
   address               Address?
   emergencyContact      EmergencyContact?
+  profileImage          String?   // Base64 or URL to profile image
+  bio                   String?   // Patient personal bio
   dischargeDate         DateTime?
   diagnosis             String?
   medications           Medication[]
@@ -96,6 +101,37 @@ enum BloodType {
   AB_NEGATIVE
   O_POSITIVE
   O_NEGATIVE
+}
+
+// ============================================
+// DOCTOR PROFILE
+// ============================================
+
+model DoctorProfile {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  specialty       String?
+  bio             String?
+  phone           String?
+  location        String?
+  profileImage    String?      // URL to profile image (Azure Blob Storage)
+  experiences     Experience[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("doctor_profiles")
+}
+
+type Experience {
+  title         String
+  institution   String
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean      @default(false)
+  description   String?
 }
 
 // ============================================
@@ -493,4 +529,85 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+// ============================================
+// MEDICAL FORMS (Doctor-defined checkup forms)
+// ============================================
+
+model MedicalForm {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId    String             @db.ObjectId
+  title       String
+  description String?
+  category    String?            // e.g. "Cardiologie", "Diabète", "Suivi post-op"
+  fields      MedicalFormField[]
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  checkups    PatientCheckup[]
+
+  @@index([doctorId])
+  @@index([isActive])
+  @@map("medical_forms")
+}
+
+type MedicalFormField {
+  id           String   // client-generated UUID
+  label        String
+  fieldType    String   // "text" | "number" | "textarea" | "select" | "checkbox" | "date"
+  required     Boolean  @default(false)
+  placeholder  String?
+  options      String[] // for "select" type
+  unit         String?  // for "number" e.g. "kg", "bpm"
+  order        Int      @default(0)
+}
+
+// ============================================
+// PATIENT CHECKUPS (form submissions)
+// ============================================
+
+model PatientCheckup {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  formId     String   @db.ObjectId
+  patientId  String   @db.ObjectId
+  doctorId   String   @db.ObjectId
+  answers    Json     // { fieldId: value, ... }
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  form       MedicalForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+  @@map("patient_checkups")
+}
+
+// ============================================
+// ACCESS GRANTS (Patient → Doctor blockchain permissions)
+// ============================================
+
+model AccessGrant {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String    @db.ObjectId  // User.id of patient
+  doctorId        String    @db.ObjectId  // User.id of doctor
+  durationDays    Int       @default(365)
+  grantedAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  isActive        Boolean   @default(true)
+  txHashGrant     String?   // Blockchain tx hash for grant
+  txHashRevoke    String?   // Blockchain tx hash for revoke
+
+  @@unique([patientId, doctorId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([isActive])
+  @@map("access_grants")
 }

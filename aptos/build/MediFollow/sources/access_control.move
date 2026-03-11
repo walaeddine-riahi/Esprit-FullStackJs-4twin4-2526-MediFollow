@@ -119,6 +119,7 @@ module medifollow_addr::access_control {
     }
 
     /// Check if a doctor has access to a patient's data (view function)
+    #[view]
     public fun has_access(
         registry_addr: address,
         doctor_address: address,
@@ -173,6 +174,7 @@ module medifollow_addr::access_control {
     }
 
     /// Get permission details for a specific doctor-patient pair (view function)
+    #[view]
     public fun get_permission(
         registry_addr: address,
         doctor_address: address,

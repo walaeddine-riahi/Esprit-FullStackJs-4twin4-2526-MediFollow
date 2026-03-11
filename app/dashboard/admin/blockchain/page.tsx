@@ -13,6 +13,11 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
+  Wallet,
+  Copy,
+  Check,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
@@ -41,6 +46,16 @@ export default function BlockchainAdminPage() {
   const [verifyDoctorAddress, setVerifyDoctorAddress] = useState("");
   const [verifyPatientId, setVerifyPatientId] = useState("");
 
+  // Wallet management state
+  const [walletUsers, setWalletUsers] = useState<any[]>([]);
+  const [walletStats, setWalletStats] = useState<any>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [assigningAll, setAssigningAll] = useState(false);
+  const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
+  const [walletMessage, setWalletMessage] = useState("");
+  const [walletError, setWalletError] = useState("");
+  const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+
   useEffect(() => {
     loadUser();
   }, []);
@@ -53,12 +68,85 @@ export default function BlockchainAdminPage() {
         return;
       }
       setUser(currentUser);
+      loadWalletUsers();
     } catch (error) {
       console.error("Load user error:", error);
       router.push("/login");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadWalletUsers() {
+    setWalletLoading(true);
+    try {
+      const res = await fetch("/api/blockchain/users-wallets");
+      const data = await res.json();
+      if (data.success) {
+        setWalletUsers(data.users);
+        setWalletStats(data.stats);
+      }
+    } catch {
+      // non-critical
+    } finally {
+      setWalletLoading(false);
+    }
+  }
+
+  async function handleAssignAll() {
+    setAssigningAll(true);
+    setWalletMessage("");
+    setWalletError("");
+    try {
+      const res = await fetch("/api/blockchain/assign-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWalletMessage(
+          `✅ ${data.assigned} wallet(s) créé(s), ${data.skipped} ignoré(s), ${data.errors} erreur(s)`
+        );
+        loadWalletUsers();
+      } else {
+        setWalletError(data.error || "Erreur");
+      }
+    } catch {
+      setWalletError("Erreur réseau");
+    } finally {
+      setAssigningAll(false);
+    }
+  }
+
+  async function handleAssignOne(userId: string) {
+    setAssigningUserId(userId);
+    setWalletMessage("");
+    setWalletError("");
+    try {
+      const res = await fetch("/api/blockchain/assign-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, forceRegenerate: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWalletMessage(`✅ Wallet créé : ${data.address}`);
+        loadWalletUsers();
+      } else {
+        setWalletError(data.error || "Erreur");
+      }
+    } catch {
+      setWalletError("Erreur réseau");
+    } finally {
+      setAssigningUserId(null);
+    }
+  }
+
+  function copyAddress(addr: string) {
+    navigator.clipboard.writeText(addr);
+    setCopiedAddr(addr);
+    setTimeout(() => setCopiedAddr(null), 2000);
   }
 
   async function handleInitialize() {
@@ -251,31 +339,204 @@ export default function BlockchainAdminPage() {
           </button>
         </div>
 
+        {/* Wallet Management */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Wallet className="size-5 text-indigo-600" />
+              2. Wallets Individuels
+            </h2>
+            <button
+              onClick={loadWalletUsers}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+              title="Rafraîchir"
+            >
+              <RefreshCw
+                className={`size-4 ${walletLoading ? "animate-spin" : ""}`}
+              />
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Chaque utilisateur possède un wallet Aptos unique. Les wallets sont
+            générés automatiquement à l&apos;inscription.
+          </p>
+
+          {/* Stats */}
+          {walletStats && (
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="flex flex-col items-center rounded-lg border border-gray-200 p-3">
+                <span className="text-2xl font-bold text-gray-900">
+                  {walletStats.total}
+                </span>
+                <span className="text-xs text-gray-500 mt-0.5">Total</span>
+              </div>
+              <div className="flex flex-col items-center rounded-lg border border-green-200 bg-green-50 p-3">
+                <span className="text-2xl font-bold text-green-700">
+                  {walletStats.withWallet}
+                </span>
+                <span className="text-xs text-green-600 mt-0.5">
+                  Avec wallet
+                </span>
+              </div>
+              <div className="flex flex-col items-center rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <span className="text-2xl font-bold text-orange-700">
+                  {walletStats.withoutWallet}
+                </span>
+                <span className="text-xs text-orange-600 mt-0.5">
+                  Sans wallet
+                </span>
+              </div>
+            </div>
+          )}
+
+          {walletMessage && (
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-3">
+              <CheckCircle className="mt-0.5 size-4 shrink-0 text-green-600" />
+              <p className="text-sm text-green-800">{walletMessage}</p>
+            </div>
+          )}
+          {walletError && (
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
+              <XCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
+              <p className="text-sm text-red-800">{walletError}</p>
+            </div>
+          )}
+
+          {/* Bulk assign */}
+          {walletStats?.withoutWallet > 0 && (
+            <button
+              onClick={handleAssignAll}
+              disabled={assigningAll}
+              className="mb-5 flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {assigningAll ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Wallet className="size-4" />
+              )}
+              Assigner un wallet à tous les utilisateurs sans wallet (
+              {walletStats.withoutWallet})
+            </button>
+          )}
+
+          {/* Users table */}
+          {walletLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="size-6 animate-spin text-indigo-500" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
+                    <th className="pb-2 pr-4 font-medium">Utilisateur</th>
+                    <th className="pb-2 pr-4 font-medium">Rôle</th>
+                    <th className="pb-2 pr-4 font-medium">
+                      Adresse Blockchain
+                    </th>
+                    <th className="pb-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {walletUsers.map((u) => (
+                    <tr key={u.id} className="group">
+                      <td className="py-2.5 pr-4">
+                        <p className="font-medium text-gray-900">
+                          {u.firstName} {u.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500">{u.email}</p>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            u.role === "DOCTOR"
+                              ? "bg-blue-100 text-blue-700"
+                              : u.role === "ADMIN"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {u.blockchainAddress ? (
+                          <div className="flex items-center gap-1.5">
+                            <UserCheck className="size-3.5 shrink-0 text-green-500" />
+                            <span className="font-mono text-xs text-gray-700">
+                              {u.blockchainAddress.slice(0, 10)}...
+                              {u.blockchainAddress.slice(-6)}
+                            </span>
+                            <button
+                              onClick={() => copyAddress(u.blockchainAddress)}
+                              className="rounded p-0.5 text-gray-400 hover:text-gray-700"
+                              title="Copier l'adresse complète"
+                            >
+                              {copiedAddr === u.blockchainAddress ? (
+                                <Check className="size-3.5 text-green-600" />
+                              ) : (
+                                <Copy className="size-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-orange-500">
+                            <UserX className="size-3.5" />
+                            Aucun wallet
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5">
+                        <button
+                          onClick={() => handleAssignOne(u.id)}
+                          disabled={assigningUserId === u.id}
+                          className="flex items-center gap-1 rounded-md border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                          title={
+                            u.blockchainAddress
+                              ? "Regénérer le wallet"
+                              : "Créer un wallet"
+                          }
+                        >
+                          {assigningUserId === u.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Wallet className="size-3" />
+                          )}
+                          {u.blockchainAddress ? "Regénérer" : "Créer"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Grant Access */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          {" "}
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Key className="size-5 text-blue-600" />
-            2. Accorder un Accès Docteur
+            3. Accorder un Accès Docteur
           </h2>
           <p className="text-sm text-gray-600 mb-4">
             Accorde la permission à un docteur d&apos;accéder aux données
             d&apos;un patient spécifique sur la blockchain.
           </p>
-
           {grantSuccess && (
             <div className="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
               <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" />
               <p className="text-sm text-green-800">{grantSuccess}</p>
             </div>
           )}
-
           {grantError && (
             <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
               <XCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
               <p className="text-sm text-red-800">{grantError}</p>
             </div>
           )}
-
           <form onSubmit={handleGrantAccess} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -306,11 +567,12 @@ export default function BlockchainAdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                 <Clock className="size-4" />
                 Durée (en jours)
               </label>
               <select
+                title="Durée d'accès en jours"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -347,7 +609,7 @@ export default function BlockchainAdminPage() {
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Users className="size-5 text-purple-600" />
-            3. Vérifier un Accès
+            4. Vérifier un Accès
           </h2>
           <p className="text-sm text-gray-600 mb-4">
             Vérifie si un docteur a la permission d&apos;accéder aux données

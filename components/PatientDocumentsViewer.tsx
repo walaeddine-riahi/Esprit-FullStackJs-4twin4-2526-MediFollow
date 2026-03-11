@@ -60,7 +60,10 @@ export default function PatientDocumentsViewer({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [viewingDocument, setViewingDocument] = useState<any>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
-  const [blockchainVerified, setBlockchainVerified] = useState<boolean>(false);
+  const [blockchainStatus, setBlockchainStatus] = useState<
+    "active" | "disabled" | "denied" | "error" | "db_fallback" | "loading"
+  >("loading");
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -69,14 +72,22 @@ export default function PatientDocumentsViewer({
   async function loadDocuments() {
     try {
       setLoading(true);
+      setAccessError(null);
       const result = await getDoctorPatientDocuments(patientId, doctorUserId);
       if (result.success && result.data) {
         setDocuments(result.data);
-        setBlockchainVerified(result.blockchainVerified || false);
+        setBlockchainStatus(
+          (result as any).blockchainStatus ??
+            (result.blockchainVerified ? "active" : "disabled")
+        );
       } else {
+        const status = (result as any).blockchainStatus;
+        setBlockchainStatus(status ?? "error");
+        setAccessError(result.error ?? null);
         console.error("Error loading documents:", result.error);
       }
     } catch (error) {
+      setBlockchainStatus("error");
       console.error("Error loading documents:", error);
     } finally {
       setLoading(false);
@@ -148,10 +159,25 @@ export default function PatientDocumentsViewer({
             <h2 className="text-xl font-semibold text-gray-900">
               Documents Médicaux
             </h2>
-            {blockchainVerified ? (
+            {blockchainStatus === "active" ? (
               <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
                 <Shield className="w-4 h-4" />
                 <span className="text-xs font-medium">Blockchain Activée</span>
+              </div>
+            ) : blockchainStatus === "db_fallback" ? (
+              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                <Shield className="w-4 h-4" />
+                <span className="text-xs font-medium">Accès via DB</span>
+              </div>
+            ) : blockchainStatus === "denied" ? (
+              <div className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1 rounded-full border border-red-200">
+                <ShieldAlert className="w-4 h-4" />
+                <span className="text-xs font-medium">Accès refusé</span>
+              </div>
+            ) : blockchainStatus === "error" ? (
+              <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-200">
+                <ShieldAlert className="w-4 h-4" />
+                <span className="text-xs font-medium">Erreur réseau</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full border border-yellow-200">
@@ -166,6 +192,17 @@ export default function PatientDocumentsViewer({
             {documents.length} document(s)
           </span>
         </div>
+
+        {/* Access error banner */}
+        {accessError &&
+          (blockchainStatus === "denied" || blockchainStatus === "error") && (
+            <div
+              className={`mb-4 flex items-start gap-2 rounded-lg p-3 text-sm ${blockchainStatus === "denied" ? "bg-red-50 text-red-700 border border-red-200" : "bg-orange-50 text-orange-700 border border-orange-200"}`}
+            >
+              <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{accessError}</span>
+            </div>
+          )}
 
         {/* Category Filter */}
         {categories.length > 0 && (

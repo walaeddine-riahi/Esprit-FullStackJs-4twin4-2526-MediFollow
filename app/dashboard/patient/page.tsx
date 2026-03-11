@@ -86,12 +86,12 @@ export default function PatientDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-black">
         <div className="text-center">
           <div className="relative mb-4 mx-auto">
             <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900"></div>
           </div>
-          <p className="text-sm font-medium text-gray-600">Chargement...</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Chargement...</p>
         </div>
       </div>
     );
@@ -122,9 +122,9 @@ export default function PatientDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* YouTube-style Top Bar */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center gap-6">
             {/* Search Bar */}
@@ -137,7 +137,7 @@ export default function PatientDashboard() {
                 <input
                   type="text"
                   placeholder="Rechercher dans vos données médicales..."
-                  className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-all"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-2.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:border-gray-400 dark:focus:border-gray-600 focus:bg-white dark:focus:bg-gray-800 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function PatientDashboard() {
                   <Activity size={16} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Mesures (7j)</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Mesures (7j)</p>
                   <p className="font-semibold text-gray-900">
                     {recentVitals.length}
                   </p>
@@ -161,7 +161,7 @@ export default function PatientDashboard() {
                     <AlertCircle size={16} className="text-red-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Alertes</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Alertes</p>
                     <p className="font-semibold text-gray-900">
                       {alerts.length}
                     </p>
@@ -177,10 +177,10 @@ export default function PatientDashboard() {
         {/* Welcome Section */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Bonjour, {patient?.user?.firstName || "Patient"} 👋
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Suivez vos signes vitaux et restez en bonne santé
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function PatientDashboard() {
         {/* Latest Vitals Cards - Minimal Style */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Blood Pressure */}
-          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+          <div className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
                 <Heart size={20} className="text-red-600" />
@@ -233,19 +233,19 @@ export default function PatientDashboard() {
                 className="text-gray-400 group-hover:text-gray-600 transition-colors"
               />
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.systolicBP || "--"}/
               {latestVitals?.diastolicBP || "--"}
             </p>
-            <p className="text-sm text-gray-600 mb-2">Tension artérielle</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Tension artérielle</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgSystolicBP?.toFixed(0) || "--"}/
               {stats?.avgDiastolicBP?.toFixed(0) || "--"} mmHg
             </p>
           </div>
 
           {/* Heart Rate */}
-          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+          <div className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
                 <Activity size={20} className="text-blue-600" />
@@ -255,17 +255,17 @@ export default function PatientDashboard() {
                 className="text-gray-400 group-hover:text-gray-600 transition-colors"
               />
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.heartRate || "--"}
             </p>
-            <p className="text-sm text-gray-600 mb-2">Fréquence cardiaque</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Fréquence cardiaque</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgHeartRate?.toFixed(0) || "--"} bpm
             </p>
           </div>
 
           {/* Temperature */}
-          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+          <div className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-lg bg-orange-50 flex items-center justify-center">
                 <Thermometer size={20} className="text-orange-600" />
@@ -275,17 +275,17 @@ export default function PatientDashboard() {
                 className="text-gray-400 group-hover:text-gray-600 transition-colors"
               />
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.temperature || "--"}°
             </p>
-            <p className="text-sm text-gray-600 mb-2">Température</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Température</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgTemperature?.toFixed(1) || "--"}°C
             </p>
           </div>
 
           {/* SpO2 */}
-          <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+          <div className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
                 <Wind size={20} className="text-green-600" />
@@ -295,11 +295,11 @@ export default function PatientDashboard() {
                 className="text-gray-400 group-hover:text-gray-600 transition-colors"
               />
             </div>
-            <p className="text-2xl font-bold text-gray-900 mb-1">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.oxygenSaturation || "--"}%
             </p>
-            <p className="text-sm text-gray-600 mb-2">SpO2</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">SpO2</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgOxygenSaturation?.toFixed(1) || "--"}%
             </p>
           </div>
@@ -334,9 +334,9 @@ export default function PatientDashboard() {
         </div>
 
         {/* Recent Measurements - YouTube Video List Style */}
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+          <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Mesures récentes
             </h2>
             <Link
@@ -350,7 +350,7 @@ export default function PatientDashboard() {
 
           {recentVitals.length === 0 ? (
             <div className="py-16 text-center">
-              <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 <Clock size={32} className="text-gray-400" />
               </div>
               <p className="text-base font-medium text-gray-900 mb-1">
@@ -368,7 +368,7 @@ export default function PatientDashboard() {
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {recentVitals.map((vital: any) => {
                 const hasAbnormal =
                   vital.systolicBP > 140 ||
@@ -382,7 +382,7 @@ export default function PatientDashboard() {
                 return (
                   <div
                     key={vital.id}
-                    className="group hover:bg-gray-50 transition-colors"
+                    className="group hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
                   >
                     <div className="px-6 py-4">
                       <div className="flex gap-4">
@@ -418,8 +418,8 @@ export default function PatientDashboard() {
                                 >
                                   {hasAbnormal ? "Anormal" : "Normal"}
                                 </span>
-                                <span className="text-xs text-gray-500">•</span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">•</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(vital.recordedAt)}
                                 </span>
                               </div>
@@ -458,7 +458,7 @@ export default function PatientDashboard() {
 
                             {/* More Button */}
                             <button
-                              className="p-2 rounded-full hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
+                              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
                               title="Plus d'options"
                               aria-label="Plus d'options"
                             >

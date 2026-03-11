@@ -153,17 +153,17 @@ export default function AppointmentsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 border-t-transparent mx-auto"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 dark:border-gray-400 border-t-transparent dark:border-t-transparent mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Sticky Search Bar - YouTube Style */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
@@ -176,14 +176,14 @@ export default function AppointmentsPage() {
                 placeholder="Rechercher un médecin, une spécialité..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-colors"
+                className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-2.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:border-gray-400 dark:focus:border-gray-600 focus:bg-white dark:focus:bg-gray-800 focus:outline-none transition-colors"
               />
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="rounded-full bg-blue-50 px-3 py-1.5 font-medium text-blue-700">
                 {upcomingCount} à venir
               </span>
-              <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-700">
+              <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 font-medium text-gray-700 dark:text-gray-300">
                 {completedCount} terminés
               </span>
             </div>
@@ -195,8 +195,8 @@ export default function AppointmentsPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Mes rendez-vous</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mes rendez-vous</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Gérez vos consultations et prenez rendez-vous
           </p>
         </div>
@@ -207,7 +207,7 @@ export default function AppointmentsPage() {
             onClick={() => {
               /* TODO: Open booking modal */
             }}
-            className="flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 rounded-full bg-gray-900 dark:bg-gray-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors whitespace-nowrap"
           >
             <Plus size={16} />
             Nouveau rendez-vous
@@ -216,8 +216,8 @@ export default function AppointmentsPage() {
             onClick={() => setFilterStatus("all")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filterStatus === "all"
-                ? "border-gray-900 bg-gray-100 text-gray-900"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                ? "border-gray-900 dark:border-gray-200 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             Tous
@@ -227,7 +227,7 @@ export default function AppointmentsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filterStatus === "scheduled"
                 ? "border-blue-300 bg-blue-50 text-blue-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <Clock size={16} />
@@ -238,7 +238,7 @@ export default function AppointmentsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filterStatus === "completed"
                 ? "border-green-300 bg-green-50 text-green-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <CheckCircle size={16} />
@@ -249,7 +249,7 @@ export default function AppointmentsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filterStatus === "cancelled"
                 ? "border-red-300 bg-red-50 text-red-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <XCircle size={16} />
@@ -260,9 +260,9 @@ export default function AppointmentsPage() {
         {/* Appointments List - YouTube Style */}
         <div className="space-y-3">
           {filteredAppointments.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-12 text-center">
               <Calendar className="mx-auto mb-4 text-gray-400" size={48} />
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
                 Aucun rendez-vous
               </h3>
               <p className="text-gray-600 mb-4">
@@ -270,7 +270,7 @@ export default function AppointmentsPage() {
               </p>
               <button
                 onClick={() => setFilterStatus("all")}
-                className="rounded-full bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+                className="rounded-full bg-gray-900 dark:bg-gray-700 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors"
               >
                 Voir tous les rendez-vous
               </button>
@@ -285,16 +285,16 @@ export default function AppointmentsPage() {
               return (
                 <div
                   key={appointment.id}
-                  className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer"
+                  className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
                     {/* Date Badge */}
                     <div className="flex-shrink-0">
-                      <div className="rounded-lg bg-gray-50 p-3 text-center">
-                        <div className="text-2xl font-bold text-gray-900">
+                      <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-center">
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
                           {appointmentDate.getDate()}
                         </div>
-                        <div className="text-xs font-medium text-gray-600 uppercase">
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                           {appointmentDate.toLocaleDateString("fr-FR", {
                             month: "short",
                           })}
@@ -307,10 +307,10 @@ export default function AppointmentsPage() {
                       {/* Header */}
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                             {appointment.doctor}
                           </h3>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
                             {appointment.specialty}
                           </p>
                         </div>
@@ -324,7 +324,7 @@ export default function AppointmentsPage() {
 
                       {/* Details Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Clock size={16} className="text-gray-400" />
                           <span>
                             {appointmentDate.toLocaleDateString("fr-FR", {
@@ -339,7 +339,7 @@ export default function AppointmentsPage() {
                             })}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           {appointment.type === "Téléconsultation" ? (
                             <>
                               <Video size={16} className="text-gray-400" />
@@ -358,7 +358,7 @@ export default function AppointmentsPage() {
 
                       {/* Notes */}
                       {appointment.notes && (
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                           📝 {appointment.notes}
                         </p>
                       )}
@@ -366,10 +366,10 @@ export default function AppointmentsPage() {
                       {/* Actions */}
                       {appointment.status === "scheduled" && !isPast && (
                         <div className="flex items-center gap-2">
-                          <button className="rounded-full bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 transition-colors">
+                          <button className="rounded-full bg-gray-900 dark:bg-gray-700 px-4 py-2 text-xs font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
                             Rejoindre
                           </button>
-                          <button className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                          <button className="rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             Modifier
                           </button>
                           <button className="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">

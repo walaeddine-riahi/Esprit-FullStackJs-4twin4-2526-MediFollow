@@ -15,6 +15,8 @@ import {
   generateRefreshToken,
 } from "@/lib/utils";
 import { LoginSchema, RegisterSchema } from "@/lib/validation";
+import { generateUserWallet } from "@/lib/actions/blockchain-access.actions";
+import { encryptPrivateKey } from "@/lib/encryption";
 
 export async function login(formData: FormData) {
   try {
@@ -52,13 +54,13 @@ export async function login(formData: FormData) {
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as any,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as any,
     });
 
     // Store refresh token in database
@@ -78,6 +80,14 @@ export async function login(formData: FormData) {
       where: { id: user.id },
       data: { lastLogin: new Date() },
     });
+
+    // Auto-assign blockchain wallet if the user doesn't have one yet
+    // (fire-and-forget — never fails the login)
+    if (!(user as any).blockchainAddress) {
+      import("@/lib/actions/blockchain-access.actions")
+        .then(({ assignWalletToUser }) => assignWalletToUser(user.id))
+        .catch((e) => console.error("[wallet auto-assign]", e));
+    }
 
     // Set cookies
     cookies().set("accessToken", accessToken, {
@@ -135,8 +145,11 @@ export async function register(formData: FormData) {
     // Hash password
     const passwordHash = await hashPassword(validated.password);
 
+    // Generate individual Aptos wallet for this user
+    const wallet = await generateUserWallet();
+
     // Create user (default role: PATIENT)
-    const user = await prisma.user.create({
+    const user = await (prisma as any).user.create({
       data: {
         email: validated.email,
         passwordHash,
@@ -144,6 +157,8 @@ export async function register(formData: FormData) {
         lastName: validated.lastName,
         phoneNumber: validated.phoneNumber,
         role: "PATIENT",
+        blockchainAddress: wallet.address,
+        blockchainPrivateKey: encryptPrivateKey(wallet.privateKey),
       },
     });
 
@@ -216,6 +231,8 @@ export async function getCurrentUser() {
       role: user.role,
       phoneNumber: user.phoneNumber,
       patient: user.patient,
+      hasFaceDescriptor: (user as any).faceDescriptor !== null,
+      blockchainAddress: (user as any).blockchainAddress ?? null,
     };
   } catch (error) {
     console.error("Get current user error:", error);

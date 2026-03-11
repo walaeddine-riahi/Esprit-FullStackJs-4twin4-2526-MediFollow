@@ -596,3 +596,116 @@ export async function getDashboardStats() {
     };
   }
 }
+
+/**
+ * Get patient profile data (for the profile page)
+ */
+export async function getPatientProfile(
+  userId: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const patient = await prisma.patient.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            faceDescriptor: true,
+          },
+        },
+      },
+    });
+
+    if (!patient) {
+      return { success: false, error: "Profil patient introuvable" };
+    }
+
+    return { success: true, data: patient };
+  } catch (error) {
+    console.error("Error fetching patient profile:", error);
+    return { success: false, error: "Erreur lors du chargement du profil" };
+  }
+}
+
+/**
+ * Update patient profile data
+ */
+export async function updatePatientProfile(
+  userId: string,
+  data: {
+    bio?: string;
+    phoneNumber?: string;
+    bloodType?: string;
+    address?: { street?: string; city?: string; country?: string };
+    emergencyContact?: { name?: string; phone?: string };
+    dateOfBirth?: string;
+    gender?: string;
+    profileImage?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Update patient fields
+    await prisma.patient.update({
+      where: { userId },
+      data: {
+        ...(data.bio !== undefined && { bio: data.bio }),
+        ...(data.bloodType && { bloodType: data.bloodType as any }),
+        ...(data.address && {
+          address: data.address as Prisma.InputJsonValue,
+        }),
+        ...(data.emergencyContact && {
+          emergencyContact: data.emergencyContact as Prisma.InputJsonValue,
+        }),
+        ...(data.dateOfBirth && { dateOfBirth: new Date(data.dateOfBirth) }),
+        ...(data.gender && { gender: data.gender as any }),
+        ...(data.profileImage !== undefined && {
+          profileImage: data.profileImage,
+        }),
+      },
+    });
+
+    // Update user phone number if provided
+    if (data.phoneNumber !== undefined) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { phoneNumber: data.phoneNumber },
+      });
+    }
+
+    revalidatePath("/dashboard/patient/profile");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating patient profile:", error);
+    return { success: false, error: "Erreur lors de la mise à jour du profil" };
+  }
+}
+
+/**
+ * Upload patient profile image
+ */
+export async function uploadPatientProfileImage(
+  userId: string,
+  imageData: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    await prisma.patient.update({
+      where: { userId },
+      data: { profileImage: imageData },
+    });
+
+    revalidatePath("/dashboard/patient/profile");
+
+    return { success: true, url: imageData };
+  } catch (error) {
+    console.error("Error uploading patient profile image:", error);
+    return {
+      success: false,
+      error: "Erreur lors du téléchargement de l'image",
+    };
+  }
+}

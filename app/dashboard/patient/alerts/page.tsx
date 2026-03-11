@@ -119,17 +119,17 @@ export default function PatientAlertsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 border-t-transparent mx-auto"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 dark:border-gray-400 border-t-transparent dark:border-t-transparent mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Sticky Search Bar - YouTube Style */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
@@ -142,11 +142,11 @@ export default function PatientAlertsPage() {
                 placeholder="Rechercher une alerte..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-colors"
+                className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-2.5 pl-12 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:border-gray-400 dark:focus:border-gray-600 focus:bg-white dark:focus:bg-gray-800 focus:outline-none transition-colors"
               />
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-700">
+              <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 font-medium text-gray-700 dark:text-gray-300">
                 {totalCount} alertes
               </span>
               {openCount > 0 && (
@@ -163,8 +163,8 @@ export default function PatientAlertsPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Mes alertes</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mes alertes</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Consultez l&apos;historique de vos alertes médicales
           </p>
         </div>
@@ -175,8 +175,8 @@ export default function PatientAlertsPage() {
             onClick={() => setFilter("all")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "all"
-                ? "border-gray-900 bg-gray-100 text-gray-900"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                ? "border-gray-900 dark:border-gray-200 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             Toutes
@@ -186,7 +186,7 @@ export default function PatientAlertsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "open"
                 ? "border-red-300 bg-red-50 text-red-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <AlertCircle size={16} />
@@ -197,7 +197,7 @@ export default function PatientAlertsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "acknowledged"
                 ? "border-yellow-300 bg-yellow-50 text-yellow-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <Clock size={16} />
@@ -208,7 +208,7 @@ export default function PatientAlertsPage() {
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "resolved"
                 ? "border-green-300 bg-green-50 text-green-700"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             <CheckCircle size={16} />
@@ -219,12 +219,12 @@ export default function PatientAlertsPage() {
         {/* Alerts List - YouTube Style */}
         <div className="space-y-3">
           {filteredAlerts.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-12 text-center">
               <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Aucune alerte
               </h3>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
                 {filter === "all"
                   ? "Tout va bien ! Vous n'avez pas d'alerte pour le moment."
                   : "Aucune alerte ne correspond à ce filtre."}
@@ -238,7 +238,7 @@ export default function PatientAlertsPage() {
               return (
                 <div
                   key={alert.id}
-                  className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer"
+                  className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
                     {/* Icon */}
@@ -252,14 +252,14 @@ export default function PatientAlertsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div>
-                          <h3 className="text-base font-semibold text-gray-900">
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                             {alert.alertType === "VITAL"
                               ? "Alerte Signes Vitaux"
                               : alert.alertType === "SYMPTOM"
                                 ? "Alerte Symptôme"
                                 : "Alerte Système"}
                           </h3>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {alert.message}
                           </p>
                         </div>
@@ -278,7 +278,7 @@ export default function PatientAlertsPage() {
                       </div>
 
                       {/* Timestamps */}
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
                           Créée: {formatDateTime(alert.createdAt)}
@@ -309,7 +309,7 @@ export default function PatientAlertsPage() {
 
                       {/* Data Details */}
                       {alert.data && (
-                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                        <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
                           <p className="text-xs font-medium text-gray-900 mb-2">
                             Détails:
                           </p>

@@ -91,13 +91,13 @@ export default function NewVitalRecordPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-black">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-50">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
             <Save className="text-green-600" size={32} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Enregistré !</h2>
-          <p className="mt-2 text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enregistré !</h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Vos signes vitaux ont été enregistrés avec succès
           </p>
         </div>
@@ -106,9 +106,9 @@ export default function NewVitalRecordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex items-center gap-4">
             <Link
@@ -118,10 +118,10 @@ export default function NewVitalRecordPage() {
               <ArrowLeft size={24} />
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Enregistrer les signes vitaux
               </h1>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Remplissez les mesures que vous avez prises
               </p>
             </div>
@@ -141,7 +141,7 @@ export default function NewVitalRecordPage() {
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-gray-200 bg-white p-8"
+          className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8"
         >
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Systolic BP */}
@@ -158,7 +158,7 @@ export default function NewVitalRecordPage() {
                 name="systolicBP"
                 value={formData.systolicBP}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-gray-400 focus:outline-none transition-colors"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                 placeholder="120"
                 step="1"
                 min="50"
@@ -180,7 +180,7 @@ export default function NewVitalRecordPage() {
                 name="diastolicBP"
                 value={formData.diastolicBP}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="80"
                 step="1"
                 min="30"
@@ -202,7 +202,7 @@ export default function NewVitalRecordPage() {
                 name="heartRate"
                 value={formData.heartRate}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="70"
                 step="1"
                 min="30"
@@ -224,7 +224,7 @@ export default function NewVitalRecordPage() {
                 name="temperature"
                 value={formData.temperature}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="36.5"
                 step="0.1"
                 min="34"
@@ -246,7 +246,7 @@ export default function NewVitalRecordPage() {
                 name="oxygenSaturation"
                 value={formData.oxygenSaturation}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="98"
                 step="1"
                 min="70"
@@ -268,7 +268,7 @@ export default function NewVitalRecordPage() {
                 name="weight"
                 value={formData.weight}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="70"
                 step="0.1"
                 min="30"
@@ -290,7 +290,7 @@ export default function NewVitalRecordPage() {
                 name="recordedAt"
                 value={formData.recordedAt}
                 onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
               />
             </div>
 
@@ -308,7 +308,7 @@ export default function NewVitalRecordPage() {
                 value={formData.notes}
                 onChange={handleChange}
                 rows={4}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                 placeholder="Ajoutez des notes sur votre état général, symptômes, etc."
               />
             </div>
@@ -319,7 +319,7 @@ export default function NewVitalRecordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-full bg-gray-900 px-6 py-3 font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 rounded-full bg-gray-900 dark:bg-gray-700 px-6 py-3 font-medium text-white transition hover:bg-gray-800 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -335,7 +335,7 @@ export default function NewVitalRecordPage() {
             </button>
             <Link
               href="/dashboard/patient"
-              className="rounded-full border border-gray-200 bg-white px-6 py-3 font-medium text-gray-700 transition hover:bg-gray-50 flex items-center justify-center"
+              className="rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-3 font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center"
             >
               Annuler
             </Link>

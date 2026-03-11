@@ -12,6 +12,11 @@ import {
   UserCircle,
   ChevronDown,
   AlertCircle,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Zap,
 } from "lucide-react";
 import {
   getPatientMedicalContext,
@@ -31,7 +36,15 @@ interface PatientOption {
   alertesActives: number;
 }
 
-export default function ChatBot() {
+export default function ChatBot({
+  forceOpen,
+  startInVoiceMode,
+  onClose,
+}: {
+  forceOpen?: boolean;
+  startInVoiceMode?: boolean;
+  onClose?: () => void;
+} = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -40,8 +53,23 @@ export default function ChatBot() {
   const [patientContext, setPatientContext] = useState<any>(null);
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  // Voice assistant state
+  const [isVoiceMode, setIsVoiceMode] = useState(startInVoiceMode ?? false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceAutoSpeak, setVoiceAutoSpeak] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // React to external forceOpen + startInVoiceMode changes
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true);
+      if (startInVoiceMode !== undefined) setIsVoiceMode(startInVoiceMode);
+      onClose?.(); // reset the trigger in the parent immediately
+    }
+  }, [forceOpen, startInVoiceMode]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -72,6 +100,58 @@ export default function ChatBot() {
       }
     } catch (error) {
       console.error("Error loading patients:", error);
+    }
+  };
+
+  // Setup Web Speech API recognition
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+  }, []);
+
+  const handleVoiceInput = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const speakText = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "fr-FR";
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
     }
   };
 
@@ -114,8 +194,11 @@ export default function ChatBot() {
     setInput("");
     setIsLoading(true);
 
+    // Use Jarvis (HuggingFace) in voice mode, Azure OpenAI otherwise
+    const apiEndpoint = isVoiceMode ? "/api/jarvis" : "/api/chatbot";
+
     try {
-      const response = await fetch("/api/chatbot", {
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +207,7 @@ export default function ChatBot() {
           messages: messages
             .concat(userMessage)
             .map(({ role, content }) => ({ role, content })),
-          patientContext: patientContext, // Send patient context
+          patientContext: patientContext,
         }),
       });
 
@@ -141,6 +224,11 @@ export default function ChatBot() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Auto-speak response when in voice mode with auto-speak enabled
+      if (isVoiceMode && voiceAutoSpeak) {
+        speakText(data.message);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMessage: Message = {
@@ -162,8 +250,9 @@ export default function ChatBot() {
     }
   };
 
-  const welcomeMessage =
-    "Bonjour! 👋 Je suis MedAssist AI, votre assistant médical intelligent. Sélectionnez un patient pour que je puisse accéder à son dossier médical et vous assister avec l'analyse de ses données cliniques.";
+  const welcomeMessage = isVoiceMode
+    ? "Bonjour! 🎙️ Je suis Jarvis, votre assistant vocal médical. Utilisez le microphone ou tapez votre question. Sélectionnez un patient pour accéder à son dossier."
+    : "Bonjour! 👋 Je suis MedAssist AI, votre assistant médical intelligent. Sélectionnez un patient pour que je puisse accéder à son dossier médical et vous assister avec l'analyse de ses données cliniques.";
 
   const selectedPatientData = patients.find((p) => p.id === selectedPatient);
 
@@ -173,8 +262,8 @@ export default function ChatBot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center"
-          aria-label="Open MedAssist AI"
+          className="fixed bottom-6 right-6 z-50 group h-14 w-14 rounded-full bg-gradient-to-r from-green-600 to-green-700 text-white shadow-xl hover:shadow-2xl hover:shadow-green-500/20 transition-all duration-300 hover:scale-110 flex items-center justify-center"
+          aria-label="Open MedAssist AI / Jarvis"
         >
           <div className="relative">
             <Bot
@@ -192,8 +281,8 @@ export default function ChatBot() {
       {/* Chat Window */}
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col w-96 h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-          {/* Header */}
-          <div className="flex flex-col bg-gradient-to-r from-blue-600 to-purple-600">
+          {/* Header - Kick Style */}
+          <div className="flex flex-col bg-gradient-to-r from-green-600 to-green-700">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -204,24 +293,84 @@ export default function ChatBot() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-white">MedAssist AI</h3>
-                    <Sparkles
-                      size={14}
-                      className="text-yellow-300 animate-pulse"
-                    />
+                    <h3 className="font-semibold text-white">
+                      {isVoiceMode ? "Jarvis" : "MedAssist AI"}
+                    </h3>
+                    {isVoiceMode ? (
+                      <Zap
+                        size={14}
+                        className="text-yellow-300 animate-pulse"
+                      />
+                    ) : (
+                      <Sparkles
+                        size={14}
+                        className="text-green-300 animate-pulse"
+                      />
+                    )}
                   </div>
-                  <p className="text-xs text-blue-100">
-                    Assistant médical intelligent
+                  <p className="text-xs text-green-100">
+                    {isVoiceMode
+                      ? "Assistant vocal Jarvis-3B"
+                      : "Assistant médical intelligent"}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="rounded-lg p-1.5 text-white hover:bg-white/20 transition-colors"
-                aria-label="Close chat"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Voice mode toggle */}
+                <button
+                  onClick={() => {
+                    setIsVoiceMode((v) => !v);
+                    stopSpeaking();
+                  }}
+                  className={`rounded-lg p-1.5 transition-colors ${
+                    isVoiceMode
+                      ? "bg-yellow-400/30 text-yellow-200 hover:bg-yellow-400/40"
+                      : "text-white hover:bg-white/20"
+                  }`}
+                  title={
+                    isVoiceMode ? "Désactiver Jarvis" : "Activer Jarvis (vocal)"
+                  }
+                  aria-label="Toggle Jarvis voice mode"
+                >
+                  <Mic size={18} />
+                </button>
+                {/* Auto-speak toggle (only visible in voice mode) */}
+                {isVoiceMode && (
+                  <button
+                    onClick={() => {
+                      setVoiceAutoSpeak((v) => !v);
+                      if (isSpeaking) stopSpeaking();
+                    }}
+                    className={`rounded-lg p-1.5 transition-colors ${
+                      voiceAutoSpeak
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:bg-white/10"
+                    }`}
+                    title={
+                      voiceAutoSpeak
+                        ? "Désactiver la lecture vocale"
+                        : "Activer la lecture vocale"
+                    }
+                    aria-label="Toggle auto-speak"
+                  >
+                    {voiceAutoSpeak ? (
+                      <Volume2 size={18} />
+                    ) : (
+                      <VolumeX size={18} />
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    stopSpeaking();
+                  }}
+                  className="rounded-lg p-1.5 text-white hover:bg-white/20 transition-colors"
+                  aria-label="Close chat"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Patient Selector */}
@@ -284,7 +433,7 @@ export default function ChatBot() {
             {/* Welcome Message */}
             {messages.length === 0 && (
               <div className="flex gap-3 items-start animate-fade-in">
-                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-green-600 to-green-700 flex items-center justify-center">
                   <Bot size={16} className="text-white" />
                 </div>
                 <div className="flex-1 bg-white rounded-2xl rounded-tl-none p-4 shadow-sm border border-gray-100">
@@ -307,7 +456,7 @@ export default function ChatBot() {
                   className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
                     message.role === "user"
                       ? "bg-gray-900"
-                      : "bg-gradient-to-r from-blue-500 to-purple-500"
+                      : "bg-gradient-to-r from-green-600 to-green-700"
                   }`}
                 >
                   {message.role === "user" ? (
@@ -345,12 +494,15 @@ export default function ChatBot() {
             {/* Loading */}
             {isLoading && (
               <div className="flex gap-3 items-start">
-                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-green-600 to-green-700 flex items-center justify-center">
                   <Bot size={16} className="text-white" />
                 </div>
                 <div className="flex-1 bg-white rounded-2xl rounded-tl-none p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-2">
-                    <Loader2 size={16} className="animate-spin text-blue-600" />
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-green-600"
+                    />
                     <span className="text-sm text-gray-500">
                       Analyse en cours...
                     </span>
@@ -371,24 +523,61 @@ export default function ChatBot() {
               </div>
             )}
             <div className="flex gap-2">
+              {/* Mic button — voice mode only */}
+              {isVoiceMode && (
+                <button
+                  onClick={handleVoiceInput}
+                  disabled={
+                    isLoading || !selectedPatient || !recognitionRef.current
+                  }
+                  className={`flex-shrink-0 rounded-lg p-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isListening
+                      ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                  aria-label={
+                    isListening ? "Arrêter l'écoute" : "Parler à Jarvis"
+                  }
+                  title={isListening ? "Arrêter l'écoute" : "Parler à Jarvis"}
+                >
+                  {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+              )}
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  selectedPatient
-                    ? "Posez votre question médicale..."
-                    : "Sélectionnez d'abord un patient..."
+                  isVoiceMode && isListening
+                    ? "Écoute en cours..."
+                    : selectedPatient
+                      ? isVoiceMode
+                        ? "Parlez ou tapez votre question..."
+                        : "Posez votre question médicale..."
+                      : "Sélectionnez d'abord un patient..."
                 }
-                className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[44px] max-h-32"
+                className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 min-h-[44px] max-h-32"
                 rows={1}
-                disabled={isLoading || !selectedPatient}
+                disabled={isLoading || !selectedPatient || isListening}
               />
+              {/* Stop speaking button */}
+              {isSpeaking && (
+                <button
+                  onClick={stopSpeaking}
+                  className="flex-shrink-0 rounded-lg bg-orange-500 p-2.5 text-white hover:bg-orange-600 transition-all"
+                  aria-label="Arrêter la lecture"
+                  title="Arrêter la lecture"
+                >
+                  <VolumeX size={20} />
+                </button>
+              )}
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading || !selectedPatient}
-                className="flex-shrink-0 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-2.5 text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                disabled={
+                  !input.trim() || isLoading || !selectedPatient || isListening
+                }
+                className="flex-shrink-0 rounded-lg bg-gradient-to-r from-green-600 to-green-700 p-2.5 text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                 aria-label="Send message"
               >
                 {isLoading ? (
@@ -399,7 +588,9 @@ export default function ChatBot() {
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-2 text-center">
-              MedAssist AI - Assistance médicale basée sur les données
+              {isVoiceMode
+                ? "Jarvis — Propulsé par Jarvis-3B (HuggingFace)"
+                : "MedAssist AI — Assistance médicale basée sur les données"}
             </p>
           </div>
         </div>

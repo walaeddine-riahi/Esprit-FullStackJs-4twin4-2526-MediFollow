@@ -159,20 +159,20 @@ export default function SettingsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 border-t-transparent mx-auto"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 dark:border-gray-400 border-t-transparent dark:border-t-transparent mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="mx-auto max-w-7xl px-6 py-8">
-          <h1 className="text-3xl font-bold text-gray-900">Paramètres</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Paramètres</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Gérez votre profil et vos préférences
           </p>
         </div>
@@ -202,8 +202,8 @@ export default function SettingsPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
                       activeTab === tab.id
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-700 hover:bg-gray-50"
+                        ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}
                   >
                     <Icon size={20} />
@@ -218,24 +218,24 @@ export default function SettingsPage() {
           <div className="flex-1">
             {/* Profile Tab */}
             {activeTab === "profile" && (
-              <div className="rounded-xl border border-gray-200 bg-white p-8">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
                 <div className="mb-6 flex items-center gap-4">
-                  <div className="h-20 w-20 rounded-full bg-gray-900 flex items-center justify-center text-2xl font-bold text-white">
+                  <div className="h-20 w-20 rounded-full bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold text-white">
                     {profileData.firstName[0]}
                     {profileData.lastName[0]}
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                       {profileData.firstName} {profileData.lastName}
                     </h2>
-                    <p className="text-gray-600">{profileData.email}</p>
+                    <p className="text-gray-600 dark:text-gray-400">{profileData.email}</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleSaveProfile} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Prénom
                       </label>
                       <input
@@ -243,11 +243,11 @@ export default function SettingsPage() {
                         name="firstName"
                         value={profileData.firstName}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Nom
                       </label>
                       <input
@@ -255,11 +255,11 @@ export default function SettingsPage() {
                         name="lastName"
                         value={profileData.lastName}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Email
                       </label>
                       <input
@@ -267,11 +267,11 @@ export default function SettingsPage() {
                         name="email"
                         value={profileData.email}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Téléphone
                       </label>
                       <input
@@ -279,11 +279,11 @@ export default function SettingsPage() {
                         name="phone"
                         value={profileData.phone}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Date de naissance
                       </label>
                       <input
@@ -291,18 +291,18 @@ export default function SettingsPage() {
                         name="dateOfBirth"
                         value={profileData.dateOfBirth}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Groupe sanguin
                       </label>
                       <select
                         name="bloodType"
                         value={profileData.bloodType}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       >
                         <option value="">Sélectionner</option>
                         <option value="A+">A+</option>
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                       </select>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Adresse
                       </label>
                       <input
@@ -324,11 +324,11 @@ export default function SettingsPage() {
                         name="address"
                         value={profileData.address}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Contact d&apos;urgence
                       </label>
                       <input
@@ -336,11 +336,11 @@ export default function SettingsPage() {
                         name="emergencyContact"
                         value={profileData.emergencyContact}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Téléphone d&apos;urgence
                       </label>
                       <input
@@ -348,7 +348,7 @@ export default function SettingsPage() {
                         name="emergencyPhone"
                         value={profileData.emergencyPhone}
                         onChange={handleProfileChange}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-gray-400 focus:outline-none transition-colors"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2.5 focus:border-gray-400 dark:focus:border-gray-600 focus:outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex items-center gap-2 rounded-full bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-full bg-gray-900 dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                     >
                       <Save size={16} />
                       {saving ? "Enregistrement..." : "Enregistrer"}
@@ -375,8 +375,8 @@ export default function SettingsPage() {
 
             {/* Notifications Tab */}
             {activeTab === "notifications" && (
-              <div className="rounded-xl border border-gray-200 bg-white p-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   Préférences de notification
                 </h2>
 
@@ -387,7 +387,7 @@ export default function SettingsPage() {
                       className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0"
                     >
                       <div>
-                        <h3 className="text-sm font-medium text-gray-900">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                           {key === "emailAlerts" && "Alertes par email"}
                           {key === "smsAlerts" && "Alertes par SMS"}
                           {key === "appointmentReminders" &&
@@ -395,13 +395,13 @@ export default function SettingsPage() {
                           {key === "vitalAlerts" && "Alertes signes vitaux"}
                           {key === "medicalReports" && "Rapports médicaux"}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           Recevoir des notifications pour cette catégorie
                         </p>
                       </div>
                       <button
                         onClick={() => handleNotificationChange(key)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors dark:opacity-90 ${
                           value ? "bg-gray-900" : "bg-gray-300"
                         }`}
                       >
@@ -419,7 +419,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleSaveNotifications}
                     disabled={saving}
-                    className="flex items-center gap-2 rounded-full bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-full bg-gray-900 dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                   >
                     <Save size={16} />
                     {saving ? "Enregistrement..." : "Enregistrer"}
@@ -430,38 +430,38 @@ export default function SettingsPage() {
 
             {/* Security Tab */}
             {activeTab === "security" && (
-              <div className="rounded-xl border border-gray-200 bg-white p-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   Sécurité
                 </h2>
 
                 <div className="space-y-6">
-                  <div className="rounded-lg border border-gray-200 p-6">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-900 p-6">
                     <div className="flex items-start gap-4">
                       <Lock className="text-gray-600 mt-1" size={20} />
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-900 mb-1">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                           Modifier le mot de passe
                         </h3>
-                        <p className="text-sm text-gray-600 mb-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                           Changez votre mot de passe régulièrement pour plus de
                           sécurité
                         </p>
-                        <button className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors">
+                        <button className="rounded-full bg-gray-900 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
                           Changer le mot de passe
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 p-6">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-900 p-6">
                     <div className="flex items-start gap-4">
                       <Shield className="text-gray-600 mt-1" size={20} />
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-900 mb-1">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                           Authentification à deux facteurs
                         </h3>
-                        <p className="text-sm text-gray-600 mb-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                           Ajoutez une couche de sécurité supplémentaire
                         </p>
                         <button className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -476,29 +476,29 @@ export default function SettingsPage() {
 
             {/* Privacy Tab */}
             {activeTab === "privacy" && (
-              <div className="rounded-xl border border-gray-200 bg-white p-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   Confidentialité
                 </h2>
 
                 <div className="space-y-6">
-                  <div className="rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-sm font-medium text-gray-900 mb-4">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-900 p-6">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
                       Partage des données médicales
                     </h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Contrôlez qui peut accéder à vos informations médicales
                     </p>
-                    <button className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors">
+                    <button className="rounded-full bg-gray-900 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
                       Gérer les autorisations
                     </button>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-sm font-medium text-gray-900 mb-4">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 dark:bg-gray-900 p-6">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
                       Télécharger mes données
                     </h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Obtenez une copie de toutes vos données médicales
                     </p>
                     <button className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">

@@ -228,7 +228,7 @@ export async function getDoctorPatientDocuments(
 ) {
   try {
     // 1. Verify the doctor user exists and has DOCTOR role
-    const doctorUser = await prisma.user.findUnique({
+    const doctorUser = await (prisma as any).user.findUnique({
       where: { id: doctorUserId },
     });
 
@@ -240,37 +240,114 @@ export async function getDoctorPatientDocuments(
     }
 
     // 2. Check if blockchain verification is enabled
-    const blockchainEnabled =
+    const blockchainConfigured = !!(
       process.env.APTOS_PRIVATE_KEY &&
       process.env.APTOS_ACCOUNT_ADDRESS &&
-      doctorUser.blockchainAddress;
+      doctorUser.blockchainAddress
+    );
 
-    if (blockchainEnabled) {
+    let blockchainVerifiedStatus:
+      | "active"
+      | "disabled"
+      | "denied"
+      | "error"
+      | "db_fallback" = "disabled";
+
+    if (blockchainConfigured) {
       // 3. Verify access on blockchain
       console.log(
         `🔐 Verifying blockchain access for doctor ${doctorUser.blockchainAddress} to patient ${patientId}`
       );
 
       const accessCheck = await verifyDoctorAccess(
-        doctorUser.blockchainAddress!,
+        doctorUser.blockchainAddress,
         patientId
       );
 
-      if (!accessCheck.hasAccess) {
-        console.warn(
-          `❌ Blockchain access denied for doctor ${doctorUser.email}`
+      if (accessCheck.hasAccess) {
+        console.log(
+          `✅ Blockchain access verified for doctor ${doctorUser.email}`
         );
-        return {
-          success: false,
-          error:
-            "Blockchain access verification failed. You don't have permission to view this patient's data.",
-          blockchainError: accessCheck.error,
-        };
-      }
+        blockchainVerifiedStatus = "active";
+      } else {
+        // Blockchain denied or network error — check DB AccessGrant as fallback
+        console.warn(
+          `⚠️  Blockchain check failed/denied: ${accessCheck.error}`
+        );
 
-      console.log(
-        `✅ Blockchain access verified for doctor ${doctorUser.email}`
-      );
+        const isNetworkError =
+          accessCheck.error &&
+          (accessCheck.error.includes("ECONNRESET") ||
+            accessCheck.error.includes("timeout") ||
+            accessCheck.error.includes("ETIMEDOUT") ||
+            accessCheck.error.includes("fetch") ||
+            accessCheck.error.includes("network") ||
+            accessCheck.error.includes("Verification failed") ||
+            accessCheck.error.includes("ENOTFOUND") ||
+            accessCheck.error.includes("socket") ||
+            accessCheck.error.includes("stream") ||
+            accessCheck.error.includes("destroyed") ||
+            accessCheck.error.includes("ERR_STREAM") ||
+            accessCheck.error.includes("cancel") ||
+            accessCheck.error.includes("settled") ||
+            accessCheck.error.includes("RequestError"));
+
+        // Check DB AccessGrant table as fallback
+        const dbGrant = await (prisma as any).accessGrant
+          .findUnique({
+            where: {
+              patientId_doctorId: {
+                patientId: doctorUser.id,
+                doctorId: doctorUserId,
+              },
+            },
+          })
+          .catch(() => null);
+
+        // Also try with patientId as User.id (patient user) mapped from Patient model
+        const patientRecord = await prisma.patient
+          .findUnique({
+            where: { id: patientId },
+            select: { userId: true },
+          })
+          .catch(() => null);
+
+        const dbGrantByUser = patientRecord
+          ? await (prisma as any).accessGrant
+              .findUnique({
+                where: {
+                  patientId_doctorId: {
+                    patientId: patientRecord.userId,
+                    doctorId: doctorUserId,
+                  },
+                },
+              })
+              .catch(() => null)
+          : null;
+
+        const activeGrant =
+          (dbGrant?.isActive &&
+            (!dbGrant.expiresAt || new Date(dbGrant.expiresAt) > new Date())) ||
+          (dbGrantByUser?.isActive &&
+            (!dbGrantByUser.expiresAt ||
+              new Date(dbGrantByUser.expiresAt) > new Date()));
+
+        if (activeGrant) {
+          console.log(`✅ DB fallback: doctor has active access grant`);
+          blockchainVerifiedStatus = isNetworkError
+            ? "db_fallback"
+            : "db_fallback";
+        } else {
+          blockchainVerifiedStatus = isNetworkError ? "error" : "denied";
+          return {
+            success: false,
+            error: isNetworkError
+              ? "Le réseau blockchain est temporairement indisponible et aucun accès DB trouvé."
+              : "Accès refusé — le patient n'a pas encore accordé l'accès blockchain.",
+            blockchainStatus: blockchainVerifiedStatus,
+          };
+        }
+      }
     } else {
       console.warn(
         "⚠️  Blockchain verification disabled - using database-only check"
@@ -296,9 +373,9 @@ export async function getDoctorPatientDocuments(
     });
 
     // 6. Log access on blockchain (audit trail)
-    if (blockchainEnabled) {
+    if (blockchainVerifiedStatus === "active" && doctorUser.blockchainAddress) {
       try {
-        await logDataAccess(doctorUser.blockchainAddress!, patientId);
+        await logDataAccess(doctorUser.blockchainAddress, patientId);
         console.log(`📝 Access logged on blockchain`);
       } catch (logError) {
         // Logging is non-critical - don't fail the entire operation
@@ -312,7 +389,8 @@ export async function getDoctorPatientDocuments(
     return {
       success: true,
       data: documents,
-      blockchainVerified: blockchainEnabled,
+      blockchainVerified: blockchainVerifiedStatus === "active",
+      blockchainStatus: blockchainVerifiedStatus,
     };
   } catch (error) {
     console.error("Error fetching patient documents:", error);

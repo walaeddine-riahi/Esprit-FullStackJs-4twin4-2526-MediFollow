@@ -22,6 +22,7 @@ const config = {
     extend: {
       colors: {
         green: {
+          400: "#53FC18", // Kick bright neon green
           500: "#24AE7C",
           600: "#0D2A1F",
         },

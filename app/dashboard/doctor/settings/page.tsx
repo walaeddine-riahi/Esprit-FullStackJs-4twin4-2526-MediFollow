@@ -157,8 +157,8 @@ export default function DoctorSettingsPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 mx-auto size-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
-          <p className="text-gray-600">Chargement...</p>
+          <div className="mb-4 mx-auto size-12 animate-spin rounded-full border-4 border-gray-200 dark:border-gray-700 border-t-blue-600 dark:border-t-green-400"></div>
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
         </div>
       </div>
     );
@@ -171,21 +171,25 @@ export default function DoctorSettingsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Paramètres</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          Paramètres
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Gérez vos préférences et votre compte
         </p>
       </div>
 
       {/* Profile Settings */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <User className="w-6 h-6 text-blue-600" />
+          <div className="w-12 h-12 bg-blue-100 dark:bg-green-500/10 rounded-lg flex items-center justify-center">
+            <User className="w-6 h-6 text-blue-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Profil</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Profil
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Informations personnelles et professionnelles
             </p>
           </div>
@@ -193,23 +197,27 @@ export default function DoctorSettingsPage() {
 
         {/* Profile Success/Error Messages */}
         {profileSuccess && (
-          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 bg-green-50 p-4">
-            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" />
-            <p className="text-sm text-green-800">{profileSuccess}</p>
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-4">
+            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+            <p className="text-sm text-green-800 dark:text-green-300">
+              {profileSuccess}
+            </p>
           </div>
         )}
 
         {profileError && (
-          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
-            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
-            <p className="text-sm text-red-800">{profileError}</p>
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-4">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600 dark:text-red-400" />
+            <p className="text-sm text-red-800 dark:text-red-300">
+              {profileError}
+            </p>
           </div>
         )}
 
         <form onSubmit={handleProfileSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Prénom
               </label>
               <input
@@ -218,12 +226,12 @@ export default function DoctorSettingsPage() {
                 defaultValue={user.firstName}
                 required
                 title="Prénom"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nom
               </label>
               <input
@@ -232,12 +240,12 @@ export default function DoctorSettingsPage() {
                 defaultValue={user.lastName}
                 required
                 title="Nom"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
@@ -246,12 +254,12 @@ export default function DoctorSettingsPage() {
                 defaultValue={user.email}
                 required
                 title="Email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Téléphone
               </label>
               <input
@@ -259,7 +267,7 @@ export default function DoctorSettingsPage() {
                 name="phoneNumber"
                 defaultValue={user.phoneNumber || ""}
                 placeholder="+33 6 12 34 56 78"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
               />
             </div>
           </div>
@@ -272,14 +280,14 @@ export default function DoctorSettingsPage() {
                 setProfileError("");
                 loadUser();
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={profileLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 dark:bg-green-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {profileLoading ? "Enregistrement..." : "Enregistrer"}
             </button>
@@ -288,26 +296,28 @@ export default function DoctorSettingsPage() {
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <Bell className="w-6 h-6 text-green-600" />
+          <div className="w-12 h-12 bg-green-100 dark:bg-green-500/10 rounded-lg flex items-center justify-center">
+            <Bell className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Notifications
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Gérez vos préférences de notification
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">Alertes Critiques</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-gray-900 dark:text-white">
+                Alertes Critiques
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Recevoir les notifications pour les alertes critiques
               </p>
             </div>
@@ -318,16 +328,16 @@ export default function DoctorSettingsPage() {
                 title="Alertes Critiques"
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-green-600"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 Nouvelles Mesures Vitales
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Notification quand un patient entre de nouvelles mesures
               </p>
             </div>
@@ -338,14 +348,16 @@ export default function DoctorSettingsPage() {
                 title="Nouvelles Mesures Vitales"
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-green-600"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">Alertes par Email</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-gray-900 dark:text-white">
+                Alertes par Email
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Recevoir un résumé quotidien par email
               </p>
             </div>
@@ -355,14 +367,16 @@ export default function DoctorSettingsPage() {
                 title="Alertes par Email"
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-green-600"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">SMS d&apos;urgence</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-medium text-gray-900 dark:text-white">
+                SMS d&apos;urgence
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Recevoir des SMS pour les situations d&apos;urgence
               </p>
             </div>
@@ -373,21 +387,23 @@ export default function DoctorSettingsPage() {
                 title="SMS d'urgence"
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-green-600"></div>
             </label>
           </div>
         </div>
       </div>
 
       {/* Security Settings */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-            <Lock className="w-6 h-6 text-red-600" />
+          <div className="w-12 h-12 bg-green-100 dark:bg-green-500/10 rounded-lg flex items-center justify-center">
+            <Lock className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Sécurité</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Sécurité
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Gérez votre mot de passe et la sécurité
             </p>
           </div>
@@ -395,23 +411,27 @@ export default function DoctorSettingsPage() {
 
         {/* Password Success/Error Messages */}
         {passwordSuccess && (
-          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 bg-green-50 p-4">
-            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" />
-            <p className="text-sm text-green-800">{passwordSuccess}</p>
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-4">
+            <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
+            <p className="text-sm text-green-800 dark:text-green-300">
+              {passwordSuccess}
+            </p>
           </div>
         )}
 
         {passwordError && (
-          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-4">
-            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
-            <p className="text-sm text-red-800">{passwordError}</p>
+          <div className="mb-6 flex items-start space-x-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-4">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600 dark:text-red-400" />
+            <p className="text-sm text-red-800 dark:text-red-300">
+              {passwordError}
+            </p>
           </div>
         )}
 
         <form onSubmit={handlePasswordSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Mot de passe actuel
               </label>
               <div className="relative">
@@ -420,12 +440,12 @@ export default function DoctorSettingsPage() {
                   name="currentPassword"
                   required
                   title="Mot de passe actuel"
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   title={showCurrentPassword ? "Masquer" : "Afficher"}
                 >
                   {showCurrentPassword ? (
@@ -439,7 +459,7 @@ export default function DoctorSettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nouveau mot de passe
                 </label>
                 <div className="relative">
@@ -448,12 +468,12 @@ export default function DoctorSettingsPage() {
                     name="newPassword"
                     required
                     title="Nouveau mot de passe"
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     title={showNewPassword ? "Masquer" : "Afficher"}
                   >
                     {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -462,7 +482,7 @@ export default function DoctorSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
@@ -471,12 +491,12 @@ export default function DoctorSettingsPage() {
                     name="confirmPassword"
                     required
                     title="Confirmer le mot de passe"
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     title={showConfirmPassword ? "Masquer" : "Afficher"}
                   >
                     {showConfirmPassword ? (
@@ -489,7 +509,7 @@ export default function DoctorSettingsPage() {
               </div>
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Le mot de passe doit contenir au moins 8 caractères, une
               majuscule, une minuscule, un chiffre et un caractère spécial.
             </p>
@@ -498,7 +518,7 @@ export default function DoctorSettingsPage() {
               <button
                 type="submit"
                 disabled={passwordLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-red-600 dark:bg-green-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {passwordLoading ? "Changement..." : "Changer le mot de passe"}
               </button>
@@ -506,17 +526,17 @@ export default function DoctorSettingsPage() {
           </div>
         </form>
 
-        <div className="border-t border-gray-200 mt-6 pt-6">
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+        <div className="border-t border-gray-200 dark:border-gray-800 mt-6 pt-6">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium text-gray-900 dark:text-white">
                 Authentification à deux facteurs
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Ajoutez une couche de sécurité supplémentaire
               </p>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            <button className="px-4 py-2 bg-blue-600 dark:bg-green-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-green-700 transition-colors text-sm">
               Activer
             </button>
           </div>
@@ -524,14 +544,16 @@ export default function DoctorSettingsPage() {
       </div>
 
       {/* Preferences */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-            <Shield className="w-6 h-6 text-purple-600" />
+          <div className="w-12 h-12 bg-green-100 dark:bg-green-500/10 rounded-lg flex items-center justify-center">
+            <Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Préférences</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Préférences
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Personnalisez votre expérience
             </p>
           </div>
@@ -539,13 +561,13 @@ export default function DoctorSettingsPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Globe className="w-4 h-4 inline mr-2" />
               Langue
             </label>
             <select
               title="Langue"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
             >
               <option value="fr">Français</option>
               <option value="en">English</option>
@@ -554,13 +576,13 @@ export default function DoctorSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Moon className="w-4 h-4 inline mr-2" />
               Thème
             </label>
             <select
               title="Thème"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
             >
               <option value="light">Clair</option>
               <option value="dark">Sombre</option>
@@ -569,13 +591,13 @@ export default function DoctorSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Database className="w-4 h-4 inline mr-2" />
               Format de date
             </label>
             <select
               title="Format de date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
             >
               <option value="dd/mm/yyyy">DD/MM/YYYY</option>
               <option value="mm/dd/yyyy">MM/DD/YYYY</option>
@@ -586,21 +608,21 @@ export default function DoctorSettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-900 mb-2">
+      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">
           Zone Dangereuse
         </h2>
-        <p className="text-sm text-red-700 mb-4">
+        <p className="text-sm text-red-700 dark:text-red-400 mb-4">
           Ces actions sont irréversibles. Procédez avec prudence.
         </p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDeactivateModal(true)}
-            className="px-4 py-2 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+            className="px-4 py-2 bg-white dark:bg-gray-900 border border-red-300 dark:border-gray-700 text-red-700 dark:text-gray-300 rounded-lg hover:bg-red-50 dark:hover:bg-gray-800 transition-colors"
           >
             Désactiver le compte
           </button>
-          <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+          <button className="px-4 py-2 bg-red-600 dark:bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-700 transition-colors">
             Supprimer le compte
           </button>
         </div>
@@ -613,44 +635,46 @@ export default function DoctorSettingsPage() {
           onClick={() => setShowDeactivateModal(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+            className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Désactiver le compte
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Cette action peut être annulée
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
-              <p className="text-sm text-gray-700 mb-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                 Votre compte sera désactivé et vous serez déconnecté. Vous
                 pourrez réactiver votre compte en vous reconnectant plus tard.
               </p>
 
               {deactivateError && (
-                <div className="mb-4 flex items-start space-x-3 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
-                  <p className="text-sm text-red-800">{deactivateError}</p>
+                <div className="mb-4 flex items-start space-x-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-3">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
+                  <p className="text-sm text-red-800 dark:text-red-300">
+                    {deactivateError}
+                  </p>
                 </div>
               )}
 
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Entrez votre mot de passe pour confirmer
               </label>
               <input
                 type="password"
                 value={deactivatePassword}
                 onChange={(e) => setDeactivatePassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-green-500"
                 placeholder="Mot de passe"
               />
             </div>
@@ -662,7 +686,7 @@ export default function DoctorSettingsPage() {
                   setDeactivatePassword("");
                   setDeactivateError("");
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 disabled={deactivateLoading}
               >
                 Annuler
@@ -670,7 +694,7 @@ export default function DoctorSettingsPage() {
               <button
                 onClick={handleDeactivateAccount}
                 disabled={deactivateLoading || !deactivatePassword}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-red-600 dark:bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deactivateLoading ? "Désactivation..." : "Désactiver"}
               </button>

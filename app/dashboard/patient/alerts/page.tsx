@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Search,
   AlertCircle,
@@ -163,7 +164,9 @@ export default function PatientAlertsPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mes alertes</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Mes alertes
+          </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Consultez l&apos;historique de vos alertes médicales
           </p>
@@ -236,8 +239,9 @@ export default function PatientAlertsPage() {
               const StatusIcon = statusConfig.icon;
 
               return (
-                <div
+                <Link
                   key={alert.id}
+                  href={`/dashboard/patient/alerts/${alert.id}`}
                   className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
@@ -344,7 +348,7 @@ export default function PatientAlertsPage() {
                       className="flex-shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                     />
                   </div>
-                </div>
+                </Link>
               );
             })
           )}

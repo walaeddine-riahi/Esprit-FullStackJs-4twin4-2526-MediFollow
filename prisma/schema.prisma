@@ -40,6 +40,7 @@ model User {
   alertsCreated Alert[]    @relation("AlertCreatedBy")
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
   alertsResolved Alert[]    @relation("AlertResolvedBy")
+  vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
   sessions      Session[]
 
   @@map("users")
@@ -181,26 +182,59 @@ type VitalRange {
 // ============================================
 
 model VitalRecord {
-  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
-  patientId           String    @db.ObjectId
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  patientId           String          @db.ObjectId
+  
+  // Vital measurements
   systolicBP          Float?
   diastolicBP         Float?
   heartRate           Float?
   temperature         Float?
   oxygenSaturation    Float?
   weight              Float?
+  
+  // Additional data
+  symptoms            Json?           // { symptomType: severity, ... }
   notes               String?
-  recordedAt          DateTime  @default(now())
+  triggeredRules      Json?           // Array of rules that triggered alerts
+  
+  // Status & Classification
+  status              VitalStatus     @default(NORMAL)  // NORMAL | A_VERIFIER | CRITIQUE
+  
+  // Medical review by doctor
+  reviewStatus        ReviewStatus    @default(PENDING) // PENDING | REVIEWED
+  reviewedById        String?         @db.ObjectId
+  reviewedAt          DateTime?
+  reviewNotes         String?
+  
+  // Metadata
+  recordedAt          DateTime        @default(now())
   blockchainTxHash    String?
-  createdAt           DateTime  @default(now())
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime?       @updatedAt
 
   // Relations
-  patient             Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient             Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reviewedBy          User?           @relation("VitalRecordReviews", fields: [reviewedById], references: [id])
   blockchainProof     BlockchainProof?
+  alerts              Alert[]         // Alerts triggered by this vital
 
   @@index([patientId])
   @@index([recordedAt])
+  @@index([status])
+  @@index([reviewStatus])
   @@map("vital_records")
+}
+
+enum VitalStatus {
+  NORMAL              // Valeur normale
+  A_VERIFIER          // Valeur anormale nécessitant vérification
+  CRITIQUE            // Valeur critique nécessitant intervention urgente
+}
+
+enum ReviewStatus {
+  PENDING             // En attente révision médecin
+  REVIEWED            // Révisé par médecin
 }
 
 // ============================================
@@ -235,30 +269,45 @@ enum Severity {
 // ============================================
 
 model Alert {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  patientId       String       @db.ObjectId
-  triggeredById   String?      @db.ObjectId
-  alertType       AlertType
-  severity        AlertSeverity
-  message         String
-  data            Json?
-  status          AlertStatus  @default(OPEN)
-  acknowledgedById String?     @db.ObjectId
-  acknowledgedAt  DateTime?
-  resolvedById    String?      @db.ObjectId
-  resolvedAt      DateTime?
-  resolution      String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  patientId           String          @db.ObjectId
+  
+  // Alert source (what triggered it)
+  vitalRecordId       String?         @db.ObjectId      // Lien vers VitalRecord si vitals triggered
+  triggeredById       String?         @db.ObjectId      // User who triggered/created alert
+  
+  // Alert type & severity
+  alertType           AlertType
+  severity            AlertSeverity
+  message             String
+  data                Json?           // Extra data about alert
+  
+  // Status workflow: OPEN → ACKNOWLEDGED → RESOLVED → CLOSED
+  status              AlertStatus     @default(OPEN)
+  
+  // Acknowledgment
+  acknowledgedById    String?         @db.ObjectId
+  acknowledgedAt      DateTime?
+  
+  // Resolution
+  resolvedById        String?         @db.ObjectId
+  resolvedAt          DateTime?
+  resolution          String?         // Notes on how alert was resolved
+  
+  // Metadata
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   // Relations
-  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  triggeredBy     User?        @relation("AlertCreatedBy", fields: [triggeredById], references: [id])
-  acknowledgedBy  User?        @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
-  resolvedBy      User?        @relation("AlertResolvedBy", fields: [resolvedById], references: [id])
-  auditLogs       AuditLog[]
+  patient             Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  vitalRecord         VitalRecord?    @relation(fields: [vitalRecordId], references: [id], onDelete: SetNull)
+  triggeredBy         User?           @relation("AlertCreatedBy", fields: [triggeredById], references: [id])
+  acknowledgedBy      User?           @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  resolvedBy          User?           @relation("AlertResolvedBy", fields: [resolvedById], references: [id])
+  auditLogs           AuditLog[]
 
   @@index([patientId])
+  @@index([vitalRecordId])
   @@index([status])
   @@index([severity])
   @@index([createdAt])

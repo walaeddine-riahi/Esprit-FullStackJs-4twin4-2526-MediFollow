@@ -9,6 +9,13 @@ import { revalidatePath } from "next/cache";
 
 import prisma from "@/lib/prisma";
 import { VitalRecordSchema } from "@/lib/validation";
+import {
+  classifyVitalStatus,
+  createVitalAlert,
+  validateVitalData,
+  getVitalViolations,
+  DEFAULT_VITAL_THRESHOLDS,
+} from "@/lib/utils/vitalValidation";
 
 import { checkVitalThresholds } from "./alert.actions";
 
@@ -56,7 +63,32 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
     if (validated.weight) vitalData.weight = parseFloat(validated.weight);
     if (validated.notes) vitalData.notes = validated.notes;
 
-    // Create vital record
+    // Auto-classify vital status and get violations
+    const status = await classifyVitalStatus(
+      {
+        systolicBP: vitalData.systolicBP,
+        diastolicBP: vitalData.diastolicBP,
+        heartRate: vitalData.heartRate,
+        temperature: vitalData.temperature,
+        oxygenSaturation: vitalData.oxygenSaturation,
+        weight: vitalData.weight,
+      },
+      patientId
+    );
+
+    vitalData.status = status;
+
+    // Get patient thresholds for violations
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+    const thresholds = patient?.vitalThresholds || DEFAULT_VITAL_THRESHOLDS;
+    const violations = getVitalViolations(vitalData, thresholds);
+
+    if (violations.critical.length > 0 || violations.abnormal.length > 0) {
+      vitalData.triggeredRules = violations.triggeredRules;
+    }
+
     const vitalRecord = await prisma.vitalRecord.create({
       data: vitalData,
       include: {
@@ -68,7 +100,12 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
       },
     });
 
-    // Check thresholds and create alerts if necessary
+    // Create alert if status is not NORMAL
+    if (status !== "NORMAL") {
+      await createVitalAlert(vitalRecord.id, patientId, status, violations);
+    }
+
+    // Also run legacy thresholds check for compatibility
     await checkVitalThresholds(vitalRecord);
 
     revalidatePath("/dashboard/patient");
@@ -298,5 +335,145 @@ export async function getVitalStats(patientId: string, days: number = 7) {
   } catch (error) {
     console.error("Get vital stats error:", error);
     return { success: false, error: "Erreur", stats: null };
+  }
+}
+
+/**
+ * DOCTOR REVIEW FUNCTIONS
+ */
+
+/**
+ * Get vital records pending doctor review
+ */
+export async function getVitalsToReview(doctorId?: string, patientId?: string) {
+  try {
+    const where: any = {
+      reviewStatus: "PENDING",
+    };
+
+    if (patientId) {
+      where.patientId = patientId;
+    }
+
+    const records = await prisma.vitalRecord.findMany({
+      where,
+      orderBy: {
+        recordedAt: "desc",
+      },
+      include: {
+        patient: {
+          include: {
+            user: true,
+          },
+        },
+        alerts: {
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        },
+      },
+    });
+
+    return { success: true, records };
+  } catch (error: any) {
+    console.error("Get vitals to review error:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération",
+      records: [],
+    };
+  }
+}
+
+/**
+ * Review vital record by doctor
+ * Adds doctor notes and updates review status
+ */
+export async function reviewVitalRecord(
+  recordId: string,
+  doctorId: string,
+  reviewNotes: string,
+  newStatus?: "NORMAL" | "A_VERIFIER" | "CRITIQUE"
+) {
+  try {
+    // Get current record
+    const currentRecord = await prisma.vitalRecord.findUnique({
+      where: { id: recordId },
+      include: { patient: true },
+    });
+
+    if (!currentRecord) {
+      return { success: false, error: "Enregistrement non trouvé" };
+    }
+
+    // Update with review info
+    const updated = await prisma.vitalRecord.update({
+      where: { id: recordId },
+      data: {
+        reviewStatus: "REVIEWED",
+        reviewedById: doctorId,
+        reviewedAt: new Date(),
+        reviewNotes,
+        // Optionally update status based on doctor's review
+        ...(newStatus && { status: newStatus }),
+      },
+      include: {
+        patient: { include: { user: true } },
+        reviewedBy: true,
+        alerts: true,
+      },
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: doctorId,
+        action: "REVIEW_VITAL",
+        entityType: "VitalRecord",
+        entityId: recordId,
+        changes: {
+          reviewStatus: "REVIEWED",
+          reviewNotes,
+          statusChanged: newStatus ? currentRecord.status !== newStatus : false,
+          newStatus,
+        },
+        timestamp: new Date(),
+      },
+    });
+
+    revalidatePath("/dashboard/doctor/vitals-review");
+    revalidatePath(`/dashboard/patient/${currentRecord.patientId}/vitals`);
+
+    return {
+      success: true,
+      message: "Revision enregistrée",
+      record: updated,
+    };
+  } catch (error: any) {
+    console.error("Review vital record error:", error);
+    return { success: false, error: "Erreur lors de la révision" };
+  }
+}
+
+/**
+ * Get vital review history for a record
+ */
+export async function getVitalReviewHistory(recordId: string) {
+  try {
+    const auditLogs = await prisma.auditLog.findMany({
+      where: {
+        entityType: "VitalRecord",
+        entityId: recordId,
+        action: "REVIEW_VITAL",
+      },
+      include: {
+        user: true,
+      },
+      orderBy: { timestamp: "desc" },
+    });
+
+    return { success: true, history: auditLogs };
+  } catch (error: any) {
+    console.error("Get vital review history error:", error);
+    return { success: false, error: "Erreur", history: [] };
   }
 }

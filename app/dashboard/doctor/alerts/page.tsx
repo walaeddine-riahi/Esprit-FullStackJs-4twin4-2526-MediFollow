@@ -1,251 +1,372 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import {
+  Search,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  ChevronRight,
+  XCircle,
+} from "lucide-react";
+
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getAllAlerts } from "@/lib/actions/alert.actions";
-import { Badge } from "@/components/ui/badge";
+import { formatDateTime } from "@/lib/utils";
 
-export default async function DoctorAlertsPage() {
-  const user = await getCurrentUser();
+export default function DoctorAlertsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [filter, setFilter] = useState<string>("all");
 
-  if (!user || user.role !== "DOCTOR") {
-    redirect("/login");
-  }
+  useEffect(() => {
+    loadAlerts();
+  }, []);
 
-  const { alerts } = await getAllAlerts();
+  async function loadAlerts() {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-  const openAlerts = alerts?.filter((a) => a.status === "OPEN") || [];
-  const acknowledgedAlerts =
-    alerts?.filter((a) => a.status === "ACKNOWLEDGED") || [];
-  const resolvedAlerts = alerts?.filter((a) => a.status === "RESOLVED") || [];
+      if (user.role !== "DOCTOR") {
+        router.push("/dashboard");
+        return;
+      }
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case "CRITICAL":
-        return (
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-        );
-      case "HIGH":
-        return (
-          <AlertTriangle className="w-5 h-5 text-orange-500 dark:text-orange-400" />
-        );
-      case "MEDIUM":
-        return (
-          <AlertCircle className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
-        );
-      default:
-        return (
-          <AlertCircle className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-        );
+      const result = await getAllAlerts();
+
+      if (result.alerts) {
+        setAlerts(result.alerts);
+      }
+    } catch (error) {
+      console.error("Error loading alerts:", error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "CRITICAL":
-        return "bg-red-100 dark:bg-red-500/10 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800";
+        return "bg-red-50 text-red-700 border-red-200";
       case "HIGH":
-        return "bg-orange-100 dark:bg-orange-500/10 text-orange-800 dark:text-orange-400 border-orange-200 dark:border-orange-800";
+        return "bg-orange-50 text-orange-700 border-orange-200";
       case "MEDIUM":
-        return "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800";
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
       default:
-        return "bg-blue-100 dark:bg-blue-500/10 text-blue-800 dark:text-blue-400 border-blue-200 dark:border-blue-800";
+        return "bg-blue-50 text-blue-700 border-blue-200";
     }
   };
 
-  const AlertCard = ({ alert }: { alert: any }) => {
-    const patientName = `${alert.patient.user.firstName} ${alert.patient.user.lastName}`;
-
-    return (
-      <div
-        className={`bg-white dark:bg-gray-900 border rounded-lg p-5 hover:shadow-md transition-shadow ${
-          alert.severity === "CRITICAL"
-            ? "border-red-300 dark:border-red-800"
-            : "border-gray-200 dark:border-gray-800"
-        }`}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            {getSeverityIcon(alert.severity)}
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                {alert.message}
-              </h3>
-              <Link
-                href={`/dashboard/doctor/patients/${alert.patientId}`}
-                className="text-sm text-green-600 dark:text-green-400 hover:underline"
-              >
-                {patientName} - MRN: {alert.patient.medicalRecordNumber}
-              </Link>
-            </div>
-          </div>
-          <Badge className={getSeverityColor(alert.severity)}>
-            {alert.severity}
-          </Badge>
-        </div>
-
-        {/* Alert Details */}
-        <div className="space-y-2 mb-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium">Type:</span> {alert.alertType}
-          </div>
-
-          {alert.vitalValue !== null && (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium">Valeur:</span> {alert.vitalValue}
-              {alert.thresholdValue && ` (Seuil: ${alert.thresholdValue})`}
-            </div>
-          )}
-
-          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            {new Date(alert.createdAt).toLocaleString("fr-FR")}
-          </div>
-        </div>
-
-        {/* Status */}
-        <div className="flex items-center justify-between pt-3 border-t dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            {alert.status === "RESOLVED" ? (
-              <>
-                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                  Résolu
-                </span>
-              </>
-            ) : alert.status === "ACKNOWLEDGED" ? (
-              <>
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                  En cours
-                </span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span className="text-sm text-red-600 dark:text-red-400 font-medium">
-                  Nouveau
-                </span>
-              </>
-            )}
-          </div>
-
-          {alert.status !== "RESOLVED" && (
-            <Link
-              href={`/dashboard/doctor/alerts/${alert.id}`}
-              className="text-sm text-blue-600 dark:text-green-400 hover:underline font-medium"
-            >
-              Gérer →
-            </Link>
-          )}
-        </div>
-
-        {/* Resolution Notes */}
-        {alert.resolution && (
-          <div className="mt-3 pt-3 border-t dark:border-gray-800">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium">Notes:</span> {alert.resolution}
-            </p>
-            {alert.resolvedBy && (
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Résolu par Dr. {alert.resolvedBy.firstName}{" "}
-                {alert.resolvedBy.lastName}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    );
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "OPEN":
+        return {
+          icon: AlertCircle,
+          label: "Actif",
+          color: "text-red-600 bg-red-50",
+          badgeColor: "bg-red-100 text-red-700 border-red-200",
+        };
+      case "ACKNOWLEDGED":
+        return {
+          icon: Clock,
+          label: "Acquittée",
+          color: "text-yellow-600 bg-yellow-50",
+          badgeColor: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        };
+      case "RESOLVED":
+        return {
+          icon: CheckCircle,
+          label: "Résolue",
+          color: "text-green-600 bg-green-50",
+          badgeColor: "bg-green-100 text-green-700 border-green-200",
+        };
+      default:
+        return {
+          icon: AlertCircle,
+          label: "En attente",
+          color: "text-gray-600 bg-gray-50",
+          badgeColor: "bg-gray-100 text-gray-700 border-gray-200",
+        };
+    }
   };
 
+  const filteredAlerts = alerts
+    .filter((alert) =>
+      filter === "all"
+        ? true
+        : filter === "open"
+          ? alert.status === "OPEN"
+          : filter === "acknowledged"
+            ? alert.status === "ACKNOWLEDGED"
+            : alert.status === "RESOLVED"
+    )
+    .filter(
+      (alert) =>
+        alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.alertType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (alert.patient?.user &&
+          `${alert.patient.user.firstName} ${alert.patient.user.lastName}`
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()))
+    );
+
+  const openCount = alerts.filter((a) => a.status === "OPEN").length;
+  const totalCount = alerts.length;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 border-t-transparent mx-auto"></div>
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Alertes
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Gérez les alertes de vos patients
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-red-50 dark:bg-gray-900 border border-red-200 dark:border-gray-800 rounded-lg p-4 hover:border-red-300 dark:hover:border-red-500/50 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-red-600 dark:text-red-400 text-sm font-medium">
-                Nouvelles
-              </p>
-              <p className="text-3xl font-bold text-red-700 dark:text-red-400">
-                {openAlerts.length}
-              </p>
+    <div className="min-h-screen bg-white">
+      {/* Sticky Search Bar - YouTube Style */}
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="Rechercher une alerte, patient..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-colors"
+              />
             </div>
-            <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
-          </div>
-        </div>
-
-        <div className="bg-blue-50 dark:bg-gray-900 border border-blue-200 dark:border-gray-800 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">
-                En cours
-              </p>
-              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
-                {acknowledgedAlerts.length}
-              </p>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-700">
+                {totalCount} alertes
+              </span>
+              {openCount > 0 && (
+                <span className="rounded-full bg-red-50 px-3 py-1.5 font-medium text-red-700">
+                  {openCount} actives
+                </span>
+              )}
             </div>
-            <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-green-50 dark:bg-gray-900 border border-green-200 dark:border-gray-800 rounded-lg p-4 hover:border-green-300 dark:hover:border-green-500 transition-colors">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-600 dark:text-green-400 text-sm font-medium">
-                Résolues
-              </p>
-              <p className="text-3xl font-bold text-green-700 dark:text-green-400">
-                {resolvedAlerts.length}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6">
-        <div className="border-b border-gray-200 dark:border-gray-800">
-          <nav className="flex gap-6">
-            <button className="border-b-2 border-blue-600 dark:border-green-400 py-3 px-1 text-sm font-medium text-blue-600 dark:text-green-400">
-              Nouvelles ({openAlerts.length})
-            </button>
-            <button className="border-b-2 border-transparent py-3 px-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 dark:hover:border-gray-600">
-              En cours ({acknowledgedAlerts.length})
-            </button>
-            <button className="border-b-2 border-transparent py-3 px-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 dark:hover:border-gray-600">
-              Résolues ({resolvedAlerts.length})
-            </button>
-          </nav>
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Alertes patients</h1>
+          <p className="mt-2 text-gray-600">
+            Gérez et consultez les alertes de vos patients
+          </p>
         </div>
-      </div>
 
-      {/* Alerts List */}
-      <div className="space-y-4">
-        {openAlerts.length > 0 ? (
-          openAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
-        ) : (
-          <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-            <CheckCircle className="w-12 h-12 text-green-500 dark:text-green-400 mx-auto mb-3" />
-            <p className="text-gray-600 dark:text-gray-300 font-medium">
-              Aucune nouvelle alerte
-            </p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Tous vos patients sont stables
-            </p>
-          </div>
-        )}
+        {/* Filters */}
+        <div className="mb-8 flex gap-3 overflow-x-auto pb-2">
+          <button
+            onClick={() => setFilter("all")}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              filter === "all"
+                ? "border-gray-900 bg-gray-100 text-gray-900"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            Toutes
+          </button>
+          <button
+            onClick={() => setFilter("open")}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              filter === "open"
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <AlertCircle size={16} />
+            Actives
+          </button>
+          <button
+            onClick={() => setFilter("acknowledged")}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              filter === "acknowledged"
+                ? "border-yellow-300 bg-yellow-50 text-yellow-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <Clock size={16} />
+            Acquittées
+          </button>
+          <button
+            onClick={() => setFilter("resolved")}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              filter === "resolved"
+                ? "border-green-300 bg-green-50 text-green-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <CheckCircle size={16} />
+            Résolues
+          </button>
+        </div>
+
+        {/* Alerts List - YouTube Style */}
+        <div className="space-y-3">
+          {filteredAlerts.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Aucune alerte
+              </h3>
+              <p className="mt-2 text-gray-600">
+                {filter === "all"
+                  ? "Tous vos patients sont stables ! Aucune alerte pour le moment."
+                  : "Aucune alerte ne correspond à ce filtre."}
+              </p>
+            </div>
+          ) : (
+            filteredAlerts.map((alert) => {
+              const statusConfig = getStatusConfig(alert.status);
+              const StatusIcon = statusConfig.icon;
+              const patientName =
+                alert.patient?.user &&
+                `${alert.patient.user.firstName} ${alert.patient.user.lastName}`;
+
+              return (
+                <Link
+                  key={alert.id}
+                  href={`/dashboard/doctor/alerts/${alert.id}`}
+                >
+                  <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+                    <div className="flex items-start gap-4">
+                      {/* Icon */}
+                      <div
+                        className={`flex-shrink-0 h-10 w-10 rounded-lg ${statusConfig.color} flex items-center justify-center`}
+                      >
+                        <StatusIcon size={20} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <div>
+                            <h3 className="text-base font-semibold text-gray-900">
+                              {alert.alertType === "VITAL"
+                                ? "Alerte Signes Vitaux"
+                                : alert.alertType === "SYMPTOM"
+                                  ? "Alerte Symptôme"
+                                  : "Alerte Système"}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {alert.message}
+                            </p>
+                            {patientName && (
+                              <p className="text-xs text-gray-500 mt-1 font-medium">
+                                Patient: {patientName}
+                                {alert.patient?.medicalRecordNumber &&
+                                  ` (MRN: ${alert.patient.medicalRecordNumber})`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <span
+                              className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${getSeverityColor(alert.severity)}`}
+                            >
+                              {alert.severity}
+                            </span>
+                            <span
+                              className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusConfig.badgeColor}`}
+                            >
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Timestamps */}
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            Créée: {formatDateTime(alert.createdAt)}
+                          </span>
+                          {alert.acknowledgedAt && (
+                            <span>
+                              Acquittée: {formatDateTime(alert.acknowledgedAt)}
+                            </span>
+                          )}
+                          {alert.resolvedAt && (
+                            <span>
+                              Résolue: {formatDateTime(alert.resolvedAt)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Resolution */}
+                        {alert.resolution && (
+                          <div className="rounded-lg bg-green-50 border border-green-200 p-3 mb-3">
+                            <p className="text-xs font-medium text-green-900 mb-1">
+                              Résolution:
+                            </p>
+                            <p className="text-sm text-green-800">
+                              {alert.resolution}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Data Details */}
+                        {alert.data && (
+                          <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                            <p className="text-xs font-medium text-gray-900 mb-2">
+                              Détails:
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                              {alert.data.vitalType && (
+                                <div>
+                                  <span className="font-medium">Type:</span>{" "}
+                                  {alert.data.vitalType}
+                                </div>
+                              )}
+                              {alert.data.value !== undefined && (
+                                <div>
+                                  <span className="font-medium">Valeur:</span>{" "}
+                                  {alert.data.value}
+                                </div>
+                              )}
+                              {alert.data.threshold && (
+                                <div className="col-span-2">
+                                  <span className="font-medium">Seuil:</span>{" "}
+                                  {alert.data.threshold.min} -{" "}
+                                  {alert.data.threshold.max}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Arrow */}
+                      <ChevronRight
+                        size={20}
+                        className="flex-shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

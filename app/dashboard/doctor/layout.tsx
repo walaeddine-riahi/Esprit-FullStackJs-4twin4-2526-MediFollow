@@ -17,6 +17,7 @@ import {
   Activity,
   FileText,
   Heart,
+  ClipboardList,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
@@ -70,6 +71,11 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
       icon: Activity,
       label: "Signes vitaux",
       href: "/dashboard/doctor/vitals",
+    },
+    {
+      icon: ClipboardList,
+      label: "Questionnaires",
+      href: "/dashboard/doctor/questionnaires",
     },
     {
       icon: BarChart3,

@@ -69,6 +69,11 @@ export default function PatientLayout({ children }: { children: ReactNode }) {
     },
     {
       icon: FileText,
+      label: "Questionnaires",
+      href: "/dashboard/patient/questionnaires",
+    },
+    {
+      icon: FileText,
       label: "Rapports médicaux",
       href: "/dashboard/patient/reports",
     },

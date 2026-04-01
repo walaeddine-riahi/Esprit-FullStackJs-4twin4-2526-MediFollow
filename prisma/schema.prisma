@@ -35,6 +35,7 @@ model User {
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
   alertsResolved Alert[]    @relation("AlertResolvedBy")
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")
+  questionnairesCreated Questionnaire[] @relation("QuestionnaireCreatedBy")
   sessions      Session[]
 
   @@map("users")
@@ -72,7 +73,7 @@ model Patient {
   vitalRecords          VitalRecord[]
   symptoms              Symptom[]
   alerts                Alert[]
-  questionnaires        Questionnaire[]
+  questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")
 
   @@map("patients")
 }
@@ -292,27 +293,6 @@ model Service {
 }
 
 // ============================================
-// QUESTIONNAIRES
-// ============================================
-
-model Questionnaire {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  patientId         String   @db.ObjectId
-  questionnaireType String
-  responses         Json
-  overallScore      Float?
-  completedAt       DateTime @default(now())
-  createdAt         DateTime @default(now())
-
-  // Relations
-  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@index([patientId])
-  @@index([completedAt])
-  @@map("questionnaires")
-}
-
-// ============================================
 // AUDIT LOGS
 // ============================================
 
@@ -424,4 +404,93 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+// ============================================
+// QUESTIONNAIRES SYSTEM
+// ============================================
+
+model Questionnaire {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  type         String   // "POST_OP", "SYMPTOM_TRACKING", "WEEKLY_ASSESSMENT", "MEDICATION_ADHERENCE", "CUSTOM"
+  
+  questions    QuestionnaireQuestion[]
+  assignments  QuestionnaireAssignment[]
+  
+  createdBy    String   @db.ObjectId
+  createdByUser User    @relation("QuestionnaireCreatedBy", fields: [createdBy], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([type])
+  @@index([createdBy])
+  @@map("questionnaires")
+}
+
+model QuestionnaireQuestion {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  questionnaireId String  @db.ObjectId
+  questionnaire  Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  
+  order          Int
+  title          String
+  description    String?
+  type           String   // "TEXT", "TEXTAREA", "RATING", "MULTISELECT", "CHECKBOX", "DATE", "YESNO"
+  options        String?  // JSON array for MULTISELECT/CHECKBOX
+  required       Boolean  @default(true)
+  minValue       Int?     // For RATING
+  maxValue       Int?     // For RATING
+  
+  @@index([questionnaireId])
+  @@map("questionnaire_questions")
+}
+
+model QuestionnaireAssignment {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  questionnaireId String  @db.ObjectId
+  questionnaire  Questionnaire @relation(fields: [questionnaireId], references: [id])
+  
+  patientId      String   @db.ObjectId
+  patient        Patient  @relation("QuestionnaireAssignments", fields: [patientId], references: [id], onDelete: Cascade)
+  
+  responses      QuestionnaireResponse[]
+  
+  dueDate        DateTime
+  sentDate       DateTime @default(now())
+  completedAt    DateTime?
+  status         String   @default("PENDING") // "PENDING", "COMPLETED", "OVERDUE"
+  reminderSent   Boolean  @default(false)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([patientId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("questionnaire_assignments")
+}
+
+model QuestionnaireResponse {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  assignmentId   String   @db.ObjectId
+  assignment     QuestionnaireAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  questionId     String
+  answer         String   // Store as JSON string to handle different question types
+  submittedAt    DateTime @default(now())
+  
+  @@index([assignmentId])
+  @@map("questionnaire_responses")
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  RATING
+  MULTISELECT
+  CHECKBOX
+  DATE
+  YESNO
 }

@@ -20,10 +20,12 @@ import {
   Save,
   Loader2,
   Edit,
+  ClipboardList,
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { createVitalRecord, getVitalRecords, updateVitalRecord } from "@/lib/actions/vital.actions";
+import { getPatientQuestionnaireAssignments } from "@/lib/actions/questionnaire.actions";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -79,6 +81,11 @@ export default function HistoryPage() {
 
       setPatient(user.patient);
 
+      if (!user.patient?.id) {
+        setLoading(false);
+        return;
+      }
+
       // Récupérer les vrais enregistrements de signes vitaux
       const vitalRecordsResult = await getVitalRecords(user.patient.id);
       
@@ -124,6 +131,33 @@ export default function HistoryPage() {
           })
         : [];
 
+      // Récupérer les questionnaires
+      const questionnairesResult = await getPatientQuestionnaireAssignments(user.patient.id);
+      
+      const questionnaireItems = questionnairesResult.success && questionnairesResult.assignments
+        ? questionnairesResult.assignments.map((assignment: any) => {
+            const questionnaire = assignment.questionnaire || {};
+            const title = questionnaire.title || "Questionnaire assigné";
+            const description = questionnaire.description || "Questionnaire à compléter";
+            const dateValue = assignment.completedAt || assignment.sentDate || assignment.dueDate || assignment.createdAt;
+
+            return {
+              id: assignment.id,
+              type: "questionnaire",
+              title,
+              description,
+              date: new Date(dateValue),
+              status: assignment.status || "PENDING",
+              questionnairStatus: assignment.status || "PENDING",
+              badge: "Questionnaire",
+              questionnaireType: questionnaire.type || "CUSTOM",
+              dueDate: assignment.dueDate,
+              completedAt: assignment.completedAt,
+              assignment,
+            };
+          })
+        : [];
+
       // Mock data pour les autres types d'événements
       const otherItems = [
         {
@@ -147,7 +181,7 @@ export default function HistoryPage() {
       ];
 
       // Combiner tous les items et les trier par date
-      const allItems = [...vitalItems, ...otherItems].sort(
+      const allItems = [...vitalItems, ...questionnaireItems, ...otherItems].sort(
         (a, b) => b.date.getTime() - a.date.getTime()
       );
       
@@ -313,6 +347,13 @@ export default function HistoryPage() {
           color: "text-blue-600 bg-blue-50",
           borderColor: "border-blue-200",
         };
+      case "questionnaire":
+        return {
+          icon: ClipboardList,
+          label: "Questionnaire",
+          color: "text-indigo-600 bg-indigo-50",
+          borderColor: "border-indigo-200",
+        };
       case "appointment":
         return {
           icon: Calendar,
@@ -382,6 +423,7 @@ export default function HistoryPage() {
   const typeFilters = [
     { id: "all", label: "Tout", icon: Clock },
     { id: "vital", label: "Signes vitaux", icon: Activity },
+    { id: "questionnaire", label: "Questionnaires", icon: ClipboardList },
     { id: "appointment", label: "Rendez-vous", icon: Calendar },
     { id: "report", label: "Rapports", icon: FileText },
     { id: "alert", label: "Alertes", icon: AlertCircle },
@@ -394,7 +436,9 @@ export default function HistoryPage() {
       new Date(item.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
   const pendingReview = historyItems.filter(
-    (item) => item.type === "vital" && (item.reviewStatus === "PENDING" || !item.reviewStatus) && (item.vitalStatus === "A_VERIFIER" || item.vitalStatus === "CRITIQUE")
+    (item) => 
+      (item.type === "vital" && (item.reviewStatus === "PENDING" || !item.reviewStatus) && (item.vitalStatus === "A_VERIFIER" || item.vitalStatus === "CRITIQUE")) ||
+      (item.type === "questionnaire" && item.questionnairStatus === "PENDING")
   ).length;
 
   if (loading) {
@@ -1074,6 +1118,47 @@ export default function HistoryPage() {
                                     </div>
                                   </div>
                                 </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Statut des questionnaires */}
+                          {item.type === "questionnaire" && item.questionnairStatus && (
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                                    item.questionnairStatus === "COMPLETED"
+                                      ? "bg-green-50 text-green-700 border-green-200"
+                                      : item.questionnairStatus === "PENDING"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : "bg-orange-50 text-orange-700 border-orange-200"
+                                  }`}
+                                >
+                                  {item.questionnairStatus === "COMPLETED" 
+                                    ? "✅ Complété" 
+                                    : item.questionnairStatus === "PENDING" 
+                                    ? "⏳ En attente"
+                                    : "⚠️ En retard"}
+                                </span>
+                              </div>
+                              {item.questionnairStatus === "PENDING" && (
+                                <p className="text-xs text-gray-500">
+                                  À compléter avant: {new Date(item.dueDate).toLocaleDateString("fr-FR", {
+                                    day: "numeric",
+                                    month: "short",
+                                  })}
+                                </p>
+                              )}
+                              {item.completedAt && (
+                                <p className="text-xs text-gray-500">
+                                  Soumis le {new Date(item.completedAt).toLocaleDateString("fr-FR", {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
                               )}
                             </div>
                           )}

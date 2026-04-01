@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 
 import { getPatientAlerts } from "@/lib/actions/alert.actions";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { getPatientQuestionnaireAssignments } from "@/lib/actions/questionnaire.actions";
 import { getVitalRecords, getVitalStats, getLatestVitalRecord } from "@/lib/actions/vital.actions";
 import { formatDateTime } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export default function PatientDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [recentVitals, setRecentVitals] = useState<any[]>([]);
+  const [questionnaires, setQuestionnaires] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -78,6 +80,12 @@ export default function PatientDashboard() {
         const alertsResult = await getPatientAlerts(patientId);
         if (alertsResult.success && alertsResult.alerts) {
           setAlerts(alertsResult.alerts);
+        }
+
+        // Load questionnaire assignments
+        const qResult = await getPatientQuestionnaireAssignments(patientId);
+        if (qResult.success && qResult.assignments) {
+          setQuestionnaires(qResult.assignments);
         }
       }
     } catch (error) {
@@ -222,6 +230,64 @@ export default function PatientDashboard() {
             </div>
           </div>
         )}
+
+        {/* Questionnaires section */}
+        <div className="mb-6 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Questionnaires assignés
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">
+                {questionnaires.length} en cours
+              </span>
+              <Link
+                href="/dashboard/patient/questionnaires"
+                className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                Voir tous
+              </Link>
+            </div>
+          </div>
+          {questionnaires.length === 0 ? (
+            <p className="text-sm text-gray-500">Aucun questionnaire assigné.</p>
+          ) : (
+            <div className="space-y-2">
+              {questionnaires.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="rounded-lg border border-gray-200 p-3 hover:bg-gray-50 transition"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {assignment.questionnaire?.title || "Questionnaire"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {assignment.questionnaire?.description || "Aucune description"}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        assignment.status === "COMPLETED"
+                          ? "text-green-700 bg-green-50"
+                          : assignment.status === "OVERDUE"
+                          ? "text-orange-700 bg-orange-50"
+                          : "text-blue-700 bg-blue-50"
+                      }`}
+                    >
+                      {assignment.status || "PENDING"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Date limite : {new Date(assignment.dueDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    {assignment.completedAt && ` • Complété : ${new Date(assignment.completedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Latest Vitals Cards - Minimal Style */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

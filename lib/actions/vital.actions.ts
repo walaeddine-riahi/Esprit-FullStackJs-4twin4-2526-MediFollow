@@ -11,6 +11,8 @@ import prisma from "@/lib/prisma";
 import { VitalRecordSchema } from "@/lib/validation";
 
 import { checkVitalThresholds } from "./alert.actions";
+import { createBlockchainProof } from "./blockchain.actions";
+import { detectAndCreateEarlyWarningAlert } from "@/lib/ai/admin-intelligence";
 
 export async function createVitalRecord(patientId: string, formData: FormData) {
   try {
@@ -62,6 +64,21 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
 
     // Check thresholds and create alerts if necessary
     await checkVitalThresholds(vitalRecord);
+
+    // AI anomaly detection for early warning alerts
+    await detectAndCreateEarlyWarningAlert(vitalRecord.patientId);
+
+    // Create blockchain proof for data integrity
+    await createBlockchainProof(vitalRecord.id, {
+      patientId: vitalRecord.patientId,
+      systolicBP: vitalRecord.systolicBP,
+      diastolicBP: vitalRecord.diastolicBP,
+      heartRate: vitalRecord.heartRate,
+      temperature: vitalRecord.temperature,
+      oxygenSaturation: vitalRecord.oxygenSaturation,
+      weight: vitalRecord.weight,
+      recordedAt: vitalRecord.recordedAt,
+    });
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");

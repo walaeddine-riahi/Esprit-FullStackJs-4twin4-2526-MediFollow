@@ -1,12 +1,10 @@
 /**
- * MediFollow - Authentication Actions
- * Server actions for authentication
+ * MediFollow - Authentication Actions with Real-Time Auditing
  */
 
 "use server";
 
 import { cookies } from "next/headers";
-
 import prisma from "@/lib/prisma";
 import {
   hashPassword,
@@ -15,6 +13,11 @@ import {
   generateRefreshToken,
 } from "@/lib/utils";
 import { LoginSchema, RegisterSchema } from "@/lib/validation";
+import { createAuditLog } from "@/lib/actions/audit.actions"; 
+import { pusherServer } from "@/lib/pusher";
+import { sendWelcomeEmail, sendNewSignupNotification } from "@/lib/actions/notification.actions";
+// Import your custom Role type to use for casting
+import { Role as CustomRole } from "@/types/medifollow.types";
 
 export async function login(formData: FormData) {
   try {
@@ -25,11 +28,11 @@ export async function login(formData: FormData) {
 
     const validated = LoginSchema.parse(rawData);
 
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email: validated.email },
       include: { patient: true },
-    });
+      // @ts-ignore - isApproved is a new field
+    }) as any;
 
     if (!user) {
       return { success: false, error: "Email ou mot de passe incorrect" };
@@ -39,29 +42,33 @@ export async function login(formData: FormData) {
       return { success: false, error: "Compte désactivé" };
     }
 
-    // Verify password
+    if (!user.isApproved) {
+      return { success: false, error: "Votre compte est en attente d'approbation par un administrateur" };
+    }
+
     const isValid = await comparePassword(
       validated.password,
       user.passwordHash
     );
+    
     if (!isValid) {
+      await createAuditLog(user.id, "LOGIN_FAILED", "User", user.id, { reason: "Wrong Password" });
       return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
-    // Generate tokens
+    // FIX: Cast user.role to CustomRole to satisfy JWTPayload
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as unknown as CustomRole,
     });
 
     const refreshToken = generateRefreshToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as unknown as CustomRole,
     });
 
-    // Store refresh token in database
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -73,24 +80,31 @@ export async function login(formData: FormData) {
       },
     });
 
-    // Update last login
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() },
     });
 
-    // Set cookies
-    cookies().set("accessToken", accessToken, {
+    await createAuditLog(
+      user.id, 
+      "CONNEXION", 
+      "User", 
+      user.id, 
+      { fullName: `${user.firstName} ${user.lastName}`, role: user.role }
+    );
+
+    const cookieStore = cookies();
+    cookieStore.set("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: 60 * 15,
       path: "/",
     });
 
-    cookies().set("refreshToken", refreshToken, {
+    cookieStore.set("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
 
@@ -101,7 +115,7 @@ export async function login(formData: FormData) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        role: user.role as unknown as CustomRole, // Fix cast here too
       },
     };
   } catch (error: any) {
@@ -123,19 +137,8 @@ export async function register(formData: FormData) {
 
     const validated = RegisterSchema.parse(rawData);
 
-    // Check if user already exists
-    const existing = await prisma.user.findUnique({
-      where: { email: validated.email },
-    });
-
-    if (existing) {
-      return { success: false, error: "Cet email est déjà utilisé" };
-    }
-
-    // Hash password
     const passwordHash = await hashPassword(validated.password);
 
-    // Create user (default role: PATIENT)
     const user = await prisma.user.create({
       data: {
         email: validated.email,
@@ -144,8 +147,41 @@ export async function register(formData: FormData) {
         lastName: validated.lastName,
         phoneNumber: validated.phoneNumber,
         role: "PATIENT",
+        isApproved: false,
       },
     });
+
+    await createAuditLog(
+      user.id, 
+      "CRÉATION_COMPTE", 
+      "User", 
+      user.id, 
+      { email: user.email, role: "PATIENT" }
+    );
+
+    try {
+      await pusherServer.trigger("admin-updates", "new-signup", {
+        title: "Nouvelle inscription",
+        desc: `${user.firstName} ${user.lastName} vient de creer un compte.`,
+        userId: user.id,
+      });
+    } catch (pusherError) {
+      console.error("Signup notification error:", pusherError);
+    }
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(user.email, user.firstName);
+    } catch (emailError) {
+      console.error("Welcome email error:", emailError);
+    }
+
+    // Notify admin of new signup
+    try {
+      await sendNewSignupNotification(user.firstName, user.lastName, user.email);
+    } catch (emailError) {
+      console.error("Signup admin email error:", emailError);
+    }
 
     return {
       success: true,
@@ -154,6 +190,16 @@ export async function register(formData: FormData) {
     };
   } catch (error: any) {
     console.error("Register error:", error);
+
+    if (error?.name === "ZodError" && error.errors?.length > 0) {
+      const messages = error.errors.map((e: any) => e.message).join(", ");
+      return { success: false, error: messages };
+    }
+
+    if (error?.code === "P2002") {
+      return { success: false, error: "Cet email est déjà utilisé" };
+    }
+
     return { success: false, error: "Erreur lors de l'inscription" };
   }
 }
@@ -162,17 +208,20 @@ export async function logout() {
   try {
     const cookieStore = cookies();
     const refreshToken = cookieStore.get("refreshToken")?.value;
+    const currentUser = await getCurrentUser();
 
     if (refreshToken) {
-      // Delete session from database
       await prisma.session.deleteMany({
         where: { refreshToken },
       });
     }
 
-    // Clear cookies
-    cookies().delete("accessToken");
-    cookies().delete("refreshToken");
+    if (currentUser) {
+      await createAuditLog(currentUser.id, "DÉCONNEXION", "User", currentUser.id);
+    }
+
+    cookieStore.delete("accessToken");
+    cookieStore.delete("refreshToken");
 
     return { success: true };
   } catch (error) {
@@ -185,40 +234,28 @@ export async function getCurrentUser() {
   try {
     const cookieStore = cookies();
     const accessToken = cookieStore.get("accessToken")?.value;
+    if (!accessToken) return null;
 
-    if (!accessToken) {
-      return null;
-    }
-
-    // Verify and decode token
     const { verifyAccessToken } = await import("@/lib/utils");
     const payload = verifyAccessToken(accessToken);
+    if (!payload) return null;
 
-    if (!payload) {
-      return null;
-    }
-
-    // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       include: { patient: true },
     });
 
-    if (!user || !user.isActive) {
-      return null;
-    }
-
+    if (!user || !user.isActive) return null;
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      role: user.role as unknown as CustomRole, // Fix cast here too
       phoneNumber: user.phoneNumber,
       patient: user.patient,
     };
   } catch (error) {
-    console.error("Get current user error:", error);
     return null;
   }
 }

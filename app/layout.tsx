@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Plus_Jakarta_Sans as FontSans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-
+import { LanguageProvider } from "./SettingsContext"; // Ensure this path matches your file location
 import { cn } from "@/lib/utils";
 
 const fontSans = FontSans({
@@ -26,16 +26,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-dark-300 font-sans antialiased",
+          "min-h-screen bg-dark-300 font-sans antialiased transition-colors duration-300",
           fontSans.variable
         )}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark">
-          {children}
-        </ThemeProvider>
+        {/* 1. LanguageProvider wraps everything to provide global language state */}
+        <LanguageProvider>
+          {/* 2. ThemeProvider handles the dark/light mode classes */}
+          <ThemeProvider attribute="class" defaultTheme="dark">
+            {children}
+          </ThemeProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

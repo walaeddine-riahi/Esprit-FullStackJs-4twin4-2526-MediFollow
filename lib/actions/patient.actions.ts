@@ -131,7 +131,10 @@ export async function getPatientWithRelations(
 export async function getAllPatients(): Promise<PatientWithUser[]> {
   try {
     const patients = await prisma.patient.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        user: { isActive: true },
+      },
       include: {
         user: {
           select: {
@@ -330,6 +333,7 @@ export async function searchPatients(
     const patients = await prisma.patient.findMany({
       where: {
         isActive: true,
+        user: { isActive: true },
         OR: [
           { medicalRecordNumber: { contains: query, mode: "insensitive" } },
           { user: { firstName: { contains: query, mode: "insensitive" } } },

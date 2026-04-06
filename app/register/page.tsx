@@ -192,8 +192,7 @@ export default function RegisterPage() {
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Min. 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1
-                caractère spécial
+                Min. 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial
               </p>
             </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,25 +9,25 @@ import {
   CheckCircle,
   ArrowLeft,
   User,
-  Calendar,
   Activity,
-  Shield,
   AlertTriangle,
   Info,
   Mail,
   Phone,
   Heart,
   Thermometer,
-  Droplets,
   Wind,
   Gauge,
-  Edit,
-  Save,
-  X,
+  Sparkles,
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { getAlertById, acknowledgeAlert, resolveAlert } from "@/lib/actions/alert.actions";
+
+interface VitalData {
+  vitalType: "systolicBP" | "diastolicBP" | "heartRate" | "temperature" | "oxygenSaturation" | "respiratoryRate";
+  value: number;
+  threshold?: { min: number; max: number };
+}
 
 interface Alert {
   id: string;
@@ -40,7 +40,7 @@ interface Alert {
   resolvedAt?: Date | null;
   resolution?: string | null;
   patientId: string;
-  data?: any;
+  data?: VitalData;
   patient?: {
     user: {
       id: string;
@@ -60,530 +60,330 @@ interface Alert {
   } | null;
 }
 
+interface NextBestAction {
+  title: string;
+  rationale: string;
+  confidence: number;
+}
+
 export default function AlertDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
   const [alert, setAlert] = useState<Alert | null>(null);
-  const [resolution, setResolution] = useState("");
-  const [showResolveForm, setShowResolveForm] = useState(false);
+  const [aiActions, setAiActions] = useState<NextBestAction[]>([]);
+  const [aiSummary, setAiSummary] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAuthAndLoadAlert();
-  }, []);
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-  async function checkAuthAndLoadAlert() {
+  const checkAuthAndLoadAlert = useCallback(async () => {
     try {
+      setLoading(true);
       const currentUser = await getCurrentUser();
+
       if (!currentUser || currentUser.role !== "ADMIN") {
         router.push("/login");
         return;
       }
 
-      const result = await getAlertById(params.id);
+      const response = await fetch(`/api/alerts/${encodeURIComponent(params.id)}`, { cache: "no-store" });
+      const result = await response.json();
+
       if (result.success && result.alert) {
-        // Mapper les données
-        const mappedAlert: Alert = {
-          id: result.alert.id,
-          alertType: result.alert.alertType,
-          severity: result.alert.severity,
-          status: result.alert.status,
-          message: result.alert.message,
-          createdAt: result.alert.createdAt,
-          acknowledgedAt: result.alert.acknowledgedAt,
-          resolvedAt: result.alert.resolvedAt,
-          resolution: result.alert.resolution,
-          patientId: result.alert.patientId,
-          data: result.alert.data,
-          patient: result.alert.patient ? {
-            user: {
-              id: result.alert.patient.user.id,
-              email: result.alert.patient.user.email,
-              firstName: result.alert.patient.user.firstName,
-              lastName: result.alert.patient.user.lastName,
-              phoneNumber: result.alert.patient.user.phoneNumber,
-            }
-          } : undefined,
-          acknowledgedBy: result.alert.acknowledgedBy ? {
-            firstName: result.alert.acknowledgedBy.firstName,
-            lastName: result.alert.acknowledgedBy.lastName,
-          } : null,
-          resolvedBy: result.alert.resolvedBy ? {
-            firstName: result.alert.resolvedBy.firstName,
-            lastName: result.alert.resolvedBy.lastName,
-          } : null,
-        };
-        setAlert(mappedAlert);
+        setAlert({
+          ...result.alert,
+          createdAt: result.alert.createdAt ? new Date(result.alert.createdAt) : new Date(),
+          acknowledgedAt: result.alert.acknowledgedAt ? new Date(result.alert.acknowledgedAt) : null,
+          resolvedAt: result.alert.resolvedAt ? new Date(result.alert.resolvedAt) : null,
+        } as Alert);
+      } else {
+        setError(result?.detail || result?.error || "Unable to load the alert.");
       }
-    } catch (error) {
-      console.error("Error loading alert:", error);
+    } catch (err) {
+      console.error("Error loading alert:", err);
+      setError("A critical error occurred.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [params.id, router]);
 
-  async function handleAcknowledge() {
+  const loadAiActions = useCallback(async () => {
     try {
-      setUpdating(true);
-      const currentUser = await getCurrentUser();
-      if (!currentUser) return;
-      
-      const result = await acknowledgeAlert(params.id, currentUser.id);
-      if (result.success && result.alert) {
-        // Mettre à jour l'alerte
-        setAlert({
-          ...alert!,
-          status: result.alert.status,
-          acknowledgedAt: result.alert.acknowledgedAt,
-          acknowledgedBy: {
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-          },
-        });
+      setAiLoading(true);
+      setAiError(null);
+      const response = await fetch(`/api/admin/alerts/${encodeURIComponent(params.id)}/next-actions`, { cache: "no-store" });
+      const result = await response.json();
+      if (result.success) {
+        setAiActions(Array.isArray(result.actions) ? result.actions : []);
+        setAiSummary(typeof result.summary === "string" ? result.summary : "");
+      } else {
+        setAiError(result?.error || "Unable to load AI suggestions");
       }
-    } catch (error) {
-      console.error("Error acknowledging alert:", error);
+    } catch {
+      setAiError("Unable to load AI suggestions");
     } finally {
-      setUpdating(false);
+      setAiLoading(false);
     }
-  }
+  }, [params.id]);
 
-  async function handleResolve(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resolution.trim()) return;
-    
-    try {
-      setUpdating(true);
-      const currentUser = await getCurrentUser();
-      if (!currentUser) return;
-      
-      const result = await resolveAlert(params.id, currentUser.id, resolution);
-      if (result.success && result.alert) {
-        setAlert({
-          ...alert!,
-          status: result.alert.status,
-          resolvedAt: result.alert.resolvedAt,
-          resolution: result.alert.resolution,
-          resolvedBy: {
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-          },
-        });
-        setShowResolveForm(false);
-      }
-    } catch (error) {
-      console.error("Error resolving alert:", error);
-    } finally {
-      setUpdating(false);
-    }
-  }
+  useEffect(() => {
+    checkAuthAndLoadAlert();
+  }, [checkAuthAndLoadAlert]);
 
-  function getSeverityColor(severity: string) {
-    switch (severity) {
-      case "CRITICAL":
-        return "bg-red-100 text-red-700 border-red-200";
-      case "HIGH":
-        return "bg-orange-100 text-orange-700 border-orange-200";
-      case "MEDIUM":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "LOW":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+  useEffect(() => {
+    if (!loading && !error && alert?.id) {
+      loadAiActions();
     }
-  }
+  }, [alert?.id, loading, error, loadAiActions]);
 
-  function getSeverityIcon(severity: string) {
-    switch (severity) {
-      case "CRITICAL":
-        return <AlertCircle size={24} className="text-red-600" />;
-      case "HIGH":
-        return <AlertTriangle size={24} className="text-orange-600" />;
-      case "MEDIUM":
-        return <AlertCircle size={24} className="text-yellow-600" />;
-      case "LOW":
-        return <Info size={24} className="text-blue-600" />;
-      default:
-        return <AlertCircle size={24} />;
-    }
-  }
+  const getSeverityStyles = (severity: string) => {
+    const styles: Record<string, { color: string; icon: JSX.Element; label: string }> = {
+      CRITICAL: {
+        color: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/50",
+        icon: <AlertCircle size={24} className="text-red-600 dark:text-red-500" />,
+        label: "Critical",
+      },
+      HIGH: {
+        color: "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900/50",
+        icon: <AlertTriangle size={24} className="text-orange-600 dark:text-orange-500" />,
+        label: "High",
+      },
+      MEDIUM: {
+        color: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/50",
+        icon: <AlertCircle size={24} className="text-yellow-600 dark:text-yellow-500" />,
+        label: "Medium",
+      },
+      LOW: {
+        color: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
+        icon: <Info size={24} className="text-blue-600 dark:text-blue-500" />,
+        label: "Low",
+      },
+    };
+    return styles[severity] || {
+      color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700",
+      icon: <AlertCircle size={24} />,
+      label: severity,
+    };
+  };
 
-  function getSeverityLabel(severity: string) {
-    switch (severity) {
-      case "CRITICAL":
-        return "Critique";
-      case "HIGH":
-        return "Haute";
-      case "MEDIUM":
-        return "Moyenne";
-      case "LOW":
-        return "Basse";
-      default:
-        return severity;
-    }
-  }
+  const getStatusStyles = (status: string) => {
+    const styles: Record<string, { color: string; icon: JSX.Element | null; label: string }> = {
+      OPEN: {
+        color: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800",
+        icon: <AlertCircle size={18} />,
+        label: "Open",
+      },
+      ACKNOWLEDGED: {
+        color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+        icon: <Clock size={18} />,
+        label: "Acknowledged",
+      },
+      RESOLVED: {
+        color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
+        icon: <CheckCircle size={18} />,
+        label: "Resolved",
+      },
+    };
+    return styles[status] || { color: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300", icon: null, label: status };
+  };
 
-  function getStatusColor(status: string) {
-    switch (status) {
-      case "OPEN":
-        return "bg-orange-100 text-orange-700 border-orange-200";
-      case "ACKNOWLEDGED":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "RESOLVED":
-        return "bg-green-100 text-green-700 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
-    }
-  }
-
-  function getStatusIcon(status: string) {
-    switch (status) {
-      case "OPEN":
-        return <AlertCircle size={20} className="text-orange-600" />;
-      case "ACKNOWLEDGED":
-        return <Clock size={20} className="text-blue-600" />;
-      case "RESOLVED":
-        return <CheckCircle size={20} className="text-green-600" />;
-      default:
-        return null;
-    }
-  }
-
-  function getStatusLabel(status: string) {
-    switch (status) {
-      case "OPEN":
-        return "Ouverte";
-      case "ACKNOWLEDGED":
-        return "Reconnue";
-      case "RESOLVED":
-        return "Résolue";
-      default:
-        return status;
-    }
-  }
-
-  function getVitalIcon(vitalType: string) {
-    switch (vitalType) {
-      case "systolicBP":
-      case "diastolicBP":
-        return <Gauge size={16} className="text-red-600" />;
-      case "heartRate":
-        return <Heart size={16} className="text-red-600" />;
-      case "temperature":
-        return <Thermometer size={16} className="text-orange-600" />;
-      case "oxygenSaturation":
-        return <Wind size={16} className="text-blue-600" />;
-      case "respiratoryRate":
-        return <Activity size={16} className="text-green-600" />;
-      default:
-        return <Activity size={16} />;
-    }
-  }
-
-  function getVitalLabel(vitalType: string) {
-    switch (vitalType) {
-      case "systolicBP":
-        return "Pression systolique";
-      case "diastolicBP":
-        return "Pression diastolique";
-      case "heartRate":
-        return "Fréquence cardiaque";
-      case "temperature":
-        return "Température";
-      case "oxygenSaturation":
-        return "Saturation en oxygène";
-      case "respiratoryRate":
-        return "Fréquence respiratoire";
-      default:
-        return vitalType;
-    }
-  }
-
-  function getVitalUnit(vitalType: string) {
-    switch (vitalType) {
-      case "systolicBP":
-      case "diastolicBP":
-        return "mmHg";
-      case "heartRate":
-        return "bpm";
-      case "temperature":
-        return "°C";
-      case "oxygenSaturation":
-        return "%";
-      case "respiratoryRate":
-        return "/min";
-      default:
-        return "";
-    }
-  }
+  const getVitalConfig = (type: string) => {
+    const config: Record<string, { icon: JSX.Element; label: string; unit: string }> = {
+      systolicBP: { icon: <Gauge size={16} className="text-red-500" />, label: "Systolic Pressure", unit: "mmHg" },
+      diastolicBP: { icon: <Gauge size={16} className="text-red-500" />, label: "Diastolic Pressure", unit: "mmHg" },
+      heartRate: { icon: <Heart size={16} className="text-red-500" />, label: "Heart Rate", unit: "bpm" },
+      temperature: { icon: <Thermometer size={16} className="text-orange-500" />, label: "Temperature", unit: "C" },
+      oxygenSaturation: { icon: <Wind size={16} className="text-blue-500" />, label: "Oxygen Saturation", unit: "%" },
+      respiratoryRate: { icon: <Activity size={16} className="text-green-500" />, label: "Respiratory Rate", unit: "/min" },
+    };
+    return config[type] || { icon: <Activity size={16} />, label: type, unit: "" };
+  };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex items-center justify-center py-32">
         <div className="text-center">
-          <div className="relative mb-4 mx-auto">
-            <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900"></div>
-          </div>
-          <p className="text-sm font-medium text-gray-600">Chargement...</p>
+          <div className="size-12 animate-spin rounded-full border-3 border-gray-200 dark:border-slate-800 border-t-blue-600 mb-4 mx-auto" />
+          <p className="text-sm font-medium text-gray-600 dark:text-slate-400">Loading data...</p>
         </div>
       </div>
     );
   }
 
-  if (!alert) {
+  if (error || !alert) {
     return (
-      <div className="min-h-screen bg-white p-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Alerte non trouvée
-          </h1>
-          <p className="text-gray-600 mb-6">
-            L'alerte que vous recherchez n'existe pas ou a été supprimée.
-          </p>
-          <Link
-            href="/dashboard/admin/alerts"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
-          >
-            <ArrowLeft size={16} />
-            Retour à la liste
-          </Link>
-        </div>
+      <div className="flex flex-col items-center justify-center py-32">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">{error || "Alert not found"}</h1>
+        <Link href="/dashboard/admin/alerts" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
+          <ArrowLeft size={16} /> Back to list
+        </Link>
       </div>
     );
   }
+
+  const severity = getSeverityStyles(alert.severity);
+  const status = getStatusStyles(alert.status);
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-4xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard/admin/alerts"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl font-bold text-gray-900">
-                Détails de l'alerte
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              {alert.status === "OPEN" && (
-                <button
-                  onClick={handleAcknowledge}
-                  disabled={updating}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  <Clock size={16} />
-                  Reconnaître
-                </button>
-              )}
-              {alert.status !== "RESOLVED" && (
-                <button
-                  onClick={() => setShowResolveForm(true)}
-                  disabled={updating}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  <CheckCircle size={16} />
-                  Résoudre
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+    <div>
+      <div className="flex items-center gap-3 mb-8">
+        <Link href="/dashboard/admin/alerts" className="text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 transition-colors">
+          <ArrowLeft size={20} />
+        </Link>
+        <h1 className="text-2xl font-bold">Alert Details</h1>
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 py-6">
-        {/* Alert Card */}
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          {/* Severity Header */}
-          <div className={`p-6 ${getSeverityColor(alert.severity)} border-b`}>
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900 overflow-hidden shadow-sm">
+          <div className={`p-6 ${severity.color} border-b border-inherit`}>
             <div className="flex items-center gap-4">
-              {getSeverityIcon(alert.severity)}
+              <div className="p-3 bg-white/50 dark:bg-slate-900/50 rounded-xl shadow-sm">{severity.icon}</div>
               <div>
-                <h2 className="text-xl font-semibold">
-                  Alerte {getSeverityLabel(alert.severity)}
-                </h2>
-                <p className="text-sm opacity-90">{alert.alertType}</p>
+                <h2 className="text-xl font-bold">Alert {severity.label}</h2>
+                <p className="text-sm font-medium opacity-80">{alert.alertType}</p>
               </div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
-            {/* Status */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3">
-                <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(alert.status)}`}>
-                  {getStatusIcon(alert.status)}
-                  {getStatusLabel(alert.status)}
-                </span>
-                <span className="text-sm text-gray-600">
-                  Créée le {new Date(alert.createdAt).toLocaleDateString("fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+          <div className="p-6 md:p-8">
+            <div className="mb-8 flex flex-wrap items-center gap-4">
+              <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border tracking-wide uppercase ${status.color}`}>
+                {status.icon} {status.label}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Clock size={14} /> Created on {formatDate(alert.createdAt)}
+              </span>
+            </div>
+
+            <div className="mb-10 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <p className="text-gray-900 dark:text-slate-200 text-lg leading-relaxed font-medium">{alert.message}</p>
+            </div>
+
+            <div className="mb-10 rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-indigo-950/30 dark:to-cyan-950/30 p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-slate-100 mb-1 flex items-center gap-2">
+                    <Sparkles size={18} className="text-indigo-600 dark:text-indigo-400" /> AI Next Best Actions
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-slate-400">{aiSummary || "Top 3 recommended actions with confidence."}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAiActions}
+                  className="rounded-lg border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/30 transition-colors"
+                >
+                  Refresh
+                </button>
               </div>
+
+              {aiLoading ? (
+                <div className="py-4 text-sm text-indigo-700 dark:text-indigo-300">Generating AI recommendations...</div>
+              ) : aiError ? (
+                <div className="py-3 text-sm text-red-600 dark:text-red-400">{aiError}</div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-3">
+                  {aiActions.map((item, idx) => (
+                    <div key={`${item.title}-${idx}`} className="rounded-lg border border-white/60 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-4 shadow-sm">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-black tracking-wider text-indigo-600 dark:text-indigo-300 uppercase">Action {idx + 1}</span>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{Math.round((item.confidence || 0) * 100)}%</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-slate-100 mb-1.5">{item.title}</p>
+                      <p className="text-xs leading-relaxed text-gray-600 dark:text-slate-400">{item.rationale}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Message */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-gray-900 text-lg">{alert.message}</p>
-            </div>
-
-            {/* Vital Signs Data */}
-            {alert.data && alert.data.vitalType && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Constantes vitales</h3>
+            {alert.data?.vitalType && (
+              <div className="mb-10">
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Activity size={18} className="text-blue-500" /> Vitals at the time of alert
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-3 mb-2">
-                      {getVitalIcon(alert.data.vitalType)}
-                      <span className="font-medium">{getVitalLabel(alert.data.vitalType)}</span>
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {alert.data.value} {getVitalUnit(alert.data.vitalType)}
-                      </span>
-                      {alert.data.threshold && (
-                        <span className="text-sm text-gray-600">
-                          Seuil: {alert.data.threshold.min} - {alert.data.threshold.max} {getVitalUnit(alert.data.vitalType)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {(() => {
+                    const vital = getVitalConfig(alert.data!.vitalType);
+                    return (
+                      <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm transition-colors">
+                        <div className="flex items-center gap-3 mb-3 text-gray-600 dark:text-slate-400">
+                          {vital.icon}
+                          <span className="text-sm font-semibold uppercase tracking-wider">{vital.label}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-4xl font-black text-gray-900 dark:text-slate-100">
+                            {alert.data!.value} <span className="text-xl font-normal text-gray-400">{vital.unit}</span>
+                          </span>
+                          {alert.data!.threshold && (
+                            <div className="text-right">
+                              <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase font-bold">Thresholds</p>
+                              <p className="text-sm font-mono text-gray-600 dark:text-slate-400">
+                                {alert.data!.threshold.min} - {alert.data!.threshold.max}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
 
-            {/* Timeline */}
-            <div className="mb-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Chronologie</h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle size={16} className="text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Alerte créée</p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(alert.createdAt).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
+            <div className="mb-10">
+              <h3 className="font-bold text-gray-900 dark:text-slate-100 mb-6">Action History</h3>
+              <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-slate-800">
+                <TimelineItem icon={<AlertCircle size={14} className="text-orange-600" />} color="bg-orange-100 dark:bg-orange-950/40" title="Alert generated by the system" date={formatDate(alert.createdAt)} />
                 {alert.acknowledgedAt && (
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Clock size={16} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Alerte reconnue</p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(alert.acknowledgedAt).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {alert.acknowledgedBy && (
-                        <p className="text-sm text-gray-600">
-                          Par {alert.acknowledgedBy.firstName} {alert.acknowledgedBy.lastName}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <TimelineItem
+                    icon={<Clock size={14} className="text-blue-600" />}
+                    color="bg-blue-100 dark:bg-blue-950/40"
+                    title="Alert acknowledged"
+                    date={formatDate(alert.acknowledgedAt)}
+                    user={`${alert.acknowledgedBy?.firstName} ${alert.acknowledgedBy?.lastName}`}
+                  />
                 )}
-
                 {alert.resolvedAt && (
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle size={16} className="text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Alerte résolue</p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(alert.resolvedAt).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {alert.resolvedBy && (
-                        <p className="text-sm text-gray-600">
-                          Par {alert.resolvedBy.firstName} {alert.resolvedBy.lastName}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <TimelineItem
+                    icon={<CheckCircle size={14} className="text-green-600" />}
+                    color="bg-green-100 dark:bg-green-950/40"
+                    title="Alert closed"
+                    date={formatDate(alert.resolvedAt)}
+                    user={`${alert.resolvedBy?.firstName} ${alert.resolvedBy?.lastName}`}
+                  />
                 )}
               </div>
             </div>
 
-            {/* Resolution */}
             {alert.resolution && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Résolution</h3>
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-gray-900">{alert.resolution}</p>
-                </div>
+              <div className="mb-10 p-5 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl">
+                <h3 className="font-bold text-green-900 dark:text-green-400 mb-2 flex items-center gap-2">
+                  <CheckCircle size={16} /> Resolution note
+                </h3>
+                <p className="text-green-800 dark:text-green-300 leading-relaxed italic">"{alert.resolution}"</p>
               </div>
             )}
 
-            {/* Patient Info */}
             {alert.patient && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Patient concerné</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <User size={20} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Nom</p>
-                      <p className="font-medium text-gray-900">
-                        {alert.patient.user.firstName} {alert.patient.user.lastName}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                      <Mail size={20} className="text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Email</p>
-                      <p className="font-medium text-gray-900">{alert.patient.user.email}</p>
-                    </div>
-                  </div>
-
+              <div className="border-t border-gray-100 dark:border-slate-800 pt-8">
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 mb-5">Patient</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <PatientInfoItem icon={<User size={18} className="text-blue-600 dark:text-blue-400" />} label="Full Name" value={`${alert.patient.user.firstName} ${alert.patient.user.lastName}`} color="bg-blue-50 dark:bg-blue-900/20" />
+                  <PatientInfoItem icon={<Mail size={18} className="text-purple-600 dark:text-purple-400" />} label="Email" value={alert.patient.user.email} color="bg-purple-50 dark:bg-purple-900/20" />
                   {alert.patient.user.phoneNumber && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <Phone size={20} className="text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Téléphone</p>
-                        <p className="font-medium text-gray-900">{alert.patient.user.phoneNumber}</p>
-                      </div>
-                    </div>
+                    <PatientInfoItem icon={<Phone size={18} className="text-green-600 dark:text-green-400" />} label="Contact" value={alert.patient.user.phoneNumber} color="bg-green-50 dark:bg-green-900/20" />
                   )}
                 </div>
               </div>
@@ -591,60 +391,38 @@ export default function AlertDetailsPage({ params }: { params: { id: string } })
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Resolve Modal */}
-      {showResolveForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Résoudre l'alerte
-              </h2>
-              <button
-                onClick={() => setShowResolveForm(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleResolve} className="p-6">
-              <div className="mb-4">
-                <label htmlFor="resolution" className="block text-sm font-medium text-gray-700 mb-2">
-                  Description de la résolution
-                </label>
-                <textarea
-                  id="resolution"
-                  rows={4}
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                  placeholder="Expliquez comment cette alerte a été résolue..."
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-gray-400 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowResolveForm(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={updating || !resolution.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save size={16} />
-                  {updating ? "Résolution..." : "Confirmer la résolution"}
-                </button>
-              </div>
-            </form>
+function TimelineItem({ icon, color, title, date, user }: { icon: JSX.Element; color: string; title: string; date: string; user?: string }) {
+  return (
+    <div className="flex items-start gap-4 relative z-10">
+      <div className={`h-9 w-9 rounded-full ${color} flex items-center justify-center flex-shrink-0 shadow-sm border border-white dark:border-slate-900`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-gray-900 dark:text-slate-200 text-sm leading-tight">{title}</p>
+        <p className="text-[11px] text-gray-500 dark:text-slate-500 font-medium mt-0.5">{date}</p>
+        {user && (
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-md border border-slate-100 dark:border-slate-700">
+            <User size={10} className="text-slate-400" />
+            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">{user}</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PatientInfoItem({ icon, label, value, color }: { icon: JSX.Element; label: string; value: string; color: string }) {
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm transition-all hover:border-blue-200 dark:hover:border-blue-900">
+      <div className={`h-12 w-12 rounded-xl ${color} flex items-center justify-center flex-shrink-0`}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-slate-500 font-black mb-0.5">{label}</p>
+        <p className="font-bold text-gray-900 dark:text-slate-200 text-sm truncate">{value}</p>
+      </div>
     </div>
   );
 }

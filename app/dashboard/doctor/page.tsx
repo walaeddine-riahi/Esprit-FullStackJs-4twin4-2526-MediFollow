@@ -30,6 +30,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -838,6 +839,12 @@ export default function DoctorDashboard() {
               <button className="flex items-center gap-2 rounded-full border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-green-300 dark:hover:border-green-500 transition-colors whitespace-nowrap">
                 <Stethoscope size={18} />
                 Rapports
+              </button>
+            </Link>
+            <Link href="/dashboard/questionnaires">
+              <button className="flex items-center gap-2 rounded-full border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors whitespace-nowrap">
+                <ClipboardList size={18} />
+                Questionnaires
               </button>
             </Link>
           </div>

@@ -37,7 +37,7 @@ async function createCardioTest() {
     const doctorProfile = await prisma.doctorProfile.create({
       data: {
         userId: cardioDoctor.id,
-        specialty: "Cardiologie",
+        specialty: "CARDIOLOGY",
         bio: "Spécialiste en cardiologie avec 15 ans d'expérience",
         phone: "+33699999999",
         location: "Paris, France",

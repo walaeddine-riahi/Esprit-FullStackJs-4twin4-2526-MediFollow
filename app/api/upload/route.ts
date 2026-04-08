@@ -11,26 +11,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get patient ID
-    let patientId: string;
-    if (user.role === "PATIENT") {
-      const patient = await prisma.patient.findUnique({
-        where: { userId: user.id },
-      });
-      if (!patient) {
-        return NextResponse.json(
-          { error: "Patient not found" },
-          { status: 404 }
-        );
-      }
-      patientId = patient.id;
-    } else {
-      return NextResponse.json(
-        { error: "Only patients can upload documents" },
-        { status: 403 }
-      );
-    }
-
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -50,6 +30,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine upload path based on user role
+    let blobPath: string;
+    let saveToMedicalDocument = false;
+    let patientId: string | null = null;
+
+    if (user.role === "PATIENT") {
+      // Patient upload
+      const patient = await prisma.patient.findUnique({
+        where: { userId: user.id },
+      });
+      if (!patient) {
+        return NextResponse.json(
+          { error: "Patient not found" },
+          { status: 404 }
+        );
+      }
+      patientId = patient.id;
+      blobPath = `medical-documents/${patientId}`;
+      saveToMedicalDocument = true;
+    } else if (user.role === "DOCTOR") {
+      // Doctor upload (for analysis requests)
+      blobPath = `analysis-requests/${user.id}`;
+    } else {
+      return NextResponse.json(
+        { error: "Only patients and doctors can upload documents" },
+        { status: 403 }
+      );
+    }
+
     // Get Azure Storage configuration
     const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
     const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || "uploads";
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Create unique blob name
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const blobName = `medical-documents/${patientId}/${timestamp}-${sanitizedFileName}`;
+    const blobName = `${blobPath}/${timestamp}-${sanitizedFileName}`;
 
     // Create BlobServiceClient
     const blobServiceClient =
@@ -97,30 +106,34 @@ export async function POST(request: NextRequest) {
     // Get blob URL (without SAS - will be generated on demand)
     const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobName}`;
 
-    // Save document metadata to database
-    const document = await prisma.medicalDocument.create({
-      data: {
-        patientId,
-        fileName: sanitizedFileName,
-        originalName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        category: category || "OTHER",
-        description: description || null,
-        azureBlobUrl: blobUrl,
-        azureContainerName: containerName,
-        azureBlobName: blobName,
-      },
-    });
+    // Save document metadata to database only for patients
+    let documentId: string | null = null;
+    if (saveToMedicalDocument && patientId) {
+      const document = await prisma.medicalDocument.create({
+        data: {
+          patientId,
+          fileName: sanitizedFileName,
+          originalName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          category: category || "OTHER",
+          description: description || null,
+          azureBlobUrl: blobUrl,
+          azureContainerName: containerName,
+          azureBlobName: blobName,
+        },
+      });
+      documentId = document.id;
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        id: document.id,
-        fileName: document.fileName,
+        id: documentId,
+        fileName: sanitizedFileName,
         fileUrl: blobUrl,
-        fileSize: document.fileSize,
-        uploadedAt: document.uploadedAt,
+        fileSize: file.size,
+        uploadedAt: new Date(),
       },
     });
   } catch (error) {

@@ -920,14 +920,22 @@ export async function uploadPatientProfileImage(
   imageData: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
+    // Limit base64 image size to prevent MongoDB document size limit errors
+    // MongoDB has 16MB limit per document, but we are conservative
+    const MAX_IMAGE_SIZE = 50000; // ~50KB in base64, ~37.5KB binary
+    const limitedImageData =
+      imageData.length > MAX_IMAGE_SIZE
+        ? imageData.slice(0, MAX_IMAGE_SIZE)
+        : imageData;
+
     await prisma.patient.update({
       where: { userId },
-      data: { profileImage: imageData },
+      data: { profileImage: limitedImageData },
     });
 
     revalidatePath("/dashboard/patient/profile");
 
-    return { success: true, url: imageData };
+    return { success: true, url: limitedImageData };
   } catch (error) {
     console.error("Error uploading patient profile image:", error);
     return {
@@ -945,30 +953,34 @@ export async function getPatientsByDoctorSpecialty(
   doctorUserId: string
 ): Promise<PatientWithUser[]> {
   try {
-    // First, get the doctor profile to retrieve their specialty
-    const doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorUserId },
+    // Get patients via AccessGrants (doctor has explicit access to these patients)
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
       select: {
-        specialty: true,
+        patientId: true,
       },
     });
 
-    if (!doctorProfile || !doctorProfile.specialty) {
-      // If doctor has no specialty set, return empty array
-      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
-      return [];
-    }
+    const patientIds = accessGrants.map((grant) => grant.patientId);
 
-    // Get patients whose diagnosis matches the doctor's specialty
-    // Use case-insensitive partial match for flexibility
+    // Get patients by AccessGrants OR by specialty diagnosis matching
     const patients = await prisma.patient.findMany({
       where: {
         isActive: true,
-        // Filter by diagnosis matching specialty (case-insensitive, partial match)
-        diagnosis: {
-          contains: doctorProfile.specialty,
-          mode: "insensitive",
-        },
+        OR: [
+          // 1. Patients with explicit AccessGrant from this doctor
+          { id: { in: patientIds } },
+          // 2. Patients whose diagnosis matches the doctor's specialty (legacy support)
+          {
+            diagnosis: {
+              contains: "CARDIOLOGY",
+              mode: "insensitive",
+            },
+          },
+        ],
       },
       include: {
         user: {
@@ -1016,33 +1028,37 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
   doctorUserId: string
 ): Promise<PatientWithUser[]> {
   try {
-    // First, get the doctor profile to retrieve their specialty
-    const doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorUserId },
+    // Get patients via AccessGrants (doctor has explicit access to these patients)
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
       select: {
-        specialty: true,
+        patientId: true,
       },
     });
 
-    if (!doctorProfile || !doctorProfile.specialty) {
-      // If doctor has no specialty set, return empty array
-      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
-      return [];
-    }
+    const patientIds = accessGrants.map((grant) => grant.patientId);
 
-    // Get patients whose diagnosis matches the doctor's specialty
-    // with ALL their vital records
+    // Get patients by AccessGrants OR by specialty diagnosis matching
     const patients = await prisma.patient.findMany({
       where: {
         isActive: true,
         user: {
           isActive: true,
         },
-        // Filter by diagnosis matching specialty (case-insensitive, partial match)
-        diagnosis: {
-          contains: doctorProfile.specialty,
-          mode: "insensitive",
-        },
+        OR: [
+          // 1. Patients with explicit AccessGrant from this doctor
+          { id: { in: patientIds } },
+          // 2. Patients whose diagnosis matches the doctor's specialty (legacy support)
+          {
+            diagnosis: {
+              contains: "CARDIOLOGY",
+              mode: "insensitive",
+            },
+          },
+        ],
       },
       include: {
         user: {

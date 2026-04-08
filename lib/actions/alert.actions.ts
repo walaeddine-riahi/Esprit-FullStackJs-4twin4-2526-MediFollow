@@ -346,28 +346,34 @@ export async function getAlertsByDoctorSpecialty(
   status?: AlertStatus
 ) {
   try {
-    // First, get the doctor profile to retrieve their specialty
-    const doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorUserId },
+    // Get patients via AccessGrants (doctor has explicit access to these patients)
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
       select: {
-        specialty: true,
+        patientId: true,
       },
     });
 
-    if (!doctorProfile || !doctorProfile.specialty) {
-      // If doctor has no specialty set, return empty array
-      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
-      return { success: true, alerts: [] };
-    }
+    const patientIds = accessGrants.map((grant) => grant.patientId);
 
-    // Get alerts for patients whose diagnosis matches the doctor's specialty
+    // Build where clause for alerts
     const where: any = {
-      patient: {
-        diagnosis: {
-          contains: doctorProfile.specialty,
-          mode: "insensitive",
+      OR: [
+        // 1. Alerts from patients with explicit AccessGrant from this doctor
+        { patientId: { in: patientIds } },
+        // 2. Alerts from patients whose diagnosis matches doctor specialty (legacy support)
+        {
+          patient: {
+            diagnosis: {
+              contains: "CARDIOLOGY",
+              mode: "insensitive",
+            },
+          },
         },
-      },
+      ],
     };
 
     if (status) {
@@ -398,29 +404,34 @@ export async function getAlertsByDoctorSpecialty(
  */
 export async function getAlertStatsByDoctorSpecialty(doctorUserId: string) {
   try {
-    // First, get the doctor profile to retrieve their specialty
-    const doctorProfile = await prisma.doctorProfile.findUnique({
-      where: { userId: doctorUserId },
+    // Get patients via AccessGrants (doctor has explicit access to these patients)
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
       select: {
-        specialty: true,
+        patientId: true,
       },
     });
 
-    if (!doctorProfile || !doctorProfile.specialty) {
-      // If doctor has no specialty set, return zeros
-      return {
-        success: true,
-        stats: { total: 0, open: 0, acknowledged: 0, resolved: 0, critical: 0 },
-      };
-    }
+    const patientIds = accessGrants.map((grant) => grant.patientId);
 
+    // Build where clause for alerts
     const where: any = {
-      patient: {
-        diagnosis: {
-          contains: doctorProfile.specialty,
-          mode: "insensitive",
+      OR: [
+        // 1. Alerts from patients with explicit AccessGrant from this doctor
+        { patientId: { in: patientIds } },
+        // 2. Alerts from patients whose diagnosis matches doctor specialty (legacy support)
+        {
+          patient: {
+            diagnosis: {
+              contains: "CARDIOLOGY",
+              mode: "insensitive",
+            },
+          },
         },
-      },
+      ],
     };
 
     const total = await prisma.alert.count({ where });

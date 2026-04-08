@@ -43,6 +43,9 @@ model User {
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
   doctorNotes   DoctorNote[]
   situationReportsCreated SituationReport[] @relation("SituationReportCreatedBy")
+  // TODO_MERGE #2: Added from branche_patient - questionnaire system
+  questionnaireTemplates QuestionnaireTemplate[] @relation("QuestionnaireTemplates")  // Questionnaires created by this doctor
+  analysisRequests AnalysisRequest[] @relation("DoctorAnalysisRequests")  // Analysis requests created by this doctor
   sessions      Session[]
 
   @@map("users")
@@ -87,6 +90,9 @@ model Patient {
   medicalAnalyses       MedicalAnalysis[]
   doctorNotes           DoctorNote[]
   situationReports      SituationReport[]
+  // TODO_MERGE #3: Added from branche_patient - questionnaire system
+  questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")  // Questionnaires assigned to this patient
+  analysisRequests      AnalysisRequest[] @relation("PatientAnalysisRequests")  // Analysis requests for this patient
 
   @@map("patients")
 }
@@ -109,13 +115,37 @@ enum BloodType {
 }
 
 // ============================================
+// MEDICAL SPECIALTIES ENUM (TODO_MERGE #1)
+// ============================================
+
+enum MedicalSpecialty {
+  CARDIOLOGY
+  NEUROLOGY
+  ORTHOPEDICS
+  PULMONOLOGY
+  GASTROENTEROLOGY
+  ENDOCRINOLOGY
+  RHEUMATOLOGY
+  NEPHROLOGY
+  HEMATOLOGY
+  ONCOLOGY
+  PSYCHIATRY
+  DERMATOLOGY
+  ENT
+  OPHTHALMOLOGY
+  GENERAL_MEDICINE
+  OTHER
+}
+
+// ============================================
 // DOCTOR PROFILE
 // ============================================
 
 model DoctorProfile {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String       @unique @db.ObjectId
-  specialty       String?
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String            @unique @db.ObjectId
+  // TODO_MERGE #1: Changed from String? to MedicalSpecialty? enum for type safety
+  specialty       MedicalSpecialty?
   bio             String?
   phone           String?
   location        String?
@@ -742,10 +772,179 @@ enum SituationReportStatus {
 }
 
 // ============================================
-// EXTEND Patient MODEL
+// QUESTIONNAIRE SYSTEM (TODO_MERGE #4-7)
 // ============================================
 
-// Note: Add situationReports relation to Patient model above:
-// situationReports    SituationReport[]
-// And to User model:
-// situationReportsCreated SituationReport[] @relation("SituationReportCreatedBy")
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  RATING
+  MULTIPLE_CHOICE
+  CHECKBOX
+  DATE
+  TIME
+  YESNO
+}
+
+model QuestionnaireTemplate {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId          String          @db.ObjectId
+  title             String
+  description       String?
+  specialty         MedicalSpecialty
+  questions         QuestionnaireQuestion[]
+  isAiGenerated     Boolean         @default(false)
+  aiPrompt          String?         // The prompt used to generate questions via AI
+  isPublished       Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  doctor            User            @relation("QuestionnaireTemplates", fields: [doctorId], references: [id], onDelete: Cascade)
+  assignments       QuestionnaireAssignment[]
+
+  @@index([doctorId])
+  @@index([specialty])
+  @@map("questionnaire_templates")
+}
+
+model QuestionnaireQuestion {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  templateId        String          @db.ObjectId
+  questionNumber    Int
+  questionText      String
+  questionType      QuestionType
+  helpText          String?         // Additional guidance for patient
+  
+  // Options for multiple choice, checkbox, etc.
+  options           Json?           // Array of {value, label}
+  
+  // Validation
+  isRequired        Boolean         @default(true)
+  minLength         Int?
+  maxLength         Int?
+  minValue          Float?
+  maxValue          Float?
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  responses         QuestionnaireResponse[]
+
+  @@index([templateId])
+  @@map("questionnaire_questions")
+}
+
+enum AssignmentStatus {
+  PENDING           // Not yet started
+  IN_PROGRESS       // Patient started but not completed
+  COMPLETED         // Patient completed
+  EXPIRED           // Due date passed without completion
+}
+
+model QuestionnaireAssignment {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  templateId        String          @db.ObjectId
+  patientId         String          @db.ObjectId
+  assignedAt        DateTime        @default(now())
+  dueDate           DateTime?       // Deadline for patient to complete
+  
+  status            AssignmentStatus @default(PENDING)
+  completedAt       DateTime?
+  
+  // Score if applicable
+  score             Float?
+  scoreOutOf        Float?          // Total possible score
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  patient           Patient         @relation("QuestionnaireAssignments", fields: [patientId], references: [id], onDelete: Cascade)
+  responses         QuestionnaireResponse[]
+
+  @@index([patientId])
+  @@index([status])
+  @@map("questionnaire_assignments")
+}
+
+model QuestionnaireResponse {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  assignmentId      String          @db.ObjectId
+  questionId        String          @db.ObjectId
+  
+  // Patient's answer
+  responseText      String?
+  responseNumber    Float?
+  responseJson      Json?           // For complex responses (multiple selections, etc.)
+  
+  answeredAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  assignment        QuestionnaireAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  question          QuestionnaireQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@index([questionId])
+  @@map("questionnaire_responses")
+}
+
+// ============================================
+// ANALYSIS REQUESTS (Doctor assigns to patient)
+// ============================================
+
+enum AnalysisRequestStatus {
+  PENDING           // Not yet started by patient
+  IN_PROGRESS       // Patient started
+  SUBMITTED         // Patient submitted results
+  APPROVED          // Doctor reviewed and approved
+  REJECTED          // Doctor rejected, needs resubmission
+  COMPLETED         // Fully completed
+  EXPIRED           // Due date passed
+  CANCELLED         // Cancelled by doctor
+}
+
+model AnalysisRequest {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId          String           @db.ObjectId
+  patientId         String           @db.ObjectId
+  
+  analysisType      AnalysisType
+  testName          String           // Ex: "Numération Formule Sanguine", "Blood Pressure"
+  description       String?          // Doctor notes about why this analysis is needed
+  
+  requestedAt       DateTime         @default(now())
+  dueDate           DateTime?        // Deadline for patient to submit
+  status            AnalysisRequestStatus @default(PENDING)
+  
+  // Optional document uploaded by doctor (e.g., lab request form)
+  documentUrl       String?          // E.g., Azure Blob URL
+  documentName      String?
+  
+  // Patient submission
+  submittedAt       DateTime?
+  submittedDocumentUrl String?       // URL to patient's uploaded result
+  submittedDocumentName String?      // Original filename
+  patientNotes      String?          // Notes from patient
+  
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  doctor            User             @relation("DoctorAnalysisRequests", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient           Patient          @relation("PatientAnalysisRequests", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([status])
+  @@index([analysisType])
+  @@index([requestedAt])
+  @@map("analysis_requests")
+}

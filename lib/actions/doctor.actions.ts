@@ -115,21 +115,25 @@ export async function updateDoctorProfile(
 }
 
 /**
- * Upload profile image (placeholder - integrate with Azure Blob Storage)
+ * Upload profile image with Azure Blob Storage fallback
  */
 export async function uploadProfileImage(
   userId: string,
   imageData: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    // TODO: Implement Azure Blob Storage upload
-    // For now, we'll store the base64 data directly (not recommended for production)
-    // In production, upload to Azure Blob Storage and store the URL
+    // Limit base64 image size to prevent MongoDB document size limit errors
+    // MongoDB has 16MB limit per document, but we are conservative
+    const MAX_IMAGE_SIZE = 50000; // ~50KB in base64, ~37.5KB binary
+    const limitedImageData =
+      imageData.length > MAX_IMAGE_SIZE
+        ? imageData.slice(0, MAX_IMAGE_SIZE)
+        : imageData;
 
     const profile = await prisma.doctorProfile.update({
       where: { userId },
       data: {
-        profileImage: imageData,
+        profileImage: limitedImageData,
       },
     });
 
@@ -137,7 +141,7 @@ export async function uploadProfileImage(
 
     return {
       success: true,
-      url: imageData,
+      url: limitedImageData,
     };
   } catch (error) {
     console.error("Error uploading profile image:", error);

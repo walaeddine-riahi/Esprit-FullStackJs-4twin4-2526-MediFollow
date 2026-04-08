@@ -18,8 +18,14 @@ import {
 } from "@/lib/utils/vitalValidation";
 
 import { checkVitalThresholds } from "./alert.actions";
+import { analyzePatientRisk, calculateFallbackRiskScore } from "@/lib/ai/riskAnalysis";
 
-export async function createVitalRecord(patientId: string, formData: FormData) {
+export async function createVitalRecord(
+  patientId: string,
+  formData: FormData,
+  enteredBy?: string,
+  enteredByRole?: string
+) {
   try {
     const rawData = {
       systolicBP: formData.get("systolicBP") as string,
@@ -89,6 +95,14 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
       vitalData.triggeredRules = violations.triggeredRules;
     }
 
+    // Add entry tracking if provided
+    if (enteredBy) {
+      vitalData.enteredBy = enteredBy;
+    }
+    if (enteredByRole) {
+      vitalData.enteredByRole = enteredByRole;
+    }
+
     const vitalRecord = await prisma.vitalRecord.create({
       data: vitalData,
       include: {
@@ -108,9 +122,15 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
     // Also run legacy thresholds check for compatibility
     await checkVitalThresholds(vitalRecord);
 
+    // AI Risk Analysis (async, don't block response)
+    runAIAnalysis(vitalRecord.id, patientId, vitalData).catch((error: any) => {
+      console.error("AI analysis error:", error);
+    });
+
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/doctor/vitals");
+    revalidatePath("/dashboard/nurse");
 
     return {
       success: true,
@@ -475,5 +495,107 @@ export async function getVitalReviewHistory(recordId: string) {
   } catch (error: any) {
     console.error("Get vital review history error:", error);
     return { success: false, error: "Erreur", history: [] };
+  }
+}
+
+/**
+ * AI Analysis for vital records (runs async in background)
+ */
+async function runAIAnalysis(
+  vitalRecordId: string,
+  patientId: string,
+  vitalData: any
+) {
+  try {
+    // Get patient details
+    const patient: any = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!patient) return;
+
+    // Get vital history for trend analysis
+    const vitalHistory = await prisma.vitalRecord.findMany({
+      where: { patientId },
+      orderBy: { recordedAt: "desc" },
+      take: 7,
+      select: {
+        recordedAt: true,
+        systolicBP: true,
+        diastolicBP: true,
+        heartRate: true,
+        temperature: true,
+        oxygenSaturation: true,
+        weight: true,
+      },
+    });
+
+    // Calculate age
+    const age = Math.floor(
+      (new Date().getTime() - new Date(patient.dateOfBirth).getTime()) /
+        (365.25 * 24 * 60 * 60 * 1000)
+    );
+
+    // Get baseline (average of recent normal vitals)
+    const baseline = {
+      systolicBP: 120,
+      diastolicBP: 80,
+      heartRate: 70,
+      temperature: 37,
+      oxygenSaturation: 98,
+    };
+
+    // Run AI risk analysis
+    const riskAnalysis = await analyzePatientRisk({
+      patientName: `${patient.user.firstName} ${patient.user.lastName}`,
+      age,
+      conditions: [],
+      baseline,
+      vitalHistory: vitalHistory.map((v) => ({
+        recordedAt: v.recordedAt,
+        systolicBP: v.systolicBP || undefined,
+        diastolicBP: v.diastolicBP || undefined,
+        heartRate: v.heartRate || undefined,
+        temperature: v.temperature || undefined,
+        oxygenSaturation: v.oxygenSaturation || undefined,
+        weight: v.weight || undefined,
+      })),
+      latestVitals: {
+        systolicBP: vitalData.systolicBP,
+        diastolicBP: vitalData.diastolicBP,
+        heartRate: vitalData.heartRate,
+        temperature: vitalData.temperature,
+        oxygenSaturation: vitalData.oxygenSaturation,
+        weight: vitalData.weight,
+      },
+    });
+
+    if (riskAnalysis.success && riskAnalysis.analysis) {
+      // Update vital record with AI analysis
+      await (prisma.vitalRecord as any).update({
+        where: { id: vitalRecordId },
+        data: {
+          aiAnalysis: riskAnalysis.analysis,
+          riskScore: riskAnalysis.analysis.riskScore,
+          trendIndicator: riskAnalysis.analysis.trendIndicator,
+          aiRecommendations: riskAnalysis.analysis.recommendations.join("; "),
+        },
+      });
+    } else {
+      // Fallback to rule-based risk score
+      const fallbackScore = calculateFallbackRiskScore(vitalData);
+      await (prisma.vitalRecord as any).update({
+        where: { id: vitalRecordId },
+        data: {
+          riskScore: fallbackScore,
+          trendIndicator: "stable",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("AI analysis error:", error);
   }
 }

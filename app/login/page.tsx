@@ -61,6 +61,10 @@ export default function LoginPage() {
           router.push("/dashboard/doctor");
         } else if (role === "ADMIN") {
           router.push("/dashboard/admin");
+        } else if (role === "NURSE") {
+          router.push("/dashboard/nurse");
+        } else if (role === "COORDINATOR") {
+          router.push("/dashboard/coordinator");
         }
       } else {
         setError(result.error || "Erreur de connexion");

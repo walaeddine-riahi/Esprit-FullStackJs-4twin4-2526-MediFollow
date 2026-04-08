@@ -36,11 +36,15 @@ model User {
   // Relations
   patient       Patient?
   doctorProfile DoctorProfile?
+  nurseProfile  NurseProfile?
+  coordinatorProfile CoordinatorProfile?
   auditLogs     AuditLog[]
   alertsCreated Alert[]    @relation("AlertCreatedBy")
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
   alertsResolved Alert[]    @relation("AlertResolvedBy")
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
+  vitalRecordsEntered VitalRecord[] @relation("VitalRecordEnteredBy")  // Vitals entered by this user (nurse/patient)
+  voiceTranscripts VoiceTranscript[] @relation("VoiceTranscripts")  // Voice entries by nurse
   sessions      Session[]
 
   @@map("users")
@@ -50,6 +54,8 @@ enum Role {
   PATIENT
   DOCTOR
   ADMIN
+  NURSE
+  COORDINATOR
 }
 
 // ============================================
@@ -126,6 +132,45 @@ model DoctorProfile {
   @@map("doctor_profiles")
 }
 
+// ============================================
+// NURSE PROFILE
+// ============================================
+
+model NurseProfile {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  department      String?
+  shift           String?      // "morning" | "afternoon" | "night"
+  phone           String?
+  profileImage    String?      // URL to profile image (Azure Blob Storage)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("nurse_profiles")
+}
+
+// ============================================
+// COORDINATOR PROFILE
+// ============================================
+
+model CoordinatorProfile {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  department      String?
+  phone           String?
+  profileImage    String?      // URL to profile image (Azure Blob Storage)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coordinator_profiles")
+}
+
 type Experience {
   title         String
   institution   String
@@ -198,6 +243,16 @@ model VitalRecord {
   notes               String?
   triggeredRules      Json?           // Array of rules that triggered alerts
   
+  // AI Analysis
+  aiAnalysis          Json?           // AI-generated analysis and insights
+  riskScore           Float?          // 0-100 AI-calculated risk score
+  trendIndicator      String?         // "improving" | "stable" | "declining"
+  aiRecommendations   String?         // AI-generated recommendations
+  
+  // Entry tracking (who entered this data)
+  enteredBy           String?         @db.ObjectId  // User ID who entered this data
+  enteredByRole       Role?                         // Role of person who entered (PATIENT/NURSE)
+  
   // Status & Classification
   status              VitalStatus     @default(NORMAL)  // NORMAL | A_VERIFIER | CRITIQUE
   
@@ -216,8 +271,10 @@ model VitalRecord {
   // Relations
   patient             Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
   reviewedBy          User?           @relation("VitalRecordReviews", fields: [reviewedById], references: [id])
+  enteredByUser       User?           @relation("VitalRecordEnteredBy", fields: [enteredBy], references: [id])
   blockchainProof     BlockchainProof?
   alerts              Alert[]         // Alerts triggered by this vital
+  voiceTranscripts    VoiceTranscript[] // Voice entries for this vital
 
   @@index([patientId])
   @@index([recordedAt])
@@ -659,4 +716,124 @@ model AccessGrant {
   @@index([doctorId])
   @@index([isActive])
   @@map("access_grants")
+}
+
+// ============================================
+// NURSE ASSIGNMENTS (Patient → Nurse)
+// ============================================
+
+model NurseAssignment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  nurseId     String   @db.ObjectId
+  patientId   String   @db.ObjectId
+  assignedAt  DateTime @default(now())
+  assignedBy  String?  @db.ObjectId  // Admin/Doctor who assigned
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([nurseId, patientId])
+  @@index([nurseId])
+  @@index([patientId])
+  @@index([isActive])
+  @@map("nurse_assignments")
+}
+
+// ============================================
+// PATIENT COMMUNICATION (Coordinator → Patient)
+// ============================================
+
+model PatientCommunication {
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String              @db.ObjectId
+  coordinatorId   String              @db.ObjectId
+  type            CommunicationType
+  subject         String?
+  message         String
+  sentAt          DateTime            @default(now())
+  readAt          DateTime?
+  isRead          Boolean             @default(false)
+  
+  @@index([patientId])
+  @@index([coordinatorId])
+  @@index([sentAt])
+  @@map("patient_communications")
+}
+
+enum CommunicationType {
+  REMINDER
+  GUIDANCE
+  FOLLOW_UP
+}
+
+// ============================================
+// COMPLIANCE TRACKING
+// ============================================
+
+model ComplianceRecord {
+  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId               String            @db.ObjectId
+  date                    DateTime
+  vitalsSubmitted         Boolean           @default(false)
+  vitalsCount             Int               @default(0)
+  symptomsReported        Boolean           @default(false)
+  symptomsCount           Int               @default(0)
+  questionnairesCompleted Boolean           @default(false)
+  questionnairesCount     Int               @default(0)
+  status                  ComplianceStatus
+  lastCheckedAt           DateTime          @default(now())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  
+  @@unique([patientId, date])
+  @@index([patientId])
+  @@index([date])
+  @@index([status])
+  @@map("compliance_records")
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  PARTIAL
+  NON_COMPLIANT
+}
+
+// ============================================
+// VOICE TRANSCRIPTS
+// ============================================
+
+model VoiceTranscript {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  vitalRecordId   String       @db.ObjectId
+  nurseId         String       @db.ObjectId
+  transcript      String       // Raw voice transcription
+  parsedData      Json         // AI-extracted vital signs
+  language        String       // "fr" | "en"
+  confidence      Float?       // 0-1 Speech recognition confidence
+  createdAt       DateTime     @default(now())
+  
+  vitalRecord     VitalRecord  @relation(fields: [vitalRecordId], references: [id], onDelete: Cascade)
+  nurse           User         @relation("VoiceTranscripts", fields: [nurseId], references: [id])
+  
+  @@index([vitalRecordId])
+  @@index([nurseId])
+  @@index([createdAt])
+  @@map("voice_transcripts")
+}
+
+// ============================================
+// AI ANALYSIS CACHE
+// ============================================
+
+model AIAnalysisCache {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  nurseId         String   @db.ObjectId
+  analysisType    String   // "cohort_insights" | "risk_summary" | "predictions"
+  data            Json     // Cached AI response
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  
+  @@index([nurseId, analysisType])
+  @@index([expiresAt])
+  @@map("ai_analysis_cache")
 }

@@ -30,7 +30,11 @@ export async function login(formData: FormData) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: validated.email },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        nurseProfile: true,
+        coordinatorProfile: true,
+      },
     });
 
     if (!user) {
@@ -216,7 +220,11 @@ export async function getCurrentUser() {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        nurseProfile: true,
+        coordinatorProfile: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -231,6 +239,8 @@ export async function getCurrentUser() {
       role: user.role,
       phoneNumber: user.phoneNumber,
       patient: user.patient,
+      nurseProfile: user.nurseProfile,
+      coordinatorProfile: user.coordinatorProfile,
       hasFaceDescriptor: (user as any).faceDescriptor !== null,
       blockchainAddress: (user as any).blockchainAddress ?? null,
     };

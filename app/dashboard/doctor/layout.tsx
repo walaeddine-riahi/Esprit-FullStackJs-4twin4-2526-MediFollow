@@ -27,6 +27,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Beaker,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
@@ -160,8 +161,13 @@ function DoctorLayoutInner({ children }: { children: ReactNode }) {
       href: "/dashboard/doctor/vitals",
     },
     {
+      icon: Beaker,
+      label: "Analyses Médicales",
+      href: "/dashboard/doctor/analyses",
+    },
+    {
       icon: BarChart3,
-      label: "Analyses",
+      label: "Rapports d'Analyses",
       href: "/dashboard/doctor/analytics",
     },
     {

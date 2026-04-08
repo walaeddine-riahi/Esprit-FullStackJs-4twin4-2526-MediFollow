@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Search,
   ClipboardList,
+  Beaker,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
@@ -179,6 +180,11 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
       icon: ClipboardList,
       label: "Questionnaires",
       href: "/dashboard/patient/questionnaires",
+    },
+    {
+      icon: Beaker,
+      label: "Analyses Médicales",
+      href: "/dashboard/patient/analyses",
     },
   ];
 

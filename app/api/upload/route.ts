@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get patient ID
-    let patientId: string;
+    // Get patient/user ID for file organization
+    let userId: string;
     if (user.role === "PATIENT") {
       const patient = await prisma.patient.findUnique({
         where: { userId: user.id },
@@ -23,10 +23,13 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      patientId = patient.id;
+      userId = patient.id;
+    } else if (user.role === "DOCTOR") {
+      // Doctors can also upload (for analysis request documents)
+      userId = user.id;
     } else {
       return NextResponse.json(
-        { error: "Only patients can upload documents" },
+        { error: "Only patients and doctors can upload documents" },
         { status: 403 }
       );
     }
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Create unique blob name
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const blobName = `medical-documents/${patientId}/${timestamp}-${sanitizedFileName}`;
+    const blobName = `medical-documents/${userId}/${timestamp}-${sanitizedFileName}`;
 
     // Create BlobServiceClient
     const blobServiceClient =
@@ -97,30 +100,32 @@ export async function POST(request: NextRequest) {
     // Get blob URL (without SAS - will be generated on demand)
     const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobName}`;
 
-    // Save document metadata to database
-    const document = await prisma.medicalDocument.create({
-      data: {
-        patientId,
-        fileName: sanitizedFileName,
-        originalName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        category: category || "OTHER",
-        description: description || null,
-        azureBlobUrl: blobUrl,
-        azureContainerName: containerName,
-        azureBlobName: blobName,
-      },
-    });
+    // Save document metadata to database (only for patient uploads)
+    if (user.role === "PATIENT") {
+      const patientId = userId;
+      await prisma.medicalDocument.create({
+        data: {
+          patientId,
+          fileName: sanitizedFileName,
+          originalName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          category: category || "OTHER",
+          description: description || null,
+          azureBlobUrl: blobUrl,
+          azureContainerName: containerName,
+          azureBlobName: blobName,
+        },
+      });
+    }
+    // For doctor uploads, we just return the URL without storing in MedicalDocument
 
     return NextResponse.json({
       success: true,
       data: {
-        id: document.id,
-        fileName: document.fileName,
+        fileName: sanitizedFileName,
         fileUrl: blobUrl,
-        fileSize: document.fileSize,
-        uploadedAt: document.uploadedAt,
+        fileSize: file.size,
       },
     });
   } catch (error) {

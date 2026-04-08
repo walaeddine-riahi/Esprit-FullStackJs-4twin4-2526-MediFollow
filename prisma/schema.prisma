@@ -42,6 +42,7 @@ model User {
   alertsResolved Alert[]    @relation("AlertResolvedBy")
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
   questionnaireTemplates QuestionnaireTemplate[] @relation("QuestionnaireTemplates")  // Questionnaires created by this doctor
+  analysisRequests AnalysisRequest[] @relation("DoctorAnalysisRequests")  // Analysis requests created by this doctor
   sessions      Session[]
 
   @@map("users")
@@ -83,6 +84,7 @@ model Patient {
   alerts                Alert[]
   questionnaires        Questionnaire[]
   questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")  // Questionnaires assigned to this patient
+  analysisRequests      AnalysisRequest[] @relation("PatientAnalysisRequests")  // Analysis requests for this patient
   medicalDocuments      MedicalDocument[]
   medicalAnalyses       MedicalAnalysis[]
 
@@ -610,6 +612,60 @@ enum AnalysisStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// ============================================
+// ANALYSIS REQUESTS (Doctor assigns to patient)
+// ============================================
+
+model AnalysisRequest {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId          String           @db.ObjectId
+  patientId         String           @db.ObjectId
+  
+  analysisType      AnalysisType
+  testName          String           // Ex: "Numération Formule Sanguine", "Blood Pressure"
+  description       String?          // Doctor notes about why this analysis is needed
+  
+  requestedAt       DateTime         @default(now())
+  dueDate           DateTime?        // Deadline for patient to submit
+  status            AnalysisRequestStatus @default(PENDING)
+  
+  // Optional document uploaded by doctor (e.g., lab request form)
+  documentUrl       String?          // E.g., Azure Blob URL
+  documentName      String?
+  
+  // Patient submission
+  submittedAt       DateTime?
+  submittedDocumentUrl String?       // URL to patient's uploaded result
+  submittedDocumentName String?      // Original filename
+  patientNotes      String?          // Notes from patient
+  
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  doctor            User             @relation("DoctorAnalysisRequests", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient           Patient          @relation("PatientAnalysisRequests", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([status])
+  @@index([analysisType])
+  @@index([requestedAt])
+  @@map("analysis_requests")
+}
+
+enum AnalysisRequestStatus {
+  PENDING           // Not yet started by patient
+  IN_PROGRESS       // Patient started
+  SUBMITTED         // Patient submitted results
+  APPROVED          // Doctor reviewed and approved
+  REJECTED          // Doctor rejected, needs resubmission
+  COMPLETED         // Fully completed
+  EXPIRED           // Due date passed
+  CANCELLED         // Cancelled by doctor
 }
 
 // ============================================

@@ -30,13 +30,13 @@ export async function createMedicalAnalysis(formData: FormData) {
     const analysis = await prisma.medicalAnalysis.create({
       data: {
         patientId,
-        analysisType,
+        analysisType: analysisType as any,
         testName,
         resultSummary: resultSummary || null,
         analysisDate: analysisDate ? new Date(analysisDate) : new Date(),
         laboratory: laboratory || null,
         doctorNotes: doctorNotes || null,
-        status: status || "COMPLETED",
+        status: (status || "COMPLETED") as any,
         isAbnormal,
         documentIds: [],
       },
@@ -87,13 +87,13 @@ export async function updateMedicalAnalysis(id: string, formData: FormData) {
     const analysis = await prisma.medicalAnalysis.update({
       where: { id },
       data: {
-        analysisType,
+        analysisType: analysisType as any,
         testName,
         resultSummary: resultSummary || null,
         analysisDate: analysisDate ? new Date(analysisDate) : undefined,
         laboratory: laboratory || null,
         doctorNotes: doctorNotes || null,
-        status: status || undefined,
+        status: (status || undefined) as any,
         isAbnormal,
       },
       include: {
@@ -210,6 +210,52 @@ export async function getMedicalAnalysisById(id: string) {
       success: false,
       error: "Erreur lors de la récupération de l'analyse",
       analysis: null,
+    };
+  }
+}
+
+export async function getAnalysesByDoctorSpecialty(doctorUserId: string) {
+  try {
+    // Get doctor's specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      return { success: true, analyses: [] };
+    }
+
+    // Get all analyses for patients matching doctor's specialty
+    const analyses = await prisma.medicalAnalysis.findMany({
+      where: {
+        patient: {
+          diagnosis: {
+            contains: doctorProfile.specialty,
+            mode: "insensitive",
+          },
+          isActive: true,
+        },
+      },
+      include: {
+        patient: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: {
+        analysisDate: "desc",
+      },
+    });
+
+    return { success: true, analyses };
+  } catch (error: any) {
+    console.error("Get analyses by doctor specialty error:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des analyses",
+      analyses: [],
     };
   }
 }

@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, Activity, Calendar, Phone } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { getAllPatients } from "@/lib/actions/patient.actions";
+import { getPatientsByDoctorSpecialty } from "@/lib/actions/patient.actions";
+import { getDoctorProfile } from "@/lib/actions/doctor.actions";
 import { Badge } from "@/components/ui/badge";
 
 export default async function DoctorPatientsPage() {
@@ -12,7 +13,9 @@ export default async function DoctorPatientsPage() {
     redirect("/login");
   }
 
-  const patients = await getAllPatients();
+  // Get doctor's specialty and patients matching that specialty
+  const doctorProfile = await getDoctorProfile(user.id);
+  const patients = await getPatientsByDoctorSpecialty(user.id);
 
   return (
     <div className="p-6">
@@ -23,6 +26,12 @@ export default async function DoctorPatientsPage() {
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           Gérez et surveillez vos patients
         </p>
+        {doctorProfile?.data?.specialty && (
+          <p className="text-sm text-green-600 dark:text-green-400 mt-2 font-medium">
+            Spécialité:{" "}
+            <span className="capitalize">{doctorProfile.data.specialty}</span>
+          </p>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -188,8 +197,23 @@ export default async function DoctorPatientsPage() {
       </div>
 
       {patients.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">Aucun patient trouvé</p>
+        <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
+            Aucun patient trouvé
+          </p>
+          {doctorProfile?.data?.specialty && (
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Aucun patient n'a le diagnostic correspondant à votre spécialité:{" "}
+              <span className="font-medium capitalize">
+                {doctorProfile.data.specialty}
+              </span>
+            </p>
+          )}
+          {!doctorProfile?.data?.specialty && (
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Veuillez définir votre spécialité dans votre profil
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -148,7 +148,13 @@ export async function register(formData: FormData) {
     // Generate individual Aptos wallet for this user
     const wallet = await generateUserWallet();
 
-    // Create user (default role: PATIENT)
+    // Generate unique medical record number
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2, 8);
+    const medicalRecordNumber =
+      `MRN${timestamp.slice(-8)}${random}`.toUpperCase();
+
+    // Create user (default role: PATIENT) with associated Patient profile
     const user = await (prisma as any).user.create({
       data: {
         email: validated.email,
@@ -159,6 +165,21 @@ export async function register(formData: FormData) {
         role: "PATIENT",
         blockchainAddress: wallet.address,
         blockchainPrivateKey: encryptPrivateKey(wallet.privateKey),
+        // Create associated Patient profile with default values
+        patient: {
+          create: {
+            medicalRecordNumber,
+            // Default date of birth: 18 years ago from today
+            dateOfBirth: new Date(
+              new Date().setFullYear(new Date().getFullYear() - 18)
+            ),
+            gender: "OTHER",
+            isActive: true,
+          },
+        },
+      },
+      include: {
+        patient: true,
       },
     });
 

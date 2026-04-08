@@ -277,6 +277,40 @@ export async function resolveAlert(
   }
 }
 
+export async function createAlert(
+  patientId: string,
+  alertType: string,
+  severity: string,
+  message: string,
+  data?: any
+) {
+  try {
+    const alert = await prisma.alert.create({
+      data: {
+        patientId,
+        alertType: alertType as any,
+        severity: severity as any,
+        message,
+        data: data || {},
+        status: AlertStatus.OPEN,
+      },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+      },
+    });
+
+    revalidatePath("/dashboard/doctor");
+    revalidatePath("/dashboard/patient");
+
+    return { success: true, message: "Alerte créée", alert };
+  } catch (error) {
+    console.error("Create alert error:", error);
+    return { success: false, error: "Erreur lors de la création de l'alerte" };
+  }
+}
+
 export async function getAlertStats() {
   try {
     const total = await prisma.alert.count();
@@ -299,6 +333,116 @@ export async function getAlertStats() {
     };
   } catch (error) {
     console.error("Get alert stats error:", error);
+    return { success: false, error: "Erreur", stats: null };
+  }
+}
+
+/**
+ * Get alerts filtered by doctor's specialty
+ * Only shows alerts for patients whose diagnosis matches the doctor's specialty
+ */
+export async function getAlertsByDoctorSpecialty(
+  doctorUserId: string,
+  status?: AlertStatus
+) {
+  try {
+    // First, get the doctor profile to retrieve their specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: {
+        specialty: true,
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      // If doctor has no specialty set, return empty array
+      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
+      return { success: true, alerts: [] };
+    }
+
+    // Get alerts for patients whose diagnosis matches the doctor's specialty
+    const where: any = {
+      patient: {
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      },
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    const alerts = await prisma.alert.findMany({
+      where: where as any,
+      orderBy: { createdAt: "desc" },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+        acknowledgedBy: true,
+        resolvedBy: true,
+      },
+    });
+
+    return { success: true, alerts };
+  } catch (error) {
+    console.error("Get alerts by doctor specialty error:", error);
+    return { success: false, error: "Erreur", alerts: [] };
+  }
+}
+
+/**
+ * Get alerts stats filtered by doctor's specialty
+ */
+export async function getAlertStatsByDoctorSpecialty(doctorUserId: string) {
+  try {
+    // First, get the doctor profile to retrieve their specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: {
+        specialty: true,
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      // If doctor has no specialty set, return zeros
+      return {
+        success: true,
+        stats: { total: 0, open: 0, acknowledged: 0, resolved: 0, critical: 0 },
+      };
+    }
+
+    const where: any = {
+      patient: {
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      },
+    };
+
+    const total = await prisma.alert.count({ where });
+    const open = await prisma.alert.count({
+      where: { ...where, status: AlertStatus.OPEN } as any,
+    });
+    const acknowledged = await prisma.alert.count({
+      where: { ...where, status: AlertStatus.ACKNOWLEDGED } as any,
+    });
+    const resolved = await prisma.alert.count({
+      where: { ...where, status: AlertStatus.RESOLVED } as any,
+    });
+    const critical = await prisma.alert.count({
+      where: { ...where, severity: AlertSeverity.CRITICAL } as any,
+    });
+
+    return {
+      success: true,
+      stats: { total, open, acknowledged, resolved, critical },
+    };
+  } catch (error) {
+    console.error("Get alert stats by doctor specialty error:", error);
     return { success: false, error: "Erreur", stats: null };
   }
 }

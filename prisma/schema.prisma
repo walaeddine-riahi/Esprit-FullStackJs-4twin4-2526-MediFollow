@@ -41,6 +41,8 @@ model User {
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
   alertsResolved Alert[]    @relation("AlertResolvedBy")
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
+  doctorNotes   DoctorNote[]
+  situationReportsCreated SituationReport[] @relation("SituationReportCreatedBy")
   sessions      Session[]
 
   @@map("users")
@@ -83,6 +85,8 @@ model Patient {
   questionnaires        Questionnaire[]
   medicalDocuments      MedicalDocument[]
   medicalAnalyses       MedicalAnalysis[]
+  doctorNotes           DoctorNote[]
+  situationReports      SituationReport[]
 
   @@map("patients")
 }
@@ -660,3 +664,88 @@ model AccessGrant {
   @@index([isActive])
   @@map("access_grants")
 }
+
+// ============================================
+// DOCTOR NOTES (Medical notes by doctor for patient)
+// ============================================
+
+model DoctorNote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  patientId String   @db.ObjectId
+  doctorId  String   @db.ObjectId
+  note      String   // Medical note content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor    User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+  @@map("doctor_notes")
+}
+
+// ============================================
+// SITUATION REPORTS (AI-assisted clinical reports)
+// ============================================
+
+model SituationReport {
+  id              String                @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String                @db.ObjectId
+  doctorId        String                @db.ObjectId
+  title           String                // Report title
+  content         String                // Main report content
+  context         Json?                 // Clinical context: vitals, symptoms, etc.
+  aiSummary       String?               // AI-generated summary
+  status          SituationReportStatus @default(DRAFT)
+  version         Int                   @default(1)
+  isPublished     Boolean               @default(false)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  publishedAt     DateTime?
+
+  // Relations
+  patient         Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor          User                  @relation("SituationReportCreatedBy", fields: [doctorId], references: [id], onDelete: Cascade)
+  versions        SituationReportVersion[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("situation_reports")
+}
+
+model SituationReportVersion {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  reportId        String    @db.ObjectId
+  versionNumber   Int
+  content         String
+  changeSummary   String?   // What changed in this version
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  report          SituationReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([versionNumber])
+  @@map("situation_report_versions")
+}
+
+enum SituationReportStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================
+// EXTEND Patient MODEL
+// ============================================
+
+// Note: Add situationReports relation to Patient model above:
+// situationReports    SituationReport[]
+// And to User model:
+// situationReportsCreated SituationReport[] @relation("SituationReportCreatedBy")

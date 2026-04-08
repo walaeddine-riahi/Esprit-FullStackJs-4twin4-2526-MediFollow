@@ -598,6 +598,233 @@ export async function getDashboardStats() {
 }
 
 /**
+ * Get comprehensive dashboard statistics filtered by doctor's specialty
+ */
+export async function getDashboardStatsByDoctorSpecialty(doctorUserId: string) {
+  try {
+    // First, get the doctor profile to retrieve their specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: {
+        specialty: true,
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      // Return empty stats if doctor has no specialty
+      return {
+        success: true,
+        stats: {
+          patients: {
+            total: 0,
+            active: 0,
+            newThisWeek: 0,
+            newThisMonth: 0,
+          },
+          vitals: {
+            today: 0,
+            thisWeek: 0,
+          },
+          alerts: {
+            total: 0,
+            open: 0,
+            critical: 0,
+            resolved: 0,
+            resolutionRate: 0,
+            avgResponseTime: 0,
+          },
+          symptoms: {
+            today: 0,
+          },
+          bloodTypeDistribution: [],
+        },
+      };
+    }
+
+    // Filter patients by diagnosis matching specialty
+    const patientFilter = {
+      diagnosis: {
+        contains: doctorProfile.specialty,
+        mode: "insensitive" as const,
+      },
+    };
+
+    // Get current date boundaries
+    const now = new Date();
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+    const startOfWeek = new Date(now.setDate(now.getDate() - 7));
+    const startOfMonth = new Date(now.setMonth(now.getMonth() - 1));
+
+    // Total patients
+    const totalPatients = await prisma.patient.count({
+      where: {
+        ...patientFilter,
+        user: {
+          isActive: true,
+        },
+      },
+    });
+
+    // New patients this week
+    const newPatientsWeek = await prisma.patient.count({
+      where: {
+        ...patientFilter,
+        createdAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // New patients this month
+    const newPatientsMonth = await prisma.patient.count({
+      where: {
+        ...patientFilter,
+        createdAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    // Vital records today
+    const vitalsToday = await prisma.vitalRecord.count({
+      where: {
+        patient: patientFilter,
+        recordedAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    // Vital records this week
+    const vitalsWeek = await prisma.vitalRecord.count({
+      where: {
+        patient: patientFilter,
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // Active patients (with vitals in last 7 days)
+    const activePatientsIds = await prisma.vitalRecord.findMany({
+      where: {
+        patient: patientFilter,
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+      select: {
+        patientId: true,
+      },
+      distinct: ["patientId"],
+    });
+    const activePatients = activePatientsIds.length;
+
+    // Alert statistics
+    const totalAlerts = await prisma.alert.count({
+      where: { patient: patientFilter },
+    });
+    const openAlerts = await prisma.alert.count({
+      where: { patient: patientFilter, status: "OPEN" },
+    });
+    const criticalAlerts = await prisma.alert.count({
+      where: { patient: patientFilter, severity: "CRITICAL", status: "OPEN" },
+    });
+    const resolvedAlerts = await prisma.alert.count({
+      where: { patient: patientFilter, status: "RESOLVED" },
+    });
+
+    // Alert resolution rate
+    const resolutionRate =
+      totalAlerts > 0 ? Math.round((resolvedAlerts / totalAlerts) * 100) : 0;
+
+    // Average response time (in hours) for resolved alerts
+    const resolvedAlertsWithTime = await prisma.alert.findMany({
+      where: {
+        patient: patientFilter,
+        status: "RESOLVED",
+        resolvedAt: { not: null },
+      },
+      select: {
+        createdAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    let avgResponseTime = 0;
+    if (resolvedAlertsWithTime.length > 0) {
+      const totalTime = resolvedAlertsWithTime.reduce((sum, alert) => {
+        const diff = alert.resolvedAt!.getTime() - alert.createdAt.getTime();
+        return sum + diff;
+      }, 0);
+      avgResponseTime = Math.round(
+        totalTime / resolvedAlertsWithTime.length / (1000 * 60 * 60)
+      ); // Convert to hours
+    }
+
+    // Patients by blood type
+    const patientsByBloodType = await prisma.patient.groupBy({
+      by: ["bloodType"],
+      _count: {
+        id: true,
+      },
+      where: {
+        ...patientFilter,
+        bloodType: { not: null },
+      },
+    });
+
+    // Recent symptoms count
+    const symptomsToday = await prisma.symptom.count({
+      where: {
+        patient: patientFilter,
+        occurredAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      stats: {
+        patients: {
+          total: totalPatients,
+          active: activePatients,
+          newThisWeek: newPatientsWeek,
+          newThisMonth: newPatientsMonth,
+        },
+        vitals: {
+          today: vitalsToday,
+          thisWeek: vitalsWeek,
+        },
+        alerts: {
+          total: totalAlerts,
+          open: openAlerts,
+          critical: criticalAlerts,
+          resolved: resolvedAlerts,
+          resolutionRate: resolutionRate,
+          avgResponseTime: avgResponseTime,
+        },
+        symptoms: {
+          today: symptomsToday,
+        },
+        bloodTypeDistribution: patientsByBloodType.map((bt) => ({
+          bloodType: bt.bloodType,
+          count: bt._count.id,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats by doctor specialty:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des statistiques",
+      stats: null,
+    };
+  }
+}
+
+/**
  * Get patient profile data (for the profile page)
  */
 export async function getPatientProfile(
@@ -707,5 +934,154 @@ export async function uploadPatientProfileImage(
       success: false,
       error: "Erreur lors du téléchargement de l'image",
     };
+  }
+}
+
+/**
+ * Get patients filtered by doctor's specialty
+ * Only shows patients whose diagnosis matches the doctor's specialty
+ */
+export async function getPatientsByDoctorSpecialty(
+  doctorUserId: string
+): Promise<PatientWithUser[]> {
+  try {
+    // First, get the doctor profile to retrieve their specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: {
+        specialty: true,
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      // If doctor has no specialty set, return empty array
+      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
+      return [];
+    }
+
+    // Get patients whose diagnosis matches the doctor's specialty
+    // Use case-insensitive partial match for flexibility
+    const patients = await prisma.patient.findMany({
+      where: {
+        isActive: true,
+        // Filter by diagnosis matching specialty (case-insensitive, partial match)
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        vitalRecords: {
+          orderBy: { recordedAt: "desc" },
+          take: 1, // Only the most recent vital record for performance
+        },
+        alerts: {
+          where: { status: "OPEN" }, // Only active alerts
+          orderBy: { createdAt: "desc" },
+        },
+        symptoms: {
+          orderBy: { occurredAt: "desc" },
+          take: 3, // Latest 3 symptoms
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return patients;
+  } catch (error) {
+    console.error("Error fetching patients by doctor specialty:", error);
+    return [];
+  }
+}
+
+/**
+ * Get patients filtered by doctor's specialty with ALL their vital records
+ * Used for vitals page - shows complete vital history
+ */
+export async function getPatientsByDoctorSpecialtyWithAllVitals(
+  doctorUserId: string
+): Promise<PatientWithUser[]> {
+  try {
+    // First, get the doctor profile to retrieve their specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: {
+        specialty: true,
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.specialty) {
+      // If doctor has no specialty set, return empty array
+      console.warn(`Doctor ${doctorUserId} has no specialty defined`);
+      return [];
+    }
+
+    // Get patients whose diagnosis matches the doctor's specialty
+    // with ALL their vital records
+    const patients = await prisma.patient.findMany({
+      where: {
+        isActive: true,
+        user: {
+          isActive: true,
+        },
+        // Filter by diagnosis matching specialty (case-insensitive, partial match)
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        vitalRecords: {
+          orderBy: { recordedAt: "desc" },
+          take: 100, // Last 100 vital records per patient
+        },
+        alerts: {
+          where: { status: "OPEN" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+        symptoms: {
+          orderBy: { occurredAt: "desc" },
+          take: 3,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return patients;
+  } catch (error) {
+    console.error(
+      "Error fetching patients by doctor specialty with all vitals:",
+      error
+    );
+    return [];
   }
 }

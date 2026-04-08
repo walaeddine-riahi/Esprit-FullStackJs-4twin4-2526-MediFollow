@@ -12,11 +12,15 @@ import {
   Thermometer,
   Wind,
   User,
+  FileText,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getPatientWithRelations } from "@/lib/actions/patient.actions";
+import { getPatientAnalyses } from "@/lib/actions/analysis.actions";
 import { Badge } from "@/components/ui/badge";
 import PatientDocumentsViewer from "@/components/PatientDocumentsViewer";
+import DoctorNotesSection from "@/components/DoctorNotesSection";
+import PatientAISummary from "@/components/PatientAISummary";
 
 export default async function PatientDetailPage({
   params,
@@ -34,6 +38,9 @@ export default async function PatientDetailPage({
   if (!patient) {
     notFound();
   }
+
+  // Fetch patient analyses
+  const { analyses } = await getPatientAnalyses(params.id);
 
   const fullName = `${patient.user.firstName} ${patient.user.lastName}`;
   const age =
@@ -77,6 +84,22 @@ export default async function PatientDetailPage({
             </Badge>
           )}
         </div>
+      </div>
+
+      {/* AI Summary Section */}
+      <div className="mb-8">
+        <PatientAISummary
+          patientId={patient.id}
+          patientName={fullName}
+          diagnosis={patient.diagnosis || undefined}
+          age={age}
+          gender={patient.gender}
+          vitalRecords={patient.vitalRecords}
+          analyses={analyses || []}
+          alerts={patient.alerts}
+          symptoms={patient.symptoms}
+          medications={patient.medications}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -438,6 +461,37 @@ export default async function PatientDetailPage({
             patientId={patient.id}
             doctorUserId={user.id}
           />
+
+          {/* Situation Reports */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="font-semibold text-gray-900">
+                    Rapports de Situation
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Créer et gérer les rapports cliniques avec assistance IA
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={`/dashboard/doctor/patients/${patient.id}/situation-reports`}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Accéder →
+              </Link>
+            </div>
+            <p className="text-sm text-gray-600">
+              Rédiger, améliorer et publier des rapports de situation cliniques.
+              Claude AI vous aide à générer des résumés et améliorer la qualité
+              du texte.
+            </p>
+          </div>
+
+          {/* Doctor Notes */}
+          <DoctorNotesSection patientId={patient.id} doctorId={user.id} />
         </div>
       </div>
     </div>

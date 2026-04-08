@@ -7,9 +7,9 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { getAllPatients } from "@/lib/actions/patient.actions";
-import { getAllAlerts } from "@/lib/actions/alert.actions";
-import { getAllMedicalAnalyses } from "@/lib/actions/analysis.actions";
+import { getPatientsByDoctorSpecialty } from "@/lib/actions/patient.actions";
+import { getAlertsByDoctorSpecialty } from "@/lib/actions/alert.actions";
+import { getAnalysesByDoctorSpecialty } from "@/lib/actions/analysis.actions";
 import AddAnalysisButton from "@/components/AddAnalysisButton";
 import AnalysisTableActions from "@/components/AnalysisTableActions";
 
@@ -23,9 +23,9 @@ export default async function DoctorAnalyticsPage() {
     redirect("/login");
   }
 
-  const patients = await getAllPatients();
-  const { alerts } = await getAllAlerts();
-  const { analyses } = await getAllMedicalAnalyses();
+  const patients = await getPatientsByDoctorSpecialty(user.id);
+  const { alerts } = await getAlertsByDoctorSpecialty(user.id);
+  const { analyses } = await getAnalysesByDoctorSpecialty(user.id);
 
   // Calculate analytics
   const totalPatients = patients.length;

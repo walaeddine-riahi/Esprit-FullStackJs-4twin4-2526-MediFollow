@@ -35,10 +35,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 
-import { getAllAlerts, getAlertStats } from "@/lib/actions/alert.actions";
+import {
+  getAllAlerts,
+  getAlertStats,
+  getAlertsByDoctorSpecialty,
+  getAlertStatsByDoctorSpecialty,
+} from "@/lib/actions/alert.actions";
 import { getCurrentUser, logout } from "@/lib/actions/auth.actions";
 import { getDoctorProfile } from "@/lib/actions/doctor.actions";
-import { getDashboardStats } from "@/lib/actions/patient.actions";
+import {
+  getDashboardStats,
+  getDashboardStatsByDoctorSpecialty,
+} from "@/lib/actions/patient.actions";
 import { formatDateTime } from "@/lib/utils";
 import { AlertStatus } from "@/types/medifollow.types";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -134,20 +142,25 @@ export default function DoctorDashboard() {
         setProfileImage(profileResult.data.profileImage);
       }
 
-      // Load alert stats
-      const statsResult = await getAlertStats();
+      // Load alert stats filtered by doctor's specialty
+      const statsResult = await getAlertStatsByDoctorSpecialty(currentUser.id);
       if (statsResult.success && statsResult.stats) {
         setStats(statsResult.stats);
       }
 
-      // Load comprehensive dashboard stats
-      const dashStatsResult = await getDashboardStats();
+      // Load comprehensive dashboard stats filtered by doctor's specialty
+      const dashStatsResult = await getDashboardStatsByDoctorSpecialty(
+        currentUser.id
+      );
       if (dashStatsResult.success && dashStatsResult.stats) {
         setDashboardStats(dashStatsResult.stats);
       }
 
-      // Load recent alerts
-      const alertsResult = await getAllAlerts(AlertStatus.OPEN);
+      // Load recent alerts filtered by doctor's specialty
+      const alertsResult = await getAlertsByDoctorSpecialty(
+        currentUser.id,
+        AlertStatus.OPEN
+      );
       if (alertsResult.success && alertsResult.alerts) {
         setRecentAlerts(alertsResult.alerts.slice(0, 10));
       }
@@ -998,6 +1011,8 @@ export default function DoctorDashboard() {
               <button
                 onClick={() => setWalletModalOpen(false)}
                 className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label="Fermer le modal du wallet"
+                title="Fermer"
               >
                 <X className="size-5 text-gray-500" />
               </button>

@@ -26,6 +26,7 @@ model User {
   blockchainAddress       String?   // Aptos wallet address (public) for blockchain access control
   blockchainPrivateKey    String?   // Aptos wallet private key (encrypted at rest)
   isActive                Boolean   @default(true)
+  isApproved              Boolean   @default(true)
   lastLogin               DateTime?
   resetPasswordToken      String?   // Token for password reset
   resetPasswordExpires    DateTime? // Expiration date for reset token
@@ -52,6 +53,7 @@ model User {
 enum Role {
   PATIENT
   DOCTOR
+  NURSE
   COORDINATOR
   ADMIN
 }
@@ -355,6 +357,8 @@ model Service {
   averageDuration   Int?     // in minutes
   isActive          Boolean  @default(true)
   specializations   String[]
+  patientIds        String[] @db.ObjectId // IDs of patients assigned to this service
+  teamIds           String[] @db.ObjectId // IDs of doctors/nurses/coordinators assigned to this service
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -380,6 +384,20 @@ model Questionnaire {
   @@index([patientId])
   @@index([completedAt])
   @@map("questionnaires")
+}
+
+model QuestionnaireTemplate {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  title               String
+  description         String?
+  questions           Json
+  assignedServiceIds  String[] @db.ObjectId
+  assignedPatientIds  String[] @db.ObjectId
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("questionnaire_templates")
 }
 
 // ============================================

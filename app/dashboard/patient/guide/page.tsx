@@ -40,7 +40,6 @@ export default function PatientGuidePage() {
   } | null>(null);
   const [sceneIdx, setSceneIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [error, setError] = useState("");
 
@@ -109,28 +108,6 @@ export default function PatientGuidePage() {
     if (!currentScene) return;
     setSecondsLeft(Number(currentScene.durationSec || 15));
   }, [currentScene]);
-
-  const speakText = (text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "fr-FR";
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-  };
 
   useEffect(() => {
     if (!isPlaying || !videoPlan || !currentScene) return;
@@ -281,24 +258,6 @@ export default function PatientGuidePage() {
                 {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
                 {isPlaying ? "Pause" : "Lecture auto"}
               </button>
-              <button
-                type="button"
-                onClick={() => currentScene && speakText(currentScene.voiceover)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-2 text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900"
-              >
-                <Play className="size-4" />
-                {isSpeaking ? "Réécouter" : "Écouter la scène"}
-              </button>
-              {isSpeaking && (
-                <button
-                  type="button"
-                  onClick={stopSpeaking}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-900"
-                >
-                  <Pause className="size-4" />
-                  Arrêter
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() =>

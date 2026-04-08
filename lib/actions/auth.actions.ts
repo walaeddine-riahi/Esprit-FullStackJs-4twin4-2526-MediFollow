@@ -41,6 +41,10 @@ export async function login(formData: FormData) {
       return { success: false, error: "Compte désactivé" };
     }
 
+    if ((user as any).role === "PATIENT" && (user as any).isApproved === false) {
+      return { success: false, error: "Compte en attente d'approbation par un administrateur." };
+    }
+
     // Verify password
     const isValid = await comparePassword(
       validated.password,
@@ -157,14 +161,22 @@ export async function register(formData: FormData) {
         lastName: validated.lastName,
         phoneNumber: validated.phoneNumber,
         role: "PATIENT",
+        isApproved: false,
         blockchainAddress: wallet.address,
         blockchainPrivateKey: encryptPrivateKey(wallet.privateKey),
       },
     });
 
+    // Notify Admin of the new signup
+    import("@/lib/actions/notification.actions")
+      .then(({ sendNewSignupNotification }) =>
+        sendNewSignupNotification(validated.firstName, validated.lastName, validated.email)
+      )
+      .catch((e) => console.error("[signup notification]", e));
+
     return {
       success: true,
-      message: "Compte créé avec succès",
+      message: "Compte créé avec succès. En attente d'approbation.",
       userId: user.id,
     };
   } catch (error: any) {

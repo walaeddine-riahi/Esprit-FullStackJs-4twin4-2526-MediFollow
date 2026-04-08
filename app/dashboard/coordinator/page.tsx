@@ -3,6 +3,7 @@
 import {
   Activity,
   AlertTriangle,
+  Brain,
   CheckCircle2,
   ClipboardList,
   Users,
@@ -191,6 +192,15 @@ export default function CoordinatorDashboardPage() {
                 </h3>
               </div>
               <ul className="space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/dashboard/coordinator/ai-assistant"
+                    className="text-blue-600 dark:text-blue-400 font-medium hover:underline inline-flex items-center gap-1"
+                  >
+                    <Brain className="size-4" />
+                    Assistant IA d'analyse
+                  </Link>
+                </li>
                 <li>
                   <Link
                     href="/dashboard/coordinator/patients"

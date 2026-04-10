@@ -10,6 +10,8 @@ import {
   PatientWithRelations,
 } from "@/types/medifollow.types";
 import { revalidatePath } from "next/cache";
+import { AuditService } from "@/lib/services/audit.service";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 /**
  * Get a patient by user ID
@@ -291,6 +293,27 @@ export async function createPatient(
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/admin");
 
+    // Log the create action to audit log
+    try {
+      const currentUser = await getCurrentUser();
+      const auditorId = currentUser?.id || "SYSTEM";
+      await AuditService.logCreatePatient(auditorId, patient.id, {
+        userId: patient.userId,
+        medicalRecordNumber: patient.medicalRecordNumber,
+        gender: patient.gender,
+        bloodType: patient.bloodType,
+      });
+      console.log(
+        "📝 [CREATE_PATIENT] Audit log created for patient:",
+        patient.id
+      );
+    } catch (auditError) {
+      console.error(
+        "Error creating audit log for patient creation:",
+        auditError
+      );
+    }
+
     return { success: true, patient };
   } catch (error) {
     console.error("Error creating patient:", error);
@@ -349,6 +372,35 @@ export async function updatePatient(
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/admin");
+
+    // Log the update action to audit log
+    try {
+      const currentUser = await getCurrentUser();
+      const auditorId = currentUser?.id || "SYSTEM";
+      await AuditService.logAction({
+        userId: auditorId,
+        action: "UPDATE_PATIENT" as any,
+        entityType: "Patient",
+        entityId: patientId,
+        changes: {
+          updated: {
+            oldValue: null,
+            newValue: {
+              dateOfBirth: data.dateOfBirth,
+              gender: data.gender,
+              bloodType: data.bloodType,
+              diagnosis: data.diagnosis,
+            },
+          },
+        },
+      });
+      console.log(
+        "📝 [UPDATE_PATIENT] Audit log created for patient:",
+        patientId
+      );
+    } catch (auditError) {
+      console.error("Error creating audit log for patient update:", auditError);
+    }
 
     return { success: true, patient };
   } catch (error) {
@@ -602,7 +654,27 @@ export async function getDashboardStats() {
  */
 export async function getDashboardStatsByDoctorSpecialty(doctorUserId: string) {
   try {
-    // First, get the doctor profile to retrieve their specialty
+    console.log("📊 Getting dashboard stats for doctor:", doctorUserId);
+
+    // Get patients via AccessGrants (doctor has explicit access to these patients)
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
+      select: {
+        patientId: true,
+      },
+    });
+
+    const grantedPatientUserIds = accessGrants.map((grant) => grant.patientId);
+    console.log(
+      "✅ Found AccessGrants:",
+      grantedPatientUserIds.length,
+      "patients"
+    );
+
+    // Get the doctor profile to retrieve their specialty for legacy support
     const doctorProfile = await prisma.doctorProfile.findUnique({
       where: { userId: doctorUserId },
       select: {
@@ -610,8 +682,33 @@ export async function getDashboardStatsByDoctorSpecialty(doctorUserId: string) {
       },
     });
 
-    if (!doctorProfile || !doctorProfile.specialty) {
-      // Return empty stats if doctor has no specialty
+    console.log("📋 Doctor specialty:", doctorProfile?.specialty);
+
+    // Build OR conditions dynamically
+    const orConditions: any[] = [];
+
+    // 1. Add AccessGrant patients if any exist
+    if (grantedPatientUserIds.length > 0) {
+      orConditions.push({ userId: { in: grantedPatientUserIds } });
+      console.log("✏️ Added AccessGrant filter");
+    }
+
+    // 2. Add specialty-based filter for legacy support
+    if (doctorProfile?.specialty) {
+      orConditions.push({
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive" as const,
+        },
+      });
+      console.log("✏️ Added specialty filter for", doctorProfile.specialty);
+    }
+
+    // If no conditions, return empty stats
+    if (orConditions.length === 0) {
+      console.warn(
+        "⚠️ No AccessGrants or specialty found for doctor, returning empty stats"
+      );
       return {
         success: true,
         stats: {
@@ -641,12 +738,13 @@ export async function getDashboardStatsByDoctorSpecialty(doctorUserId: string) {
       };
     }
 
-    // Filter patients by diagnosis matching specialty
+    // Build patient filter: Include patients with AccessGrant OR matching specialty (legacy)
     const patientFilter = {
-      diagnosis: {
-        contains: doctorProfile.specialty,
-        mode: "insensitive" as const,
+      isActive: true,
+      user: {
+        isActive: true,
       },
+      OR: orConditions,
     };
 
     // Get current date boundaries
@@ -953,6 +1051,8 @@ export async function getPatientsByDoctorSpecialty(
   doctorUserId: string
 ): Promise<PatientWithUser[]> {
   try {
+    console.log("🔍 Getting patients for doctor:", doctorUserId);
+
     // Get patients via AccessGrants (doctor has explicit access to these patients)
     const accessGrants = await prisma.accessGrant.findMany({
       where: {
@@ -965,22 +1065,54 @@ export async function getPatientsByDoctorSpecialty(
     });
 
     const patientIds = accessGrants.map((grant) => grant.patientId);
+    console.log("✅ Found AccessGrants:", patientIds.length, "patients");
+
+    // Get doctor's specialty for legacy support
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+
+    console.log("📋 Doctor specialty:", doctorProfile?.specialty);
+
+    // Build OR conditions dynamically
+    const orConditions: any[] = [];
+
+    // 1. Add AccessGrant patients if any exist
+    if (patientIds.length > 0) {
+      orConditions.push({ userId: { in: patientIds } });
+      console.log(
+        "✏️ Added AccessGrant filter for",
+        patientIds.length,
+        "patients"
+      );
+    }
+
+    // 2. Add specialty-based filter for legacy support
+    if (doctorProfile?.specialty) {
+      orConditions.push({
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      });
+      console.log("✏️ Added specialty filter for", doctorProfile.specialty);
+    }
+
+    // If no conditions, return empty array
+    if (orConditions.length === 0) {
+      console.warn("⚠️ No AccessGrants or specialty found for doctor");
+      return [];
+    }
 
     // Get patients by AccessGrants OR by specialty diagnosis matching
     const patients = await prisma.patient.findMany({
       where: {
         isActive: true,
-        OR: [
-          // 1. Patients with explicit AccessGrant from this doctor
-          { id: { in: patientIds } },
-          // 2. Patients whose diagnosis matches the doctor's specialty (legacy support)
-          {
-            diagnosis: {
-              contains: "CARDIOLOGY",
-              mode: "insensitive",
-            },
-          },
-        ],
+        user: {
+          isActive: true,
+        },
+        OR: orConditions,
       },
       include: {
         user: {
@@ -1013,6 +1145,7 @@ export async function getPatientsByDoctorSpecialty(
       orderBy: { createdAt: "desc" },
     });
 
+    console.log("✅ Found", patients.length, "patients for doctor");
     return patients;
   } catch (error) {
     console.error("Error fetching patients by doctor specialty:", error);
@@ -1028,6 +1161,11 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
   doctorUserId: string
 ): Promise<PatientWithUser[]> {
   try {
+    console.log(
+      "🔍 Getting patients with all vitals for doctor:",
+      doctorUserId
+    );
+
     // Get patients via AccessGrants (doctor has explicit access to these patients)
     const accessGrants = await prisma.accessGrant.findMany({
       where: {
@@ -1040,6 +1178,45 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
     });
 
     const patientIds = accessGrants.map((grant) => grant.patientId);
+    console.log("✅ Found AccessGrants:", patientIds.length, "patients");
+
+    // Get doctor's specialty for legacy support
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+
+    console.log("📋 Doctor specialty:", doctorProfile?.specialty);
+
+    // Build OR conditions dynamically
+    const orConditions: any[] = [];
+
+    // 1. Add AccessGrant patients if any exist
+    if (patientIds.length > 0) {
+      orConditions.push({ userId: { in: patientIds } });
+      console.log(
+        "✏️ Added AccessGrant filter for",
+        patientIds.length,
+        "patients"
+      );
+    }
+
+    // 2. Add specialty-based filter for legacy support
+    if (doctorProfile?.specialty) {
+      orConditions.push({
+        diagnosis: {
+          contains: doctorProfile.specialty,
+          mode: "insensitive",
+        },
+      });
+      console.log("✏️ Added specialty filter for", doctorProfile.specialty);
+    }
+
+    // If no conditions, return empty array
+    if (orConditions.length === 0) {
+      console.warn("⚠️ No AccessGrants or specialty found for doctor");
+      return [];
+    }
 
     // Get patients by AccessGrants OR by specialty diagnosis matching
     const patients = await prisma.patient.findMany({
@@ -1048,17 +1225,7 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
         user: {
           isActive: true,
         },
-        OR: [
-          // 1. Patients with explicit AccessGrant from this doctor
-          { id: { in: patientIds } },
-          // 2. Patients whose diagnosis matches the doctor's specialty (legacy support)
-          {
-            diagnosis: {
-              contains: "CARDIOLOGY",
-              mode: "insensitive",
-            },
-          },
-        ],
+        OR: orConditions,
       },
       include: {
         user: {
@@ -1092,6 +1259,11 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
       orderBy: { createdAt: "desc" },
     });
 
+    console.log(
+      "✅ Found",
+      patients.length,
+      "patients with all vitals for doctor"
+    );
     return patients;
   } catch (error) {
     console.error(
@@ -1099,5 +1271,141 @@ export async function getPatientsByDoctorSpecialtyWithAllVitals(
       error
     );
     return [];
+  }
+}
+
+/**
+ * Diagnostic function - check AccessGrant status for a doctor
+ */
+export async function diagnoseDoctorAccess(doctorUserId: string) {
+  try {
+    console.log("🔍📊 DIAGNOSTIC: Checking doctor access...", doctorUserId);
+
+    // 1. Check doctor exists
+    const doctor = await prisma.user.findUnique({
+      where: { id: doctorUserId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+      },
+    });
+    console.log("👨‍⚕️ Doctor:", doctor);
+
+    // 2. Check AccessGrants
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        doctorId: doctorUserId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        patientId: true,
+        doctorId: true,
+        isActive: true,
+        grantedAt: true,
+        expiresAt: true,
+      },
+    });
+    console.log("🔗 AccessGrants found:", accessGrants.length);
+    accessGrants.forEach((ag, idx) => {
+      console.log(
+        `  [${idx}] patientId (userId): ${ag.patientId}, isActive: ${ag.isActive}, expiresAt: ${ag.expiresAt}`
+      );
+    });
+
+    // 3. Check if patients exist for these IDs
+    const patientUserIds = accessGrants.map((ag) => ag.patientId);
+    console.log("👥 Patient User IDs to lookup:", patientUserIds);
+
+    let patients = [];
+    if (patientUserIds.length > 0) {
+      patients = await prisma.patient.findMany({
+        where: {
+          userId: { in: patientUserIds },
+        },
+        include: {
+          user: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+        },
+      });
+    }
+    console.log("✅ Patients found:", patients.length);
+    patients.forEach((p, idx) => {
+      console.log(
+        `  [${idx}] ${p.user.firstName} ${p.user.lastName} (ID: ${p.userId})`
+      );
+    });
+
+    // 4. Check doctor profile specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+    console.log("🏥 Doctor Specialty:", doctorProfile?.specialty);
+
+    // 5. Check all patients by specialty (legacy)
+    if (doctorProfile?.specialty) {
+      const patientsBySpecialty = await prisma.patient.findMany({
+        where: {
+          diagnosis: {
+            contains: doctorProfile.specialty,
+            mode: "insensitive",
+          },
+        },
+        select: { userId: true },
+      });
+      console.log(
+        "📋 Patients by specialty",
+        doctorProfile.specialty + ":",
+        patientsBySpecialty.length
+      );
+    }
+
+    return {
+      doctor,
+      accessGrantsCount: accessGrants.length,
+      accessGrants,
+      patientsFound: patients.length,
+      patients,
+      doctorSpecialty: doctorProfile?.specialty || null,
+    };
+  } catch (error) {
+    console.error("❌ Diagnostic error:", error);
+    // Try to at least return doctor info
+    try {
+      const doctor = await prisma.user.findUnique({
+        where: { id: doctorUserId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
+      });
+      return {
+        doctor,
+        accessGrantsCount: 0,
+        accessGrants: [],
+        patientsFound: 0,
+        patients: [],
+        doctorSpecialty: null,
+        error: String(error),
+      };
+    } catch (err) {
+      return {
+        doctor: null,
+        accessGrantsCount: 0,
+        accessGrants: [],
+        patientsFound: 0,
+        patients: [],
+        doctorSpecialty: null,
+        error: String(error),
+      };
+    }
   }
 }

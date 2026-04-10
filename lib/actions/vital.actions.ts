@@ -18,6 +18,8 @@ import {
 } from "@/lib/utils/vitalValidation";
 
 import { checkVitalThresholds } from "./alert.actions";
+import { AuditService } from "@/lib/services/audit.service";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 export async function createVitalRecord(patientId: string, formData: FormData) {
   try {
@@ -108,6 +110,29 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
     // Also run legacy thresholds check for compatibility
     await checkVitalThresholds(vitalRecord);
 
+    // Log the create action to audit log
+    try {
+      const currentUser = await getCurrentUser();
+      const auditorId = currentUser?.id || vitalRecord.patient.userId;
+      await AuditService.logCreateVitalSign(auditorId, vitalRecord.id, {
+        patientId,
+        systolicBP: vitalRecord.systolicBP,
+        diastolicBP: vitalRecord.diastolicBP,
+        heartRate: vitalRecord.heartRate,
+        temperature: vitalRecord.temperature,
+        oxygenSaturation: vitalRecord.oxygenSaturation,
+      });
+      console.log(
+        "📝 [CREATE_VITAL_SIGN] Audit log created for vital record:",
+        vitalRecord.id
+      );
+    } catch (auditError) {
+      console.error(
+        "Error creating audit log for vital record creation:",
+        auditError
+      );
+    }
+
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/doctor/vitals");
@@ -185,9 +210,36 @@ export async function getVitalRecordById(id: string) {
 
 export async function deleteVitalRecord(id: string) {
   try {
+    // Get the record before deleting for audit log
+    const record = await prisma.vitalRecord.findUnique({
+      where: { id },
+      include: { patient: { include: { user: true } } },
+    });
+
     await prisma.vitalRecord.delete({
       where: { id },
     });
+
+    // Log the delete action to audit log
+    try {
+      const currentUser = await getCurrentUser();
+      const auditorId = currentUser?.id || record?.patient.userId || "SYSTEM";
+      await AuditService.logDeleteVitalSign(auditorId, id, {
+        patientId: record?.patientId,
+        systolicBP: record?.systolicBP,
+        diastolicBP: record?.diastolicBP,
+        heartRate: record?.heartRate,
+      });
+      console.log(
+        "📝 [DELETE_VITAL_SIGN] Audit log created for vital record:",
+        id
+      );
+    } catch (auditError) {
+      console.error(
+        "Error creating audit log for vital record deletion:",
+        auditError
+      );
+    }
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
@@ -253,6 +305,33 @@ export async function updateVitalRecord(id: string, formData: FormData) {
 
     // Re-check thresholds
     await checkVitalThresholds(vitalRecord);
+
+    // Log the update action to audit log
+    try {
+      const currentUser = await getCurrentUser();
+      const auditorId = currentUser?.id || vitalRecord.patient.userId;
+      await AuditService.logAction({
+        userId: auditorId,
+        action: "UPDATE_VITAL_SIGN" as any,
+        entityType: "VitalRecord",
+        entityId: id,
+        changes: {
+          updated: {
+            oldValue: null,
+            newValue: vitalData,
+          },
+        },
+      });
+      console.log(
+        "📝 [UPDATE_VITAL_SIGN] Audit log created for vital record:",
+        id
+      );
+    } catch (auditError) {
+      console.error(
+        "Error creating audit log for vital record update:",
+        auditError
+      );
+    }
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");

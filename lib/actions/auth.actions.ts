@@ -17,6 +17,7 @@ import {
 import { LoginSchema, RegisterSchema } from "@/lib/validation";
 import { generateUserWallet } from "@/lib/actions/blockchain-access.actions";
 import { encryptPrivateKey } from "@/lib/encryption";
+import { AuditService } from "@/lib/services/audit.service";
 
 export async function login(formData: FormData) {
   try {
@@ -104,6 +105,10 @@ export async function login(formData: FormData) {
       path: "/",
     });
 
+    // Log the login action to audit log
+    await AuditService.logLogin(user.id);
+    console.log("📝 [LOGIN] Audit log created for user:", user.email);
+
     return {
       success: true,
       user: {
@@ -112,7 +117,9 @@ export async function login(formData: FormData) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        mustChangePassword: (user as any).mustChangePassword,
       },
+      mustChangePassword: (user as any).mustChangePassword,
     };
   } catch (error: any) {
     console.error("Login error:", error);
@@ -198,6 +205,21 @@ export async function logout() {
   try {
     const cookieStore = cookies();
     const refreshToken = cookieStore.get("refreshToken")?.value;
+    const accessToken = cookieStore.get("accessToken")?.value;
+
+    // Get current user info for audit log
+    let currentUserId: string | null = null;
+    if (accessToken) {
+      try {
+        const { verifyAccessToken } = await import("@/lib/utils");
+        const payload = verifyAccessToken(accessToken);
+        if (payload) {
+          currentUserId = payload.userId;
+        }
+      } catch (e) {
+        console.error("Error getting user for logout audit:", e);
+      }
+    }
 
     if (refreshToken) {
       // Delete session from database
@@ -209,6 +231,12 @@ export async function logout() {
     // Clear cookies
     cookies().delete("accessToken");
     cookies().delete("refreshToken");
+
+    // Log the logout action to audit log
+    if (currentUserId) {
+      await AuditService.logLogout(currentUserId);
+      console.log("📝 [LOGOUT] Audit log created for user:", currentUserId);
+    }
 
     return { success: true };
   } catch (error) {
@@ -258,5 +286,86 @@ export async function getCurrentUser() {
   } catch (error) {
     console.error("Get current user error:", error);
     return null;
+  }
+}
+
+/**
+ * Change password for first-time login
+ * Called when user connects for the first time and must change their temporary password
+ */
+export async function changePasswordFirstLogin(
+  userId: string,
+  newPassword: string
+) {
+  try {
+    const { hashPassword } = await import("@/lib/utils");
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return {
+        success: false,
+        error: "Le mot de passe doit contenir au moins 8 caractères",
+      };
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      return {
+        success: false,
+        error: "Le mot de passe doit contenir au moins une lettre majuscule",
+      };
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      return {
+        success: false,
+        error: "Le mot de passe doit contenir au moins une lettre minuscule",
+      };
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+      return {
+        success: false,
+        error: "Le mot de passe doit contenir au moins un chiffre",
+      };
+    }
+
+    if (!/[!@#$%^&*]/.test(newPassword)) {
+      return {
+        success: false,
+        error:
+          "Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*)",
+      };
+    }
+
+    // Hash the new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update user: set new password and clear mustChangePassword flag
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: hashedPassword,
+        mustChangePassword: false,
+      },
+    });
+
+    console.log(
+      "[changePasswordFirstLogin] Password changed for user:",
+      userId
+    );
+
+    return {
+      success: true,
+      message: "Votre mot de passe a été changé avec succès",
+    };
+  } catch (error) {
+    console.error("[changePasswordFirstLogin] Error:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erreur lors du changement de mot de passe",
+    };
   }
 }

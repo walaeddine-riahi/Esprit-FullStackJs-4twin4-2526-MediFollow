@@ -14,6 +14,7 @@ import {
   AlertSeverity,
   AlertStatus,
 } from "@/types/medifollow.types";
+import { AuditService } from "@/lib/services/audit.service";
 
 export async function checkVitalThresholds(vitalRecord: any) {
   try {
@@ -239,7 +240,16 @@ export async function acknowledgeAlert(alertId: string, userId: string) {
         acknowledgedById: userId,
         acknowledgedAt: new Date(),
       },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+      },
     });
+
+    // Log the acknowledge action to audit log
+    await AuditService.logAcknowledgeAlert(userId, alertId);
+    console.log("📝 [ACKNOWLEDGE_ALERT] Audit log created for alert:", alertId);
 
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/patient");
@@ -265,7 +275,16 @@ export async function resolveAlert(
         resolvedAt: new Date(),
         resolution,
       },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+      },
     });
+
+    // Log the resolve action to audit log
+    await AuditService.logResolveAlert(userId, alertId, resolution);
+    console.log("📝 [RESOLVE_ALERT] Audit log created for alert:", alertId);
 
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/patient");
@@ -300,6 +319,20 @@ export async function createAlert(
         },
       },
     });
+
+    // Log the create action to audit log
+    try {
+      await AuditService.logCreateAlert(alert.patient.userId, alert.id, {
+        alertType,
+        severity,
+        message,
+        patientId,
+      });
+      console.log("📝 [CREATE_ALERT] Audit log created for alert:", alert.id);
+    } catch (auditError) {
+      console.error("Error creating audit log for alert:", auditError);
+      // Don't fail the alert creation if audit logging fails
+    }
 
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/patient");
@@ -455,5 +488,73 @@ export async function getAlertStatsByDoctorSpecialty(doctorUserId: string) {
   } catch (error) {
     console.error("Get alert stats by doctor specialty error:", error);
     return { success: false, error: "Erreur", stats: null };
+  }
+}
+
+/**
+ * Get a single alert by ID
+ */
+export async function getAlertById(id: string) {
+  try {
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+        acknowledgedBy: true,
+        resolvedBy: true,
+      },
+    });
+
+    if (!alert) {
+      return { success: false, error: "Alerte non trouvée", alert: null };
+    }
+
+    return { success: true, alert };
+  } catch (error) {
+    console.error("Get alert by ID error:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération de l'alerte",
+      alert: null,
+    };
+  }
+}
+
+/**
+ * Update alert status
+ */
+export async function updateAlertStatus(id: string, status: string) {
+  try {
+    const validStatuses = [
+      AlertStatus.OPEN,
+      AlertStatus.ACKNOWLEDGED,
+      AlertStatus.RESOLVED,
+    ];
+
+    if (!validStatuses.includes(status as any)) {
+      return { success: false, error: "Statut invalide" };
+    }
+
+    const alert = await prisma.alert.update({
+      where: { id },
+      data: {
+        status: status as any,
+      },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+      },
+    });
+
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/doctor");
+
+    return { success: true, alert, message: "Statut de l'alerte mis à jour" };
+  } catch (error) {
+    console.error("Update alert status error:", error);
+    return { success: false, error: "Erreur lors de la mise à jour du statut" };
   }
 }

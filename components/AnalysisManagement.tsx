@@ -84,20 +84,50 @@ export default function AnalysisManagement() {
 
   const fetchPatients = async () => {
     try {
+      console.log("🔍 Fetching patients...");
       const response = await fetch("/api/patients");
       const data = await response.json();
 
+      console.log("📡 FULL API Response:", data);
+      console.log("📡 Response keys:", Object.keys(data));
+      console.log(
+        "📡 data.data exists?",
+        !!data.data,
+        "type:",
+        typeof data.data
+      );
+      if (data.data) console.log("📡 data.data length:", data.data.length);
+
       if (!response.ok) {
-        console.error("Error fetching patients:", data.error);
+        console.error("❌ Error fetching patients:", data.error);
         alert(`Erreur: ${data.error || "Failed to fetch patients"}`);
         return;
       }
 
-      setPatients(data.data || []);
-      if (data.data?.length === 0) {
+      const patientsArray = Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
+      console.log(`✅ Setting patients: ${patientsArray.length} patients`);
+      setPatients(patientsArray);
+      if (patientsArray.length === 0) {
         console.warn(
-          "No patients found - make sure you have AccessGrant links"
+          "⚠️ No patients found - make sure you have AccessGrant links"
         );
+        // Log current user info
+        try {
+          const userResponse = await fetch("/api/me");
+          const userData = await userResponse.json();
+          console.log(
+            "👤 Current user:",
+            userData?.user?.email,
+            `(${userData?.user?.role})`
+          );
+          console.log("   User ID:", userData?.user?.id);
+        } catch (e) {
+          console.log("Could not fetch user info:", e);
+        }
       }
     } catch (error) {
       console.error("Error fetching patients:", error);
@@ -127,6 +157,64 @@ export default function AnalysisManagement() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (
+    blobUrl: string | undefined,
+    fileName: string | undefined,
+    documentType: string
+  ) => {
+    console.log(`🔵 Download initiated:`, { blobUrl, fileName, documentType });
+
+    if (!blobUrl) {
+      alert(`❌ ${documentType} not available`);
+      return;
+    }
+
+    if (!fileName) {
+      fileName = `${documentType}-${Date.now()}`;
+    }
+
+    try {
+      const downloadUrl = getBlobDownloadUrl(blobUrl, fileName);
+
+      if (!downloadUrl) {
+        alert(`❌ Invalid download URL for ${documentType}`);
+        return;
+      }
+
+      console.log(`✅ Downloading from:`, downloadUrl);
+
+      // Use fetch to handle errors properly
+      const response = await fetch(downloadUrl);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`❌ Download failed:`, response.status, errorData);
+        alert(
+          `❌ Impossible de télécharger: ${errorData.error || response.statusText}`
+        );
+        return;
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`✅ Download completed:`, fileName);
+    } catch (error) {
+      console.error(`❌ Download error:`, error);
+      alert(
+        `❌ Impossible de télécharger: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   };
 
@@ -629,18 +717,20 @@ export default function AnalysisManagement() {
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     📄 Document Demande
                   </p>
-                  <Button variant="outline" size="sm" asChild className="gap-2">
-                    <a
-                      href={getBlobDownloadUrl(
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleDownload(
                         selectedRequest.documentUrl,
-                        selectedRequest.documentName
-                      )}
-                      download={selectedRequest.documentName}
-                    >
-                      <Download className="h-4 w-4" />
-                      {selectedRequest.documentName ||
-                        "Télécharger le document"}
-                    </a>
+                        selectedRequest.documentName,
+                        "Document Demande"
+                      )
+                    }
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {selectedRequest.documentName || "Télécharger le document"}
                   </Button>
                 </div>
               )}
@@ -660,20 +750,18 @@ export default function AnalysisManagement() {
                       <Button
                         variant="outline"
                         size="sm"
-                        asChild
+                        onClick={() =>
+                          handleDownload(
+                            selectedRequest.submittedDocumentUrl,
+                            selectedRequest.submittedDocumentName,
+                            "Document Résultat"
+                          )
+                        }
                         className="gap-2"
                       >
-                        <a
-                          href={getBlobDownloadUrl(
-                            selectedRequest.submittedDocumentUrl,
-                            selectedRequest.submittedDocumentName
-                          )}
-                          download={selectedRequest.submittedDocumentName}
-                        >
-                          <Download className="h-4 w-4" />
-                          {selectedRequest.submittedDocumentName ||
-                            "Télécharger le résultat"}
-                        </a>
+                        <Download className="h-4 w-4" />
+                        {selectedRequest.submittedDocumentName ||
+                          "Télécharger le résultat"}
                       </Button>
                     </div>
                   )}

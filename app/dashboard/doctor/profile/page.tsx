@@ -599,6 +599,7 @@ export default function DoctorProfile() {
                 <select
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
+                  aria-label="Sélectionner une spécialité"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-blue-400 dark:focus:border-green-500 focus:outline-none transition-colors"
                   autoFocus
                 >

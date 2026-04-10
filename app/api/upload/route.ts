@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           originalName: file.name,
           fileType: file.type,
           fileSize: file.size,
-          category: category || "OTHER",
+          category: (category || "OTHER") as any,
           description: description || null,
           azureBlobUrl: blobUrl,
           azureContainerName: containerName,

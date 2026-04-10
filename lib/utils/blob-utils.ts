@@ -2,24 +2,36 @@
  * Convert Azure Blob URL to our proxy download URL
  */
 export function getBlobDownloadUrl(blobUrl: string, fileName: string): string {
-  if (!blobUrl) return "";
+  if (!blobUrl) {
+    console.error("❌ No blob URL provided");
+    return "";
+  }
 
-  // Extract the blob path from the full Azure URL
-  // URL format: https://{account}.blob.core.windows.net/{container}/{path}
+  console.log("🔵 getBlobDownloadUrl input:", { blobUrl, fileName });
+
   try {
     const url = new URL(blobUrl);
     const pathname = url.pathname;
-    // pathname is like: /uploads/medical-documents/...
-    const blobPath = pathname.substring(1); // Remove leading /
+    console.log("📍 Pathname:", pathname);
 
-    // Split into container and path
-    const parts = blobPath.split("/");
-    const containerAndPath = parts.slice(1).join("/"); // Skip container, join rest
+    // pathname is like: /container/uploads/medical-documents/...
+    const pathParts = pathname.substring(1).split("/"); // Remove leading /, then split
+
+    if (pathParts.length < 2) {
+      console.error("❌ Invalid pathname format:", pathname);
+      return "";
+    }
+
+    // Skip container name, get the rest
+    const blobPath = pathParts.slice(1).join("/");
+    console.log("📍 Blob path:", blobPath);
 
     // Return proxy URL
-    return `/api/download/${containerAndPath}?fileName=${encodeURIComponent(fileName)}`;
+    const downloadUrl = `/api/download/${blobPath}?fileName=${encodeURIComponent(fileName)}`;
+    console.log("✅ Download URL:", downloadUrl);
+    return downloadUrl;
   } catch (error) {
-    console.error("Invalid blob URL:", blobUrl);
+    console.error("❌ Invalid blob URL:", blobUrl, error);
     return "";
   }
 }

@@ -26,6 +26,7 @@ model User {
   blockchainAddress       String?   // Aptos wallet address (public) for blockchain access control
   blockchainPrivateKey    String?   // Aptos wallet private key (encrypted at rest)
   isActive                Boolean   @default(true)
+  mustChangePassword      Boolean   @default(false)  // Force password change on first login
   lastLogin               DateTime?
   resetPasswordToken      String?   // Token for password reset
   resetPasswordExpires    DateTime? // Expiration date for reset token
@@ -36,6 +37,7 @@ model User {
   // Relations
   patient       Patient?
   doctorProfile DoctorProfile?
+  nurseProfile  NurseProfile?
   auditLogs     AuditLog[]
   alertsCreated Alert[]    @relation("AlertCreatedBy")
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
@@ -54,7 +56,10 @@ model User {
 enum Role {
   PATIENT
   DOCTOR
+  NURSE
   ADMIN
+  AUDITOR
+  COORDINATOR
 }
 
 // ============================================
@@ -90,6 +95,7 @@ model Patient {
   medicalAnalyses       MedicalAnalysis[]
   doctorNotes           DoctorNote[]
   situationReports      SituationReport[]
+  patientReminders      PatientReminder[]  // Reminders sent by nurses
   // TODO_MERGE #3: Added from branche_patient - questionnaire system
   questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")  // Questionnaires assigned to this patient
   analysisRequests      AnalysisRequest[] @relation("PatientAnalysisRequests")  // Analysis requests for this patient
@@ -158,6 +164,31 @@ model DoctorProfile {
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("doctor_profiles")
+}
+
+// ============================================
+// NURSE PROFILE
+// ============================================
+
+model NurseProfile {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String            @unique @db.ObjectId
+  licenseNumber   String            @unique
+  bio             String?
+  phone           String?
+  location        String?
+  profileImage    String?      // URL to profile image
+  specialization  String?      // e.g., ICU, Emergency, Cardiology
+  certifications  String[]     // Array of certification names
+  assignedPatients String[]    @db.ObjectId  // Patient IDs assigned to this nurse
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patientReminders PatientReminder[]
+
+  @@map("nurse_profiles")
 }
 
 type Experience {
@@ -370,6 +401,53 @@ enum AlertStatus {
 }
 
 // ============================================
+// PATIENT REMINDERS (Nurse-sent)
+// ============================================
+
+model PatientReminder {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String            @db.ObjectId
+  nurseId         String            @db.ObjectId
+  title           String
+  message         String
+  reminderType    ReminderType      // MEDICATION, APPOINTMENT, VITAL, QUESTIONNAIRE, etc.
+  scheduledFor    DateTime          // When to send/show the reminder
+  isSent          Boolean           @default(false)
+  sentAt          DateTime?
+  isRead          Boolean           @default(false)
+  readAt          DateTime?
+  priority        ReminderPriority  @default(NORMAL)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nurse           NurseProfile      @relation(fields: [nurseId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([nurseId])
+  @@index([scheduledFor])
+  @@index([isSent])
+  @@map("patient_reminders")
+}
+
+enum ReminderType {
+  MEDICATION
+  APPOINTMENT
+  VITAL_CHECK
+  QUESTIONNAIRE
+  FOLLOW_UP
+  GENERAL
+}
+
+enum ReminderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ============================================
 // SERVICES
 // ============================================
 
@@ -498,6 +576,65 @@ enum AnalysisStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// ============================================
+// AUDIT ACTIONS
+// ============================================
+
+enum AuditAction {
+  // Authentication
+  LOGIN
+  LOGOUT
+  PASSWORD_RESET
+  
+  // User Management
+  CREATE_USER
+  UPDATE_USER
+  DELETE_USER
+  CHANGE_ROLE
+  
+  // Patient Management
+  CREATE_PATIENT
+  UPDATE_PATIENT
+  DELETE_PATIENT
+  VIEW_PATIENT
+  
+  // Medical Records
+  CREATE_VITAL_SIGN
+  UPDATE_VITAL_SIGN
+  DELETE_VITAL_SIGN
+  CREATE_MEDICAL_ANALYSIS
+  UPDATE_MEDICAL_ANALYSIS
+  DELETE_MEDICAL_ANALYSIS
+  
+  // Alerts
+  CREATE_ALERT
+  UPDATE_ALERT
+  ACKNOWLEDGE_ALERT
+  RESOLVE_ALERT
+  DELETE_ALERT
+  
+  // Questionnaires
+  CREATE_QUESTIONNAIRE
+  UPDATE_QUESTIONNAIRE
+  DELETE_QUESTIONNAIRE
+  SUBMIT_QUESTIONNAIRE
+  
+  // Documents
+  UPLOAD_DOCUMENT
+  UPDATE_DOCUMENT
+  DELETE_DOCUMENT
+  DOWNLOAD_DOCUMENT
+  
+  // Access Control
+  GRANT_ACCESS
+  REVOKE_ACCESS
+  
+  // System
+  EXPORT_DATA
+  IMPORT_DATA
+  SYSTEM_CONFIG
 }
 
 // ============================================

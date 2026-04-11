@@ -6,7 +6,6 @@ import LogoutButton from "@/components/LogoutButton";
 import {
   Users,
   AlertCircle,
-  Settings,
   FileText,
   TrendingUp,
   Building2,
@@ -32,7 +31,6 @@ const infraLinks: { href: string; icon: React.ReactNode; label: string; exact?: 
   { href: "/dashboard/admin/profile", icon: <UserCircle size={20} />, label: "Mon Profil" },
   { href: "/dashboard/admin/analytics", icon: <TrendingUp size={20} />, label: "Analytics" },
   { href: "/dashboard/admin/export", icon: <Download size={20} />, label: "Data Export" },
-  { href: "/dashboard/admin/settings", icon: <Settings size={20} />, label: "Settings" },
 ];
 
 function NavItem({ href, icon, label, active, badge = 0 }: {

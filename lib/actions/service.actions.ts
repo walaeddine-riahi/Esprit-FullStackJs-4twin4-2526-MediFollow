@@ -61,8 +61,11 @@ export async function createService(data: ServiceInput) {
 
     revalidatePath("/dashboard/admin/services");
     return { success: true, service };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create service error:", error);
+    if (error?.code === "P2002") {
+      return { success: false, error: "A service with this name already exists." };
+    }
     return { success: false, error: "Failed to create service" };
   }
 }

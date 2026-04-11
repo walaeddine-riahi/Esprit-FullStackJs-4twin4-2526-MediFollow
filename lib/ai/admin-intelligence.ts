@@ -26,7 +26,7 @@ const NON_DUMMY_ALERT_WHERE = {
       { message: { contains: "collection 'alerts'", mode: "insensitive" as const } },
     ],
   },
-} as const;
+};
 
 function clampConfidence(value: number): number {
   return Math.max(0.35, Math.min(0.98, Number(value.toFixed(2))));

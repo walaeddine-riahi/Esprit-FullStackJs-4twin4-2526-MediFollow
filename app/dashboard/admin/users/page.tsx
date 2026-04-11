@@ -156,10 +156,8 @@ export default function AdminUsersPage() {
 
   const availableDoctors = useMemo(() => {
     if (!formData.serviceId) return [];
-    const selectedService = services.find((s) => s.id === formData.serviceId);
-    const serviceTeamIds = new Set(selectedService?.teamIds || []);
-    return teamMembers.filter((member) => serviceTeamIds.has(member.id));
-  }, [services, teamMembers, formData.serviceId]);
+    return teamMembers;
+  }, [teamMembers, formData.serviceId]);
 
   const updateURL = (key: string, val: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -277,23 +275,33 @@ export default function AdminUsersPage() {
         });
       }
 
-      setShowAddModal(false);
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "Password123!",
-        role: "PATIENT",
-        isActive: true,
-        phoneNumber: "",
-        hospitalId: "",
-        serviceId: "",
-        doctorId: "",
-        specialty: "",
-      });
-      loadUsers();
+      if (created?.success) {
+        const staffRoles = ["DOCTOR", "NURSE", "COORDINATOR"];
+        if (staffRoles.includes(formData.role) && !created.emailSent) {
+          alert(`User created successfully, but the credentials email could not be sent to ${formData.email}. Please check SMTP settings.`);
+        }
+
+        setShowAddModal(false);
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "Password123!",
+          role: "PATIENT",
+          isActive: true,
+          phoneNumber: "",
+          hospitalId: "",
+          serviceId: "",
+          doctorId: "",
+          specialty: "",
+        });
+        await loadUsers();
+      } else {
+        alert(created?.error || "Failed to create user. Please try again.");
+      }
     } catch (error) {
         console.error("Creation failed", error);
+        alert("An error occurred while creating the user.");
     } finally {
       setSaving(false);
     }
@@ -327,7 +335,8 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-cyan-300/70">Administration</p>
-          <h1 className="text-2xl font-black tracking-tight">Profile Management</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Profile Management</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}{roleFilter !== 'ALL' ? ` (${roleFilter.toLowerCase()})` : ''}</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -379,24 +388,24 @@ export default function AdminUsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-800/50 border-b border-cyan-300/10">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role & Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                <tr className="bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-cyan-300/10">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Identity</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Role & Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Contact</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/30">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/30">
                 {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                  <tr key={user.id} className="group hover:bg-slate-800/30 transition-all">
+                  <tr key={user.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400 text-xs">
-                          {user.firstName[0]}{user.lastName[0]}
+                          {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-100 truncate">{user.name}</p>
-                          <p className="text-[10px] text-slate-500 font-medium">Created {new Date(user.createdAt).toLocaleDateString('en-US')}</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{user.name}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Created {new Date(user.createdAt).toLocaleDateString('en-US')}</p>
                         </div>
                       </div>
                     </td>
@@ -404,8 +413,8 @@ export default function AdminUsersPage() {
                       <div className="flex flex-col gap-1.5">
                         <RoleBadge role={user.role} />
                         <div className="flex items-center gap-1.5 px-1">
-                          <div className={`h-1.5 w-1.5 rounded-full ${user.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
-                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter">
+                          <div className={`h-1.5 w-1.5 rounded-full ${user.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-600'}`} />
+                          <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter">
                             {user.isActive ? 'Active' : 'Disabled'}
                           </span>
                         </div>
@@ -413,18 +422,18 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                        <div className="space-y-1">
-                         <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                            <Mail size={12} className="text-slate-600"/> {user.email}
+                         <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                            <Mail size={12} className="text-slate-400 dark:text-slate-600"/> {user.email}
                          </div>
                          {user.phoneNumber && (
-                           <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                              <Phone size={12} className="text-slate-600"/> {user.phoneNumber}
+                           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                              <Phone size={12} className="text-slate-400 dark:text-slate-600"/> {user.phoneNumber}
                            </div>
                          )}
                        </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                      <div className="flex items-center justify-end gap-2">
                         <Link 
                           href={`/dashboard/admin/users/${user.id}`}
                           className="p-2 glass-panel rounded-xl text-slate-400 hover:text-cyan-500 transition-all hover:shadow-md"

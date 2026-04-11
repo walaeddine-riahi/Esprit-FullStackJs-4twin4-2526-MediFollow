@@ -30,9 +30,6 @@ export default async function AdminDashboard() {
         <Link href="/dashboard/admin/analytics" className="glass-panel rounded-2xl border border-slate-200 dark:border-cyan-300/25 p-3 text-sm font-bold text-slate-700 dark:text-cyan-100">
           Analytics
         </Link>
-        <Link href="/dashboard/admin/settings" className="glass-panel rounded-2xl border border-slate-200 dark:border-cyan-300/25 p-3 text-sm font-bold text-slate-700 dark:text-cyan-100">
-          Settings
-        </Link>
       </div>
       <LiveAdminDashboard initialStats={initialStats} />
     </>

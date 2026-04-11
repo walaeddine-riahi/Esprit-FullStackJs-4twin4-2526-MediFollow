@@ -63,8 +63,6 @@ export default function ServiceManagementPage() {
   const [newService, setNewService] = useState({
     serviceName: "",
     description: "",
-    consultationFee: "",
-    averageDuration: "",
     specializations: "",
   });
 
@@ -110,23 +108,24 @@ export default function ServiceManagementPage() {
   async function handleCreateService(e: React.FormEvent) {
     e.preventDefault();
     if (!newService.serviceName.trim()) return;
+    if (newServiceTeamIds.length === 0) {
+      alert("Please assign at least one doctor or nurse to the care team.");
+      return;
+    }
 
     const result = await createService({
       serviceName: newService.serviceName.trim(),
       description: newService.description.trim() || undefined,
-      consultationFee: newService.consultationFee ? Number(newService.consultationFee) : null,
-      averageDuration: newService.averageDuration ? Number(newService.averageDuration) : null,
       specializations: newService.specializations
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean),
-      patientIds: newServicePatientIds,
+      patientIds: [],
       teamIds: newServiceTeamIds,
     });
 
     if (result.success) {
-      setNewService({ serviceName: "", description: "", consultationFee: "", averageDuration: "", specializations: "" });
-      setNewServicePatientIds([]);
+      setNewService({ serviceName: "", description: "", specializations: "" });
       setNewServiceTeamIds([]);
       await loadData();
       if (result.service?.id) handleSelectService(result.service.id);
@@ -249,22 +248,6 @@ export default function ServiceManagementPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 rows={2}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  value={newService.consultationFee}
-                  onChange={(e) => setNewService((p) => ({ ...p, consultationFee: e.target.value }))}
-                  placeholder="Fee"
-                  type="number"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-                <input
-                  value={newService.averageDuration}
-                  onChange={(e) => setNewService((p) => ({ ...p, averageDuration: e.target.value }))}
-                  placeholder="Duration (min)"
-                  type="number"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
               <input
                 value={newService.specializations}
                 onChange={(e) => setNewService((p) => ({ ...p, specializations: e.target.value }))}
@@ -272,32 +255,10 @@ export default function ServiceManagementPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
 
-              {/* Patients box */}
+              {/* Care Team (required) */}
               <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                 <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                  Patients ({newServicePatientIds.length} selected)
-                </p>
-                <div className="max-h-32 space-y-1 overflow-auto">
-                  {patients.length === 0 && (
-                    <p className="text-[11px] text-slate-500">No patients found.</p>
-                  )}
-                  {patients.map((p) => (
-                    <label key={p.id} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
-                      <input
-                        type="checkbox"
-                        checked={newServicePatientIds.includes(p.id)}
-                        onChange={() => toggle(p.id, newServicePatientIds, setNewServicePatientIds)}
-                      />
-                      {p.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Care Team box */}
-              <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                  Doctors &amp; Nurses ({newServiceTeamIds.length} selected)
+                  Care Team <span className="text-red-500">*</span> ({newServiceTeamIds.length} selected)
                 </p>
                 <div className="max-h-32 space-y-1 overflow-auto">
                   {team.length === 0 && (
@@ -318,6 +279,10 @@ export default function ServiceManagementPage() {
                   ))}
                 </div>
               </div>
+
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                You can assign patients after creating the service.
+              </p>
 
               <button
                 type="submit"

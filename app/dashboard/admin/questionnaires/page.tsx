@@ -128,6 +128,14 @@ export default function QuestionnaireManagementPage() {
       alert("Title and at least one question required.");
       return;
     }
+    if (selectedServiceIds.length === 0) {
+      alert("Please assign at least one service to this questionnaire.");
+      return;
+    }
+    if (selectedPatientIds.length === 0) {
+      alert("Please assign at least one patient to this questionnaire.");
+      return;
+    }
 
     const payload = {
       title: title.trim(),
@@ -329,7 +337,7 @@ export default function QuestionnaireManagementPage() {
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                   <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    <Building2 size={14} /> Assign to Services ({selectedServiceIds.length})
+                    <Building2 size={14} /> Assign to Services <span className="text-red-500">*</span> ({selectedServiceIds.length})
                   </p>
                   <div className="max-h-32 space-y-1 overflow-auto">
                     {services.length === 0 && <p className="text-[11px] text-slate-500">No services.</p>}
@@ -348,7 +356,7 @@ export default function QuestionnaireManagementPage() {
 
                 <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                   <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    <Users size={14} /> Assign to Patients ({selectedPatientIds.length})
+                    <Users size={14} /> Assign to Patients <span className="text-red-500">*</span> ({selectedPatientIds.length})
                   </p>
                   <div className="max-h-32 space-y-1 overflow-auto">
                     {patients.length === 0 && <p className="text-[11px] text-slate-500">No patients.</p>}

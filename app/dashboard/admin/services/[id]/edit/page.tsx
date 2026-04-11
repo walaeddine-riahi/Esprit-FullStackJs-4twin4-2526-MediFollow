@@ -42,8 +42,6 @@ export default function EditServicePage({ params }: { params: { id: string } }) 
   const [formData, setFormData] = useState({
     serviceName: "",
     description: "",
-    consultationFee: "",
-    averageDuration: "",
     specializations: "",
     isActive: true,
   });
@@ -63,8 +61,6 @@ export default function EditServicePage({ params }: { params: { id: string } }) 
         setFormData({
           serviceName: current.serviceName,
           description: current.description || "",
-          consultationFee: current.consultationFee?.toString() || "",
-          averageDuration: current.averageDuration?.toString() || "",
           specializations: current.specializations.join(", "),
           isActive: current.isActive,
         });
@@ -101,8 +97,6 @@ export default function EditServicePage({ params }: { params: { id: string } }) 
     await updateService(service.id, {
       serviceName: formData.serviceName.trim(),
       description: formData.description.trim(),
-      consultationFee: formData.consultationFee ? Number(formData.consultationFee) : null,
-      averageDuration: formData.averageDuration ? Number(formData.averageDuration) : null,
       specializations: formData.specializations
         .split(",")
         .map((item) => item.trim())
@@ -156,22 +150,6 @@ export default function EditServicePage({ params }: { params: { id: string } }) 
                   rows={3}
                   placeholder="Description"
                 />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={formData.consultationFee}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, consultationFee: e.target.value }))}
-                    type="number"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    placeholder="Fee"
-                  />
-                  <input
-                    value={formData.averageDuration}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, averageDuration: e.target.value }))}
-                    type="number"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    placeholder="Duration"
-                  />
-                </div>
                 <input
                   value={formData.specializations}
                   onChange={(e) => setFormData((prev) => ({ ...prev, specializations: e.target.value }))}

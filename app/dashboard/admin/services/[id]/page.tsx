@@ -101,8 +101,6 @@ export default function ServiceDetailsPage({ params }: { params: { id: string } 
             <div className="space-y-2 text-sm">
               <p className="text-slate-800 dark:text-slate-200"><span className="font-semibold">Name:</span> {service.serviceName}</p>
               <p className="text-slate-800 dark:text-slate-200"><span className="font-semibold">Description:</span> {service.description || "-"}</p>
-              <p className="text-slate-800 dark:text-slate-200"><span className="font-semibold">Consultation Fee:</span> {service.consultationFee ?? "-"}</p>
-              <p className="text-slate-800 dark:text-slate-200"><span className="font-semibold">Average Duration:</span> {service.averageDuration ?? "-"} min</p>
               <p className="text-slate-800 dark:text-slate-200">
                 <span className="font-semibold">Status:</span> {service.isActive ? "Active" : "Inactive"}
               </p>

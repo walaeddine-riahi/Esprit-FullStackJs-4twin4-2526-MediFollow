@@ -168,16 +168,21 @@ export async function createUser(data: any) {
     }
 
     // Send credentials email to staff (doctor, nurse, coordinator)
+    let emailSent = false;
     if (staffRoles.includes(data.role)) {
       try {
-        await sendStaffCredentialsEmail(data.email, data.firstName, plainPassword, data.role);
+        const emailResult = await sendStaffCredentialsEmail(data.email, data.firstName, plainPassword, data.role);
+        emailSent = !!emailResult?.success;
+        if (!emailSent) {
+          console.error("Staff credentials email failed:", emailResult?.error);
+        }
       } catch (emailError) {
         console.error("Staff credentials email error:", emailError);
       }
     }
     
     revalidatePath("/dashboard/admin/users");
-    return { success: true, user: newUser };
+    return { success: true, user: newUser, emailSent };
   } catch (error) {
     console.error("Error creating user:", error);
     return { success: false, error: "Failed to create user" };

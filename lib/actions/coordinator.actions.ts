@@ -469,17 +469,12 @@ export async function sendCoordinatorReminder(
   if (!auth.ok || !auth.user) {
     return { success: false, error: auth.error };
   }
-  const link = await prisma.coordinatorPatient.findUnique({
-    where: {
-      coordinatorId_patientId: {
-        coordinatorId: auth.user.id,
-        patientId,
-      },
-    },
-    include: { patient: { include: { user: true } } },
+  const patientRow = await prisma.patient.findUnique({
+    where: { id: patientId },
+    include: { user: true },
   });
-  if (!link || !link.patient || !link.patient.user) {
-    return { success: false, error: "Patient introuvable ou lien invalide" };
+  if (!patientRow || !patientRow.user) {
+    return { success: false, error: "Patient introuvable" };
   }
 
   const trimmed = message.trim();
@@ -498,7 +493,7 @@ export async function sendCoordinatorReminder(
     },
   });
 
-  const patientUserId = link.patient.userId;
+  const patientUserId = patientRow.userId;
   const title = "Rappel — suivi post-hospitalisation";
 
   if (ch.includes("IN_APP")) {
@@ -818,16 +813,11 @@ export async function flagCoordinatorEntry(
   if (!auth.ok || !auth.user) {
     return { success: false, error: auth.error };
   }
-  const link = await prisma.coordinatorPatient.findUnique({
-    where: {
-      coordinatorId_patientId: {
-        coordinatorId: auth.user.id,
-        patientId,
-      },
-    },
+  const patientRow = await prisma.patient.findUnique({
+    where: { id: patientId },
   });
-  if (!link) {
-    return { success: false, error: "Patient non assigné" };
+  if (!patientRow) {
+    return { success: false, error: "Patient introuvable" };
   }
   const note = payload.note.trim();
   if (!note) return { success: false, error: "Note requise" };
@@ -911,4 +901,133 @@ export async function getCoordinatorOpenFlags() {
     (flag) => flag.patient && flag.patient.user
   );
   return { success: true, flags: validFlags };
+}
+
+export async function getUnifiedReviews() {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, reviews: [], stats: null };
+  }
+
+  // 1. Get Flags
+  const flags = await prisma.coordinatorEntryFlag.findMany({
+    where: { coordinatorId: auth.user.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      patient: {
+        include: {
+          user: { select: { firstName: true, lastName: true } },
+        },
+      },
+      vitalRecord: true,
+    },
+  });
+
+  // 2. Get Alerts (for patients assigned to coordinator)
+  const patientIds = await getCoordinatorPatientIds(auth.user.id);
+  const alerts = await prisma.alert.findMany({
+    where: { patientId: { in: patientIds }, alertType: "VITAL" }, 
+    orderBy: { createdAt: "desc" },
+    include: {
+      patient: {
+        include: {
+          user: { select: { firstName: true, lastName: true } },
+        },
+      },
+      vitalRecord: true,
+    },
+  });
+
+  // Today's date logic for Closed stats
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Map into Unified format
+  let unifiedReviews = [];
+  let stats = {
+    total: 0,
+    critiques: 0,
+    suspects: 0,
+    incomplets: 0,
+    closedToday: 0
+  };
+
+  for (const f of flags) {
+    if (f.status === "RESOLVED" && f.resolvedAt && f.resolvedAt >= today) {
+      stats.closedToday++;
+    }
+    if (f.status !== "OPEN") continue;
+
+    const reviewType = f.flagType === "INCOMPLETE" ? "Incomplet" : "Suspect";
+    if (reviewType === "Incomplet") stats.incomplets++;
+    if (reviewType === "Suspect") stats.suspects++;
+    stats.total++;
+
+    unifiedReviews.push({
+      id: f.id,
+      sourceType: "FLAG",
+      patientId: f.patientId,
+      patientName: `${f.patient.user.firstName} ${f.patient.user.lastName}`,
+      priority: reviewType === "Incomplet" ? "basse" : "moyenne",
+      reviewType,
+      title: reviewType === "Incomplet" ? "Entrée soumise avec champs manquants" : "Valeur hors plage normale — possible erreur",
+      note: f.note,
+      createdAt: f.createdAt,
+      vitalRecord: f.vitalRecord
+    });
+  }
+
+  for (const a of alerts) {
+    if ((a.status === "RESOLVED" || a.status === "CLOSED" || a.resolvedAt) && a.resolvedAt && a.resolvedAt >= today) {
+      stats.closedToday++;
+    }
+    if (a.status !== "OPEN" && a.status !== "ACKNOWLEDGED") continue;
+
+    stats.critiques++;
+    stats.total++;
+
+    unifiedReviews.push({
+      id: a.id,
+      sourceType: "ALERT",
+      patientId: a.patientId,
+      patientName: `${a.patient.user.firstName} ${a.patient.user.lastName}`,
+      priority: "haute",
+      reviewType: "Critique",
+      title: a.severity === "CRITICAL" ? "Valeur anormalement élevée détectée" : "Alerte système sur constante",
+      note: a.message,
+      createdAt: a.createdAt,
+      vitalRecord: a.vitalRecord
+    });
+  }
+
+  // Sort by date DESC
+  unifiedReviews.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  return { success: true, reviews: unifiedReviews, stats };
+}
+
+export async function closeUnifiedReview(id: string, sourceType: string) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  try {
+    if (sourceType === "FLAG") {
+      await prisma.coordinatorEntryFlag.update({
+        where: { id },
+        data: { status: "RESOLVED", resolvedAt: new Date() },
+      });
+    } else {
+      await prisma.alert.update({
+        where: { id },
+        data: { status: "RESOLVED", resolvedById: auth.user.id, resolvedAt: new Date(), resolution: "Clôturé par le coordinateur depuis Revues" },
+      });
+    }
+
+    revalidatePath("/dashboard/coordinator/reviews");
+    return { success: true, message: "Signalement clôturé" };
+  } catch (error) {
+    return { success: false, error: "Impossible de clôturer l'élément." };
+  }
 }

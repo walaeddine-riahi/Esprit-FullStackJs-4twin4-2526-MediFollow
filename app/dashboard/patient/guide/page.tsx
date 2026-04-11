@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { ensurePatientLinkedToCoordinatorForGuide } from "@/lib/actions/coordinator.actions";
 import CoordinatorGuideVideoMaker from "@/components/CoordinatorGuideVideoMaker";
+import PatientGuideChatbot from "@/components/PatientGuideChatbot";
 
 export default function PatientGuidePage() {
   const router = useRouter();
@@ -282,6 +283,19 @@ export default function PatientGuidePage() {
             />
           </div>
         ) : null}
+
+        <section className="mt-12 mb-8">
+          <div className="mb-6 flex flex-col gap-2">
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <UserCircle className="size-8 text-red-600" />
+              Assistant Virtuel (IA)
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Posez-moi vos questions sur la prise de vos constantes et l'utilisation de MediFollow.
+            </p>
+          </div>
+          <PatientGuideChatbot />
+        </section>
 
         <section className="mt-12 space-y-8 text-lg leading-relaxed text-gray-900 dark:text-gray-100">
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6">

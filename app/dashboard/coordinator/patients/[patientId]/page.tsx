@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import VitalsAiAgent from "@/components/VitalsAiAgent";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import {
@@ -34,6 +35,7 @@ export default function CoordinatorPatientDetailPage() {
     SMS: false,
   });
   const [sending, setSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
   const [flagNote, setFlagNote] = useState("");
   const [flagType, setFlagType] = useState<"INCOMPLETE" | "SUSPICIOUS" | "OTHER">(
     "INCOMPLETE"
@@ -41,94 +43,59 @@ export default function CoordinatorPatientDetailPage() {
   const [flagVitalId, setFlagVitalId] = useState<string>("");
   const [flagging, setFlagging] = useState(false);
   const [flagError, setFlagError] = useState<string | null>(null);
-  const [aiNotes, setAiNotes] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiBundle, setAiBundle] = useState<any>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [flagSuccess, setFlagSuccess] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   async function reload() {
-    const res = await getCoordinatorPatientDetail(patientId);
-    if (res.success && res.data) setDetail(res.data);
-    else if (!res.success) router.push("/dashboard/coordinator/patients");
+    try {
+      const res = await getCoordinatorPatientDetail(patientId);
+      if (res.success && res.data) setDetail(res.data);
+      else router.push("/dashboard/coordinator/patients");
+    } catch (e) {
+      console.error(e);
+      setDetail(null);
+    }
   }
 
   useEffect(() => {
     (async () => {
-      const user = await getCurrentUser();
-      if (!user || user.role !== "COORDINATOR") {
-        router.push("/login");
-        return;
+      try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== "COORDINATOR") {
+          router.push("/login");
+          return;
+        }
+        await reload();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
-      await reload();
-      setLoading(false);
     })();
   }, [patientId, router]);
 
   async function handleSendReminder() {
     setSending(true);
+    setSendSuccess(false);
+    setSendError(null);
     const ch: ("IN_APP" | "EMAIL" | "SMS")[] = [];
     if (channels.IN_APP) ch.push("IN_APP");
     if (channels.EMAIL) ch.push("EMAIL");
     if (channels.SMS) ch.push("SMS");
-    await sendCoordinatorReminder(patientId, reminderMsg, ch);
-    setSending(false);
-  }
-
-  async function handleAiBundle() {
-    if (!detail) return;
-    const { patient, vitalsWithCompleteness } = detail;
-    const latest = vitalsWithCompleteness[0];
-    if (!latest) return;
-    setAiLoading(true);
-    setAiError(null);
-    setAiBundle(null);
-    const dob = patient.dateOfBirth
-      ? new Date(patient.dateOfBirth)
-      : null;
-    const ageYears =
-      dob != null
-        ? Math.floor(
-            (Date.now() - dob.getTime()) /
-              (365.25 * 24 * 60 * 60 * 1000)
-          )
-        : undefined;
-    try {
-      const res = await fetch("/api/coordinator/ai/vitals-bundle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systolicBP: latest.systolicBP,
-          diastolicBP: latest.diastolicBP,
-          heartRate: latest.heartRate,
-          temperature: latest.temperature,
-          oxygenSaturation: latest.oxygenSaturation,
-          weight: latest.weight,
-          notes: [latest.notes, aiNotes.trim()].filter(Boolean).join("\n") || undefined,
-          patientContext: {
-            age: ageYears,
-            pathology: patient.diagnosis ?? undefined,
-            dischargeDate: patient.dischargeDate
-              ? new Date(patient.dischargeDate).toISOString()
-              : undefined,
-          },
-          triageText: aiNotes.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setAiError((data.detail || data.error || "Erreur") as string);
-        return;
-      }
-      setAiBundle(data);
-    } catch (e: unknown) {
-      setAiError(String((e as Error)?.message ?? e));
-    } finally {
-      setAiLoading(false);
+    const res = await sendCoordinatorReminder(patientId, reminderMsg, ch);
+    if (res.success) {
+      setSendSuccess(true);
+      setTimeout(() => setSendSuccess(false), 3000);
+      setReminderMsg("Bonjour, merci de compléter vos constantes vitales pour aujourd'hui dans MediFollow.");
+    } else {
+      setSendError(res.error || "Une erreur est survenue lors de l'envoi du rappel.");
     }
+    setSending(false);
   }
 
   async function handleFlag() {
     setFlagError(null);
+    setFlagSuccess(false);
     if (!flagNote.trim()) return;
 
     const selectedVital = detail.vitalsWithCompleteness.find(
@@ -146,21 +113,39 @@ export default function CoordinatorPatientDetailPage() {
     }
 
     setFlagging(true);
-    await flagCoordinatorEntry(patientId, {
+    const res = await flagCoordinatorEntry(patientId, {
       vitalRecordId: flagVitalId || undefined,
       flagType,
       note: flagNote.trim(),
     });
-    setFlagNote("");
-    setFlagVitalId("");
+    
+    if (res.success) {
+      setFlagSuccess(true);
+      setTimeout(() => setFlagSuccess(false), 3000);
+      setFlagNote("");
+      setFlagVitalId("");
+      await reload();
+    } else {
+      setFlagError(res.error || "Une erreur est survenue.");
+    }
     setFlagging(false);
-    await reload();
   }
 
-  if (loading || !detail) {
+  if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-10 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center p-6">
+        <Loader2 className="size-10 animate-spin text-red-600 mb-4" />
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chargement impossible</h3>
+        <p className="text-sm text-gray-500">Les données de ce patient sont introuvables ou une erreur est survenue.</p>
+        <button onClick={() => router.push("/dashboard/coordinator/patients")} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Retour</button>
       </div>
     );
   }
@@ -260,19 +245,31 @@ export default function CoordinatorPatientDetailPage() {
               SMS
             </label>
           </div>
-          <button
-            type="button"
-            disabled={sending}
-            onClick={handleSendReminder}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {sending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={sending}
+              onClick={handleSendReminder}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {sending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              Envoyer
+            </button>
+            {sendSuccess && (
+              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                Rappel envoyé avec succès !
+              </span>
             )}
-            Envoyer
-          </button>
+          </div>
+          {sendError && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400">
+              {sendError}
+            </p>
+          )}
         </section>
 
         {/* Signalement */}
@@ -313,20 +310,27 @@ export default function CoordinatorPatientDetailPage() {
             rows={2}
             className="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3 text-sm"
           />
-          <button
-            type="button"
-            disabled={
-              flagging ||
-              !flagNote.trim() ||
-              (flagType === "INCOMPLETE" &&
-                vitalsWithCompleteness.find((v: any) => v.id === flagVitalId)
-                  ?.completeness?.score === 100)
-            }
-            onClick={handleFlag}
-            className="mt-3 rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
-          >
-            Enregistrer le signalement
-          </button>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={
+                flagging ||
+                !flagNote.trim() ||
+                (flagType === "INCOMPLETE" &&
+                  vitalsWithCompleteness.find((v: any) => v.id === flagVitalId)
+                    ?.completeness?.score === 100)
+              }
+              onClick={handleFlag}
+              className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              Enregistrer le signalement
+            </button>
+            {flagSuccess && (
+              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                Signalement enregistré avec succès !
+              </span>
+            )}
+          </div>
           {flagError && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400">
               {flagError}
@@ -388,77 +392,13 @@ export default function CoordinatorPatientDetailPage() {
           </div>
         </section>
 
-        <section className="mt-10 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/30 dark:bg-blue-950/20 p-6">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Sparkles className="size-5 text-blue-600" />
-            Analyse IA — Mistral + BiomedBERT
-          </h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Utilise la dernière ligne de mesures ci-dessus. Optionnel : contexte ou symptômes pour le
-            triage texte.
-          </p>
-          <textarea
-            value={aiNotes}
-            onChange={(e) => setAiNotes(e.target.value)}
-            rows={2}
-            placeholder="Notes ou symptômes pour affiner le triage (optionnel)…"
-            className="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-3 text-sm"
-          />
-          <button
-            type="button"
-            disabled={aiLoading || vitalsWithCompleteness.length === 0}
-            onClick={handleAiBundle}
-            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {aiLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Sparkles className="size-4" />
-            )}
-            Lancer l&apos;analyse
-          </button>
-          {vitalsWithCompleteness.length === 0 && (
-            <p className="mt-2 text-xs text-amber-600">Aucune mesure vitale à analyser.</p>
-          )}
-          {aiError && (
-            <p className="mt-3 text-sm text-red-600 dark:text-red-400">{aiError}</p>
-          )}
-          {aiBundle?.clinical && (
-            <div className="mt-4 space-y-3 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-white/90 dark:bg-gray-950/90 p-4 text-sm">
-              <div>
-                <p className="text-xs font-bold uppercase text-blue-600">Mistral — JSON clinique</p>
-                <p className="mt-1">
-                  <span className="font-semibold">Score risque :</span>{" "}
-                  {aiBundle.clinical.scoreRisque}/100
-                </p>
-                <p className="mt-1 text-gray-700 dark:text-gray-300">
-                  {aiBundle.clinical.recommandationFR}
-                </p>
-                {aiBundle.clinical.parametresFlagges?.length > 0 && (
-                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    <span className="font-semibold">Paramètres flaggés :</span>{" "}
-                    {aiBundle.clinical.parametresFlagges.join(", ")}
-                  </p>
-                )}
-              </div>
-              {aiBundle.triage && (
-                <div className="border-t border-blue-100 dark:border-blue-900/40 pt-3">
-                  <p className="text-xs font-bold uppercase text-blue-600">BiomedBERT — triage</p>
-                  <p className="mt-1">
-                    Alerte probable :{" "}
-                    <span className="font-semibold">
-                      {aiBundle.triage.alerteProbable ? "oui" : "non"}
-                    </span>{" "}
-                    · Priorité : {aiBundle.triage.priorite}
-                  </p>
-                  {aiBundle.triage.labelBrut && (
-                    <p className="text-xs text-gray-500 mt-1">{aiBundle.triage.labelBrut}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+        <VitalsAiAgent 
+           vitals={vitalsWithCompleteness} 
+           patientContext={{
+             age: patient.dateOfBirth ? Math.floor((Date.now() - new Date(patient.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : undefined, 
+             pathology: patient.diagnosis
+           }} 
+        />
 
         {/* Questionnaires */}
         <section className="mt-10">

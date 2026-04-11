@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
@@ -11,9 +8,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    if (!GROQ_API_KEY) {
+    // Configuration Azure OpenAI
+    const AZURE_KEY = process.env.AZURE_OPENAI_API_KEY;
+    const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+    const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+    const AZURE_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+
+    if (!AZURE_KEY || !AZURE_ENDPOINT) {
       return NextResponse.json(
-        { error: "Configuration IA (Groq) manquante sur le serveur." },
+        { error: "Configuration Azure OpenAI manquante." },
         { status: 500 }
       );
     }
@@ -39,26 +42,29 @@ Constantes:
 
     const userMessage = `Signalement: ${title}\nMotif technique: ${note}\n${vitalsStr}`;
 
-    const response = await fetch(GROQ_API_URL, {
+    const url = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT}/chat/completions?api-version=${AZURE_VERSION}`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "api-key": AZURE_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage }
         ],
         temperature: 0.3, 
-        max_tokens: 200,
+        max_tokens: 300,
       }),
     });
 
     if (!response.ok) {
+      const errText = await response.text();
+      console.error("[ReviewAnalysis Azure Error]", response.status, errText);
       return NextResponse.json(
-        { error: "Erreur Groq API" },
+        { error: "Erreur lors de l'analyse IA." },
         { status: response.status }
       );
     }

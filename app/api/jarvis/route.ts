@@ -16,11 +16,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    // Configuration Azure OpenAI
+    const AZURE_KEY = process.env.AZURE_OPENAI_API_KEY;
+    const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+    const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+    const AZURE_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
 
-    if (!apiKey) {
+    if (!AZURE_KEY || !AZURE_ENDPOINT) {
       return NextResponse.json(
-        { error: "Groq API key not configured" },
+        { error: "Configuration Azure OpenAI manquante (Jarvis)" },
         { status: 500 }
       );
     }
@@ -52,27 +56,25 @@ RÔLE MÉDICAL :
 
     const fullMessages: Message[] = [systemMessage, ...messages];
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: fullMessages,
-          max_tokens: 300,
-          temperature: 0.75,
-          top_p: 0.95,
-        }),
-      }
-    );
+    const url = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT}/chat/completions?api-version=${AZURE_VERSION}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "api-key": AZURE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: fullMessages,
+        max_tokens: 300,
+        temperature: 0.75,
+        top_p: 0.95,
+      }),
+    });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("Groq error (Jarvis):", error);
+      const errorText = await response.text();
+      console.error("Azure error (Jarvis):", errorText);
       return NextResponse.json(
         { error: "Impossible de contacter Jarvis" },
         { status: response.status }

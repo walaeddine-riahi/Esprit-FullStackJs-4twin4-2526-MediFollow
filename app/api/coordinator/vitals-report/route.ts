@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
@@ -11,9 +8,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    if (!GROQ_API_KEY) {
+    // Configuration Azure OpenAI
+    const AZURE_KEY = process.env.AZURE_OPENAI_API_KEY;
+    const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+    const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+    const AZURE_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+
+    if (!AZURE_KEY || !AZURE_ENDPOINT) {
       return NextResponse.json(
-        { error: "Configuration IA (Groq) manquante sur le serveur." },
+        { error: "Configuration Azure OpenAI manquante." },
         { status: 500 }
       );
     }
@@ -38,16 +41,17 @@ Tu DOIS impérativement répondre avec une structure JSON valide, contenant exac
 2. "analyseParParametre": Un tableau d'objets (JSON Array) contenant les anomalies et tendances éventuelles. Chaque objet a {"parametre": "...", "analyse": "..."}.
 3. "recommandations": Un tableau de chaînes de caractères (array of strings) contenant des actions concrètes pour le coordinateur (ex: "Contacter le patient pour revérifier la température du 08/04").
 
-Réponds UNIQUEMENT et EXCLUSIVEMENT avec le JSON brut. N'ajoute AUCUN texte avant ou après. N'utilise pas les balises markdown de code \`\`\`json.`;
+Réponds UNIQUEMENT et EXCLUSIVEMENT avec le JSON brut.`;
 
-    const response = await fetch(GROQ_API_URL, {
+    const url = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT}/chat/completions?api-version=${AZURE_VERSION}`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "api-key": AZURE_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Voici l'historique des constantes du patient :\n${dataStr}\n\nContexte patient (Pathologie/Age) : ${JSON.stringify(patientContext)}` }
@@ -59,7 +63,7 @@ Réponds UNIQUEMENT et EXCLUSIVEMENT avec le JSON brut. N'ajoute AUCUN texte ava
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[VitalsReport API Error]", response.status, errorText);
+      console.error("[VitalsReport Azure Error]", response.status, errorText);
       return NextResponse.json({ error: "Erreur lors de la génération." }, { status: response.status });
     }
 

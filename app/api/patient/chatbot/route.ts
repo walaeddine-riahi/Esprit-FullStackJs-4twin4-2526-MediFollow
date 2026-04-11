@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
-// On utilise le modèle Llama 3.3 70B via Groq
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+// Configuration Azure OpenAI
+const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY;
+const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT;
+const AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION;
 
 const SYSTEM_PROMPT = `
 Vous êtes l'assistant IA intégré au "Guide" de la plateforme MediFollow.
@@ -21,15 +23,13 @@ export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     
-    // Pour des questions de sécurité, on s'assure que la requête vient bien de l'application
-    // même s'ils sont anonymes on pourrait accepter, mais l'AI est réservée au guide patient
     if (!user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    if (!GROQ_API_KEY) {
+    if (!AZURE_OPENAI_API_KEY || !AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_DEPLOYMENT) {
       return NextResponse.json(
-        { error: "La clé de l'API Groq (GROQ_API_KEY) n'est pas configurée dans l'environnement." },
+        { error: "Configuration Azure OpenAI manquante." },
         { status: 500 }
       );
     }
@@ -40,8 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Format invalide" }, { status: 400 });
     }
 
-    // Préparer les messages pour l'API compatible OpenAI de Groq
-    const groqMessages = [
+    const fullMessages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...messages.map((m: any) => ({
         role: m.role,
@@ -49,23 +48,24 @@ export async function POST(req: Request) {
       }))
     ];
 
-    const response = await fetch(GROQ_API_URL, {
+    const azureUrl = `${AZURE_OPENAI_ENDPOINT}openai/deployments/${AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${AZURE_OPENAI_API_VERSION}`;
+
+    const response = await fetch(azureUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
+        "api-key": AZURE_OPENAI_API_KEY,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: groqMessages,
-        temperature: 0.5,
+        messages: fullMessages,
         max_tokens: 1024,
+        temperature: 0.5,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("[PatientChatbot API Error]", response.status, errorData);
+      console.error("[PatientChatbot Azure Error]", response.status, errorData);
       return NextResponse.json(
         { error: "Erreur lors de la communication avec l'IA." },
         { status: response.status }

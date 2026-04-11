@@ -114,9 +114,13 @@ export class NotificationService {
       const smsText =
         payload.smsMessage || this.getTruncatedMessage(payload.message, 160);
 
+      const fromOption = process.env.TWILIO_MESSAGING_SERVICE_SID
+        ? { messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID }
+        : { from: process.env.TWILIO_PHONE_NUMBER };
+
       await twilioClient.messages.create({
         body: smsText,
-        from: process.env.TWILIO_PHONE_NUMBER,
+        ...fromOption,
         to: recipient.phoneNumber,
       });
     } catch (error) {

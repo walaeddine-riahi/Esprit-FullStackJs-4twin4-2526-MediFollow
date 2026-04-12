@@ -13,8 +13,12 @@ import {
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
+<<<<<<< HEAD
 import { getAlertsByDoctorSpecialty } from "@/lib/actions/alert.actions";
 import { getDoctorProfile } from "@/lib/actions/doctor.actions";
+=======
+import { getAllAlerts } from "@/lib/actions/alert.actions";
+>>>>>>> ai-features-backup
 import { formatDateTime } from "@/lib/utils";
 
 export default function DoctorAlertsPage() {
@@ -23,7 +27,10 @@ export default function DoctorAlertsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
+<<<<<<< HEAD
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
+=======
+>>>>>>> ai-features-backup
 
   useEffect(() => {
     loadAlerts();
@@ -42,12 +49,16 @@ export default function DoctorAlertsPage() {
         return;
       }
 
+<<<<<<< HEAD
       // Load doctor profile to display specialty
       const profile = await getDoctorProfile(user.id);
       setDoctorProfile(profile);
 
       // Load alerts filtered by doctor's specialty
       const result = await getAlertsByDoctorSpecialty(user.id);
+=======
+      const result = await getAllAlerts();
+>>>>>>> ai-features-backup
 
       if (result.alerts) {
         setAlerts(result.alerts);
@@ -62,6 +73,7 @@ export default function DoctorAlertsPage() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "CRITICAL":
+<<<<<<< HEAD
         return "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30";
       case "HIGH":
         return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30";
@@ -69,6 +81,15 @@ export default function DoctorAlertsPage() {
         return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/30";
       default:
         return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30";
+=======
+        return "bg-red-50 text-red-700 border-red-200";
+      case "HIGH":
+        return "bg-orange-50 text-orange-700 border-orange-200";
+      case "MEDIUM":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      default:
+        return "bg-blue-50 text-blue-700 border-blue-200";
+>>>>>>> ai-features-backup
     }
   };
 
@@ -78,36 +99,56 @@ export default function DoctorAlertsPage() {
         return {
           icon: AlertCircle,
           label: "Actif",
+<<<<<<< HEAD
           color: "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/20",
           badgeColor:
             "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30",
+=======
+          color: "text-red-600 bg-red-50",
+          badgeColor: "bg-red-100 text-red-700 border-red-200",
+>>>>>>> ai-features-backup
         };
       case "ACKNOWLEDGED":
         return {
           icon: Clock,
           label: "Acquittée",
+<<<<<<< HEAD
           color:
             "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-500/20",
           badgeColor:
             "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/30",
+=======
+          color: "text-yellow-600 bg-yellow-50",
+          badgeColor: "bg-yellow-100 text-yellow-700 border-yellow-200",
+>>>>>>> ai-features-backup
         };
       case "RESOLVED":
         return {
           icon: CheckCircle,
           label: "Résolue",
+<<<<<<< HEAD
           color:
             "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-500/20",
           badgeColor:
             "bg-green-100 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/30",
+=======
+          color: "text-green-600 bg-green-50",
+          badgeColor: "bg-green-100 text-green-700 border-green-200",
+>>>>>>> ai-features-backup
         };
       default:
         return {
           icon: AlertCircle,
           label: "En attente",
+<<<<<<< HEAD
           color:
             "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-500/20",
           badgeColor:
             "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-500/30",
+=======
+          color: "text-gray-600 bg-gray-50",
+          badgeColor: "bg-gray-100 text-gray-700 border-gray-200",
+>>>>>>> ai-features-backup
         };
     }
   };
@@ -137,19 +178,32 @@ export default function DoctorAlertsPage() {
 
   if (loading) {
     return (
+<<<<<<< HEAD
       <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 dark:border-gray-400 border-t-transparent mx-auto"></div>
           <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+=======
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-900 border-t-transparent mx-auto"></div>
+          <p className="text-gray-600">Chargement...</p>
+>>>>>>> ai-features-backup
         </div>
       </div>
     );
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Sticky Search Bar - YouTube Style */}
       <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+=======
+    <div className="min-h-screen bg-white">
+      {/* Sticky Search Bar - YouTube Style */}
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+>>>>>>> ai-features-backup
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
@@ -162,6 +216,7 @@ export default function DoctorAlertsPage() {
                 placeholder="Rechercher une alerte, patient..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+<<<<<<< HEAD
                 className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white py-2.5 pl-12 pr-4 text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:border-gray-400 dark:focus:border-gray-600 focus:bg-white dark:focus:bg-gray-700 focus:outline-none transition-colors"
               />
             </div>
@@ -171,6 +226,17 @@ export default function DoctorAlertsPage() {
               </span>
               {openCount > 0 && (
                 <span className="rounded-full bg-red-50 dark:bg-red-500/20 px-3 py-1.5 font-medium text-red-700 dark:text-red-300">
+=======
+                className="w-full rounded-full border border-gray-300 bg-gray-50 py-2.5 pl-12 pr-4 text-sm focus:border-gray-400 focus:bg-white focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-700">
+                {totalCount} alertes
+              </span>
+              {openCount > 0 && (
+                <span className="rounded-full bg-red-50 px-3 py-1.5 font-medium text-red-700">
+>>>>>>> ai-features-backup
                   {openCount} actives
                 </span>
               )}
@@ -183,6 +249,7 @@ export default function DoctorAlertsPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Header */}
         <div className="mb-8">
+<<<<<<< HEAD
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Alertes patients
           </h1>
@@ -195,6 +262,12 @@ export default function DoctorAlertsPage() {
               <span className="capitalize">{doctorProfile.data.specialty}</span>
             </p>
           )}
+=======
+          <h1 className="text-3xl font-bold text-gray-900">Alertes patients</h1>
+          <p className="mt-2 text-gray-600">
+            Gérez et consultez les alertes de vos patients
+          </p>
+>>>>>>> ai-features-backup
         </div>
 
         {/* Filters */}
@@ -203,8 +276,13 @@ export default function DoctorAlertsPage() {
             onClick={() => setFilter("all")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "all"
+<<<<<<< HEAD
                 ? "border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                 : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+=======
+                ? "border-gray-900 bg-gray-100 text-gray-900"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+>>>>>>> ai-features-backup
             }`}
           >
             Toutes
@@ -213,8 +291,13 @@ export default function DoctorAlertsPage() {
             onClick={() => setFilter("open")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "open"
+<<<<<<< HEAD
                 ? "border-red-300 dark:border-red-500/50 bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-300"
                 : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+=======
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+>>>>>>> ai-features-backup
             }`}
           >
             <AlertCircle size={16} />
@@ -224,8 +307,13 @@ export default function DoctorAlertsPage() {
             onClick={() => setFilter("acknowledged")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "acknowledged"
+<<<<<<< HEAD
                 ? "border-yellow-300 dark:border-yellow-500/50 bg-yellow-50 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
                 : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+=======
+                ? "border-yellow-300 bg-yellow-50 text-yellow-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+>>>>>>> ai-features-backup
             }`}
           >
             <Clock size={16} />
@@ -235,8 +323,13 @@ export default function DoctorAlertsPage() {
             onClick={() => setFilter("resolved")}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               filter === "resolved"
+<<<<<<< HEAD
                 ? "border-green-300 dark:border-green-500/50 bg-green-50 dark:bg-green-500/20 text-green-700 dark:text-green-300"
                 : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+=======
+                ? "border-green-300 bg-green-50 text-green-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+>>>>>>> ai-features-backup
             }`}
           >
             <CheckCircle size={16} />
@@ -247,6 +340,7 @@ export default function DoctorAlertsPage() {
         {/* Alerts List - YouTube Style */}
         <div className="space-y-3">
           {filteredAlerts.length === 0 ? (
+<<<<<<< HEAD
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-12 text-center">
               <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -257,6 +351,16 @@ export default function DoctorAlertsPage() {
                   ? doctorProfile?.data?.specialty
                     ? `Tous vos patients (spécialité: ${doctorProfile.data.specialty}) sont stables ! Aucune alerte pour le moment.`
                     : "Tous vos patients sont stables ! Aucune alerte pour le moment."
+=======
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Aucune alerte
+              </h3>
+              <p className="mt-2 text-gray-600">
+                {filter === "all"
+                  ? "Tous vos patients sont stables ! Aucune alerte pour le moment."
+>>>>>>> ai-features-backup
                   : "Aucune alerte ne correspond à ce filtre."}
               </p>
             </div>
@@ -273,7 +377,11 @@ export default function DoctorAlertsPage() {
                   key={alert.id}
                   href={`/dashboard/doctor/alerts/${alert.id}`}
                 >
+<<<<<<< HEAD
                   <div className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-md dark:hover:shadow-lg transition-all cursor-pointer">
+=======
+                  <div className="group rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-all cursor-pointer">
+>>>>>>> ai-features-backup
                     <div className="flex items-start gap-4">
                       {/* Icon */}
                       <div
@@ -286,18 +394,30 @@ export default function DoctorAlertsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-2">
                           <div>
+<<<<<<< HEAD
                             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+=======
+                            <h3 className="text-base font-semibold text-gray-900">
+>>>>>>> ai-features-backup
                               {alert.alertType === "VITAL"
                                 ? "Alerte Signes Vitaux"
                                 : alert.alertType === "SYMPTOM"
                                   ? "Alerte Symptôme"
                                   : "Alerte Système"}
                             </h3>
+<<<<<<< HEAD
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                               {alert.message}
                             </p>
                             {patientName && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+=======
+                            <p className="text-sm text-gray-600 mt-1">
+                              {alert.message}
+                            </p>
+                            {patientName && (
+                              <p className="text-xs text-gray-500 mt-1 font-medium">
+>>>>>>> ai-features-backup
                                 Patient: {patientName}
                                 {alert.patient?.medicalRecordNumber &&
                                   ` (MRN: ${alert.patient.medicalRecordNumber})`}
@@ -319,7 +439,11 @@ export default function DoctorAlertsPage() {
                         </div>
 
                         {/* Timestamps */}
+<<<<<<< HEAD
                         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-3">
+=======
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+>>>>>>> ai-features-backup
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
                             Créée: {formatDateTime(alert.createdAt)}
@@ -338,11 +462,19 @@ export default function DoctorAlertsPage() {
 
                         {/* Resolution */}
                         {alert.resolution && (
+<<<<<<< HEAD
                           <div className="rounded-lg bg-green-50 dark:bg-green-500/20 border border-green-200 dark:border-green-500/30 p-3 mb-3">
                             <p className="text-xs font-medium text-green-900 dark:text-green-300 mb-1">
                               Résolution:
                             </p>
                             <p className="text-sm text-green-800 dark:text-green-200">
+=======
+                          <div className="rounded-lg bg-green-50 border border-green-200 p-3 mb-3">
+                            <p className="text-xs font-medium text-green-900 mb-1">
+                              Résolution:
+                            </p>
+                            <p className="text-sm text-green-800">
+>>>>>>> ai-features-backup
                               {alert.resolution}
                             </p>
                           </div>
@@ -350,11 +482,19 @@ export default function DoctorAlertsPage() {
 
                         {/* Data Details */}
                         {alert.data && (
+<<<<<<< HEAD
                           <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-3">
                             <p className="text-xs font-medium text-gray-900 dark:text-white mb-2">
                               Détails:
                             </p>
                             <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-gray-300">
+=======
+                          <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                            <p className="text-xs font-medium text-gray-900 mb-2">
+                              Détails:
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+>>>>>>> ai-features-backup
                               {alert.data.vitalType && (
                                 <div>
                                   <span className="font-medium">Type:</span>{" "}

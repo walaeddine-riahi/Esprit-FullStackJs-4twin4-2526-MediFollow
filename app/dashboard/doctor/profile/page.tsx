@@ -30,6 +30,7 @@ import {
 } from "@/lib/actions/doctor.actions";
 import FaceEnrollModal from "@/components/FaceEnrollModal";
 
+<<<<<<< HEAD
 // Medical specialties enum values
 const MEDICAL_SPECIALTIES = [
   { value: "CARDIOLOGY", label: "Cardiologie" },
@@ -50,6 +51,8 @@ const MEDICAL_SPECIALTIES = [
   { value: "OTHER", label: "Autre" },
 ];
 
+=======
+>>>>>>> ai-features-backup
 interface Experience {
   id: string;
   title: string;
@@ -596,6 +599,7 @@ export default function DoctorProfile() {
             </div>
             {isEditingSpecialty ? (
               <div>
+<<<<<<< HEAD
                 <select
                   value={specialty}
                   onChange={(e) => setSpecialty(e.target.value)}
@@ -610,6 +614,16 @@ export default function DoctorProfile() {
                     </option>
                   ))}
                 </select>
+=======
+                <input
+                  type="text"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-blue-400 dark:focus:border-green-500 focus:outline-none transition-colors"
+                  placeholder="Ex: Cardiologue, Pédiatre, etc."
+                  autoFocus
+                />
+>>>>>>> ai-features-backup
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => setIsEditingSpecialty(false)}
@@ -630,8 +644,12 @@ export default function DoctorProfile() {
               </div>
             ) : (
               <div className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">
+<<<<<<< HEAD
                 {MEDICAL_SPECIALTIES.find((spec) => spec.value === specialty)
                   ?.label || specialty}
+=======
+                {specialty}
+>>>>>>> ai-features-backup
               </div>
             )}
           </div>

@@ -1,53 +1,27 @@
+/**
+ * MediFollow - Nurse Actions
+ * Server actions for nurse-specific functionality
+ */
+
 "use server";
 
+import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import {
-  AlertStatus,
-  ReminderType,
-  ReminderPriority,
+  NurseProfile,
+  NurseAssignment,
+  NurseAssignmentInput,
+  NurseProfileUpdateInput,
+  NurseDashboardStats,
 } from "@/types/medifollow.types";
-import { AuditService } from "@/lib/services/audit.service";
 
 /**
- * Get all patients assigned to a nurse (patients with reminders from this nurse)
+ * Get nurse profile by user ID
  */
-export async function getNursePatients(nurseId: string) {
+export async function getNurseProfile(userId: string) {
   try {
-    const assignments = await prisma.patientReminder.findMany({
-      where: { nurseId },
-      distinct: ["patientId"],
-      include: {
-        patient: {
-          include: {
-            user: true,
-            vitalRecords: {
-              take: 1,
-              orderBy: { createdAt: "desc" },
-            },
-            alerts: {
-              where: { status: "OPEN" },
-            },
-          },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      patients: assignments.map((a) => a.patient),
-    };
-  } catch (error) {
-    console.error("Error fetching nurse patients:", error);
-    return { success: false, error: "Failed to fetch patients" };
-  }
-}
-
-/**
- * Get ALL patients in the system for nurse management
- */
-export async function getAllPatientsForNurse() {
-  try {
-    const patients = await prisma.patient.findMany({
+    const profile = await prisma.nurseProfile.findUnique({
+      where: { userId },
       include: {
         user: {
           select: {
@@ -55,386 +29,21 @@ export async function getAllPatientsForNurse() {
             email: true,
             firstName: true,
             lastName: true,
+            role: true,
             phoneNumber: true,
             isActive: true,
+            lastLogin: true,
             createdAt: true,
-          },
-        },
-        vitalRecords: {
-          take: 1,
-          orderBy: { createdAt: "desc" },
-        },
-        alerts: {
-          where: { status: "OPEN" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return {
-      success: true,
-      patients,
-    };
-  } catch (error) {
-    console.error("Error fetching all patients:", error);
-    return { success: false, error: "Failed to fetch patients" };
-  }
-}
-
-/**
- * Get all alerts for patients assigned to a nurse
- */
-export async function getNurseAlerts(nurseId: string, status?: AlertStatus) {
-  try {
-    // First get all patient IDs assigned to the nurse
-    const assignments = await prisma.patientReminder.findMany({
-      where: { nurseId },
-      distinct: ["patientId"],
-      select: { patientId: true },
-    });
-
-    const patientIds = assignments.map((a) => a.patientId);
-
-    // Then fetch alerts for those patients
-    const alerts = await prisma.alert.findMany({
-      where: {
-        patientId: { in: patientIds },
-        ...(status && { status }),
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return {
-      success: true,
-      alerts,
-      stats: {
-        total: alerts.length,
-        open: alerts.filter((a) => a.status === "OPEN").length,
-        acknowledged: alerts.filter((a) => a.status === "ACKNOWLEDGED").length,
-        resolved: alerts.filter((a) => a.status === "RESOLVED").length,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching nurse alerts:", error);
-    return { success: false, error: "Failed to fetch alerts" };
-  }
-}
-
-/**
- * Get all reminders for a nurse
- */
-export async function getNurseReminders(nurseId: string) {
-  try {
-    const reminders = await prisma.patientReminder.findMany({
-      where: { nurseId },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-      orderBy: { scheduledFor: "asc" },
-    });
-
-    return {
-      success: true,
-      reminders,
-      stats: {
-        total: reminders.length,
-        pending: reminders.filter((r) => !r.isSent).length,
-        unread: reminders.filter((r) => r.isSent && !r.isRead).length,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching reminders:", error);
-    return { success: false, error: "Failed to fetch reminders" };
-  }
-}
-
-/**
- * Create a new reminder for a patient
- */
-export async function createPatientReminder(
-  nurseId: string,
-  patientId: string,
-  data: {
-    title: string;
-    message: string;
-    reminderType: ReminderType;
-    scheduledFor: Date;
-    priority?: ReminderPriority;
-  }
-) {
-  try {
-    const reminder = await prisma.patientReminder.create({
-      data: {
-        nurseId,
-        patientId,
-        title: data.title,
-        message: data.message,
-        reminderType: data.reminderType,
-        scheduledFor: data.scheduledFor,
-        priority: data.priority || "NORMAL",
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      reminder,
-      message: "Rappel créé avec succès",
-    };
-  } catch (error) {
-    console.error("Error creating reminder:", error);
-    return { success: false, error: "Failed to create reminder" };
-  }
-}
-
-/**
- * Send a reminder to a patient
- */
-export async function sendPatientReminder(reminderId: string) {
-  try {
-    const reminder = await prisma.patientReminder.update({
-      where: { id: reminderId },
-      data: {
-        isSent: true,
-        sentAt: new Date(),
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    // TODO: Send notification to patient (email, SMS, in-app)
-
-    return {
-      success: true,
-      reminder,
-      message: "Rappel envoyé",
-    };
-  } catch (error) {
-    console.error("Error sending reminder:", error);
-    return { success: false, error: "Failed to send reminder" };
-  }
-}
-
-/**
- * Acknowledge an alert
- */
-export async function acknowledgeAlert(alertId: string, nurseId: string) {
-  try {
-    const alert = await prisma.alert.update({
-      where: { id: alertId },
-      data: {
-        status: "ACKNOWLEDGED",
-        acknowledgedById: nurseId,
-        acknowledgedAt: new Date(),
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      alert,
-      message: "Alerte acceptée",
-    };
-  } catch (error) {
-    console.error("Error acknowledging alert:", error);
-    return { success: false, error: "Failed to acknowledge alert" };
-  }
-}
-
-/**
- * Resolve an alert
- */
-export async function resolveAlert(
-  alertId: string,
-  nurseId: string,
-  resolution?: string
-) {
-  try {
-    const alert = await prisma.alert.update({
-      where: { id: alertId },
-      data: {
-        status: "RESOLVED",
-        resolvedById: nurseId,
-        resolvedAt: new Date(),
-        resolution: resolution || "Resolved by nurse",
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      alert,
-      message: "Alerte résolue",
-    };
-  } catch (error) {
-    console.error("Error resolving alert:", error);
-    return { success: false, error: "Failed to resolve alert" };
-  }
-}
-
-/**
- * Assign a patient to a doctor
- */
-export async function assignPatientToDoctor(
-  patientId: string,
-  doctorId: string,
-  nurseId: string
-) {
-  try {
-    console.log("📋 [ASSIGN] Starting assignment:", {
-      patientId,
-      doctorId,
-      nurseId,
-    });
-
-    // Verify patient and doctor exist
-    const patient = await prisma.patient.findUnique({
-      where: { id: patientId },
-      include: { user: true },
-    });
-
-    console.log("👥 [ASSIGN] Patient found:", patient?.id, patient?.user.email);
-    if (!patient) {
-      console.log("❌ [ASSIGN] Patient not found for ID:", patientId);
-      return { success: false, error: "Patient not found" };
-    }
-
-    const doctor = await prisma.user.findUnique({
-      where: { id: doctorId },
-      include: { doctorProfile: true },
-    });
-
-    console.log(
-      "👨‍⚕️ [ASSIGN] Doctor found:",
-      doctor?.id,
-      doctor?.email,
-      "role:",
-      doctor?.role
-    );
-    if (!doctor || doctor.role !== "DOCTOR") {
-      console.log(
-        "❌ [ASSIGN] Doctor not found or invalid role:",
-        doctor?.role
-      );
-      return { success: false, error: "Doctor not found or invalid role" };
-    }
-
-    // Create or update AccessGrant
-    console.log("🔗 [ASSIGN] Creating AccessGrant for:", {
-      patientUserId: patient.userId,
-      doctorId: doctorId,
-    });
-
-    const accessGrant = await prisma.accessGrant.upsert({
-      where: {
-        patientId_doctorId: {
-          patientId: patient.userId,
-          doctorId: doctorId,
-        },
-      },
-      update: {
-        isActive: true,
-        revokedAt: null,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days from now
-      },
-      create: {
-        patientId: patient.userId,
-        doctorId: doctorId,
-        durationDays: 365,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        isActive: true,
-      },
-    });
-
-    console.log("✅ [ASSIGN] AccessGrant created/updated:", {
-      id: accessGrant.id,
-      patientId: accessGrant.patientId,
-      doctorId: accessGrant.doctorId,
-      isActive: accessGrant.isActive,
-      expiresAt: accessGrant.expiresAt,
-    });
-
-    // Log the patient assignment to audit log
-    await AuditService.logAction({
-      userId: nurseId,
-      action: "GRANT_ACCESS" as any,
-      entityType: "AccessGrant",
-      entityId: accessGrant.id,
-      changes: {
-        assignment: {
-          oldValue: null,
-          newValue: {
-            patientId: patient.id,
-            patientEmail: patient.user.email,
-            patientName: `${patient.user.firstName} ${patient.user.lastName}`,
-            doctorId: doctor.id,
-            doctorEmail: doctor.email,
-            doctorName: `${doctor.firstName} ${doctor.lastName}`,
+            updatedAt: true,
           },
         },
       },
     });
-    console.log(
-      "📝 [ASSIGN] Audit log created for AccessGrant:",
-      accessGrant.id
-    );
 
-    return {
-      success: true,
-      message: `Patient ${patient.user.firstName} ${patient.user.lastName} assigned to Dr. ${doctor.firstName} ${doctor.lastName} successfully`,
-      accessGrant,
-    };
-  } catch (error) {
-    console.error("❌ [ASSIGN] Error assigning patient:", error);
-    return { success: false, error: "Failed to assign patient to doctor" };
-  }
-}
-
-/**
- * Get nurse profile
- */
-export async function getNurseProfile(userId: string) {
-  try {
-    const profile = await prisma.nurseProfile.findUnique({
-      where: { userId },
-      include: {
-        user: true,
-      },
-    });
-
-    if (!profile) {
-      return { success: false, error: "Nurse profile not found" };
-    }
-
-    return {
-      success: true,
-      profile,
-    };
+    return { success: true, data: profile };
   } catch (error) {
     console.error("Error fetching nurse profile:", error);
-    return { success: false, error: "Failed to fetch profile" };
+    return { success: false, error: "Failed to fetch nurse profile" };
   }
 }
 
@@ -443,137 +52,381 @@ export async function getNurseProfile(userId: string) {
  */
 export async function updateNurseProfile(
   userId: string,
-  data: {
-    licenseNumber?: string;
-    bio?: string;
-    phone?: string;
-    location?: string;
-    specialization?: string;
-  }
+  data: NurseProfileUpdateInput
 ) {
   try {
     const profile = await prisma.nurseProfile.update({
       where: { userId },
-      data,
-      include: {
-        user: true,
+      data: {
+        ...data,
+        updatedAt: new Date(),
       },
     });
 
-    return {
-      success: true,
-      profile,
-      message: "Profile updated successfully",
-    };
+    revalidatePath("/dashboard/nurse/settings");
+    return { success: true, data: profile };
   } catch (error) {
     console.error("Error updating nurse profile:", error);
-    return { success: false, error: "Failed to update profile" };
+    return { success: false, error: "Failed to update nurse profile" };
   }
 }
 
 /**
- * Get all doctors available for patient assignment
+ * Get all patients assigned to a nurse
  */
-export async function getAllDoctors() {
+export async function getAssignedPatients(nurseId: string) {
   try {
-    const doctors = await prisma.doctorProfile.findMany({
+    const assignments = await prisma.nurseAssignment.findMany({
+      where: {
+        nurseId,
+        isActive: true,
+      },
+      include: {
+        // We'll manually fetch patient data
+      },
+    });
+
+    // Fetch full patient details for each assignment
+    const patientIds = assignments.map((a) => a.patientId);
+    const patients = await prisma.patient.findMany({
+      where: {
+        id: { in: patientIds },
+        isActive: true,
+      },
       include: {
         user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
             email: true,
-          },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      doctors: doctors.map((doc) => ({
-        id: doc.userId,
-        name: `Dr. ${doc.user.firstName} ${doc.user.lastName}`,
-        email: doc.user.email,
-        specialty: doc.specialty,
-        phone: doc.phone,
-        location: doc.location,
-      })),
-    };
-  } catch (error) {
-    console.error("Error fetching doctors:", error);
-    return { success: false, error: "Failed to fetch doctors", doctors: [] };
-  }
-}
-
-/**
- * Get patient vital records for a patient assigned to nurse
- */
-export async function getPatientVitals(patientId: string) {
-  try {
-    const vitals = await prisma.vitalRecord.findMany({
-      where: { patientId },
-      include: {
-        reviewedBy: {
-          select: {
-            id: true,
             firstName: true,
             lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
           },
         },
+        vitalRecords: {
+          take: 1,
+          orderBy: { recordedAt: "desc" },
+        },
+        alerts: {
+          where: { status: "OPEN" },
+        },
       },
-      orderBy: { recordedAt: "desc" },
-      take: 50,
     });
 
-    return {
-      success: true,
-      vitals,
-    };
+    return { success: true, data: patients };
   } catch (error) {
-    console.error("Error fetching patient vitals:", error);
-    return { success: false, error: "Failed to fetch vitals" };
+    console.error("Error fetching assigned patients:", error);
+    return { success: false, error: "Failed to fetch assigned patients" };
   }
 }
 
 /**
- * Enter vital data for a patient
+ * Assign a patient to a nurse
  */
-export async function enterPatientVital(
-  patientId: string,
-  data: {
-    systolic: number;
-    diastolic: number;
-    heartRate: number;
-    temperature: number;
-    spO2: number;
-    weight?: number;
-    notes?: string;
+export async function assignPatientToNurse(input: NurseAssignmentInput) {
+  try {
+    const assignment = await prisma.nurseAssignment.create({
+      data: {
+        nurseId: input.nurseId,
+        patientId: input.patientId,
+        assignedBy: input.assignedBy,
+        isActive: true,
+      },
+    });
+
+    revalidatePath("/dashboard/nurse/patients");
+    return { success: true, data: assignment };
+  } catch (error) {
+    console.error("Error assigning patient to nurse:", error);
+    return { success: false, error: "Failed to assign patient to nurse" };
   }
+}
+
+/**
+ * Remove patient assignment from nurse
+ */
+export async function unassignPatientFromNurse(
+  nurseId: string,
+  patientId: string
 ) {
   try {
-    const vitalRecord = await prisma.vitalRecord.create({
-      data: {
+    await prisma.nurseAssignment.updateMany({
+      where: {
+        nurseId,
         patientId,
-        systolic: data.systolic,
-        diastolic: data.diastolic,
-        heartRate: data.heartRate,
-        temperature: data.temperature,
-        spO2: data.spO2,
-        weight: data.weight,
-        notes: data.notes,
-        recordedAt: new Date(),
-        status: "A_VERIFIER", // Will be validated against thresholds
+      },
+      data: {
+        isActive: false,
+        updatedAt: new Date(),
       },
     });
 
-    return {
-      success: true,
-      vitalRecord,
-      message: "Vital data recorded successfully",
-    };
+    revalidatePath("/dashboard/nurse/patients");
+    return { success: true };
   } catch (error) {
-    console.error("Error entering vital data:", error);
-    return { success: false, error: "Failed to record vital data" };
+    console.error("Error unassigning patient from nurse:", error);
+    return { success: false, error: "Failed to unassign patient from nurse" };
+  }
+}
+
+/**
+ * Get nurse dashboard statistics
+ */
+export async function getNurseDashboardStats(
+  nurseId: string
+): Promise<{ success: boolean; stats?: NurseDashboardStats; error?: string }> {
+  try {
+    // Get assigned patients
+    const assignments = await prisma.nurseAssignment.findMany({
+      where: {
+        nurseId,
+        isActive: true,
+      },
+    });
+
+    const patientIds = assignments.map((a) => a.patientId);
+
+    // Get active alerts for assigned patients
+    const activeAlerts = await prisma.alert.count({
+      where: {
+        patientId: { in: patientIds },
+        status: "OPEN",
+      },
+    });
+
+    // Get today's entries made by this nurse
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const entriesMadeToday = await prisma.vitalRecord.count({
+      where: {
+        enteredBy: nurseId,
+        createdAt: { gte: today },
+      },
+    });
+
+    // Get recent entries made by this nurse
+    const recentEntries = await prisma.vitalRecord.findMany({
+      where: {
+        enteredBy: nurseId,
+      },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                phoneNumber: true,
+                isActive: true,
+                lastLogin: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    // Check which patients need data entry today
+    const patientsWithTodayVitals = await prisma.vitalRecord.findMany({
+      where: {
+        patientId: { in: patientIds },
+        recordedAt: { gte: today },
+      },
+      select: { patientId: true },
+      distinct: ["patientId"],
+    });
+
+    const patientsWithVitalsSet = new Set(
+      patientsWithTodayVitals.map((v) => v.patientId)
+    );
+    const patientsNeedingDataEntry =
+      patientIds.length - patientsWithVitalsSet.size;
+
+    const stats: NurseDashboardStats = {
+      totalAssignedPatients: patientIds.length,
+      patientsNeedingDataEntry,
+      activeAlerts,
+      entriesMadeToday,
+      recentEntries: recentEntries as any,
+    };
+
+    return { success: true, stats };
+  } catch (error) {
+    console.error("Error fetching nurse dashboard stats:", error);
+    return { success: false, error: "Failed to fetch dashboard statistics" };
+  }
+}
+
+/**
+ * Get patients needing data entry today
+ */
+export async function getPatientsNeedingDataEntry(nurseId: string) {
+  try {
+    const assignments = await prisma.nurseAssignment.findMany({
+      where: {
+        nurseId,
+        isActive: true,
+      },
+    });
+
+    const patientIds = assignments.map((a) => a.patientId);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get patients who haven't submitted vitals today
+    const patientsWithTodayVitals = await prisma.vitalRecord.findMany({
+      where: {
+        patientId: { in: patientIds },
+        recordedAt: { gte: today },
+      },
+      select: { patientId: true },
+      distinct: ["patientId"],
+    });
+
+    const patientsWithVitalsSet = new Set(
+      patientsWithTodayVitals.map((v) => v.patientId)
+    );
+    const patientsNeedingData = patientIds.filter(
+      (id) => !patientsWithVitalsSet.has(id)
+    );
+
+    const patients = await prisma.patient.findMany({
+      where: {
+        id: { in: patientsNeedingData },
+        isActive: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    return { success: true, data: patients };
+  } catch (error) {
+    console.error("Error fetching patients needing data entry:", error);
+    return {
+      success: false,
+      error: "Failed to fetch patients needing data entry",
+    };
+  }
+}
+
+/**
+ * Get alerts for nurse's assigned patients
+ */
+export async function getNursePatientAlerts(nurseId: string) {
+  try {
+    const assignments = await prisma.nurseAssignment.findMany({
+      where: {
+        nurseId,
+        isActive: true,
+      },
+    });
+
+    const patientIds = assignments.map((a) => a.patientId);
+
+    const alerts = await prisma.alert.findMany({
+      where: {
+        patientId: { in: patientIds },
+        status: { in: ["OPEN", "ACKNOWLEDGED"] },
+      },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                phoneNumber: true,
+                isActive: true,
+                lastLogin: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+    });
+
+    return { success: true, data: alerts };
+  } catch (error) {
+    console.error("Error fetching nurse patient alerts:", error);
+    return { success: false, error: "Failed to fetch patient alerts" };
+  }
+}
+
+/**
+ * Acknowledge alert (nurse can see but not resolve)
+ */
+export async function acknowledgeAlertAsNurse(alertId: string, nurseId: string) {
+  try {
+    const alert = await prisma.alert.update({
+      where: { id: alertId },
+      data: {
+        status: "ACKNOWLEDGED",
+        acknowledgedById: nurseId,
+        acknowledgedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/dashboard/nurse/alerts");
+    return { success: true, data: alert };
+  } catch (error) {
+    console.error("Error acknowledging alert:", error);
+    return { success: false, error: "Failed to acknowledge alert" };
+  }
+}
+
+/**
+ * Check if a patient is assigned to a nurse
+ */
+export async function isPatientAssignedToNurse(
+  nurseId: string,
+  patientId: string
+) {
+  try {
+    const assignment = await prisma.nurseAssignment.findFirst({
+      where: {
+        nurseId,
+        patientId,
+        isActive: true,
+      },
+    });
+
+    return { success: true, data: !!assignment };
+  } catch (error) {
+    console.error("Error checking patient assignment:", error);
+    return { success: false, error: "Failed to check patient assignment" };
   }
 }

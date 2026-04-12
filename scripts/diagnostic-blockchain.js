@@ -271,7 +271,7 @@ async function runDiagnostics() {
   } else {
     console.log("\n✅ La blockchain Aptos est fonctionnelle!");
     console.log("\nPour initialiser le système blockchain:");
-    console.log("1. Visitez: http://localhost:3000/admin/blockchain");
+    console.log("1. Visitez: http://localhost:3000/dashboard/admin/blockchain");
     console.log("2. Cliquez sur 'Initialiser la Blockchain'");
     console.log("3. Testez en accordant un accès docteur");
   }

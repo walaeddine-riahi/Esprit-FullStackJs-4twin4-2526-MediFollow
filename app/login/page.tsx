@@ -24,15 +24,9 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import dynamic from "next/dynamic";
 
 import { login } from "@/lib/actions/auth.actions";
-
-// Lazy load FaceLoginModal to avoid critical dependency warnings
-const FaceLoginModal = dynamic(() => import("@/components/FaceLoginModal"), {
-  loading: () => null,
-  ssr: false,
-});
+import FaceLoginModal from "@/components/FaceLoginModal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,31 +53,18 @@ export default function LoginPage() {
       const result = await login(formData);
 
       if (result.success && result.user) {
-        // Check if user must change password on first login
-        if (result.mustChangePassword) {
-          // Store user ID in session/localStorage for change-password page
-          sessionStorage.setItem("userIdForPasswordChange", result.user.id);
-          router.push("/change-password");
-          return;
-        }
-
         // Redirect based on role
         const role = result.user.role;
         if (role === "PATIENT") {
           router.push("/dashboard/patient");
         } else if (role === "DOCTOR") {
           router.push("/dashboard/doctor");
+        } else if (role === "ADMIN") {
+          router.push("/dashboard/admin");
         } else if (role === "NURSE") {
           router.push("/dashboard/nurse");
         } else if (role === "COORDINATOR") {
           router.push("/dashboard/coordinator");
-        } else if (role === "ADMIN") {
-          router.push("/admin");
-        } else if (role === "AUDITOR") {
-          router.push("/dashboard/auditor");
-        } else {
-          // Default redirect
-          router.push("/");
         }
       } else {
         setError(result.error || "Erreur de connexion");

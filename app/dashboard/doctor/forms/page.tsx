@@ -307,7 +307,10 @@ export default function MedicalFormsPage() {
                 onChange={(e) =>
                   setFormData((fd) => ({ ...fd, category: e.target.value }))
                 }
+<<<<<<< HEAD
                 title="Sélectionner une catégorie"
+=======
+>>>>>>> ai-features-backup
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 transition-colors"
               >
                 <option value="">-- Choisir --</option>
@@ -373,8 +376,11 @@ export default function MedicalFormsPage() {
                         <button
                           onClick={() => moveField(field.id, "up")}
                           disabled={idx === 0}
+<<<<<<< HEAD
                           aria-label="Déplacer le champ vers le haut"
                           title="Déplacer vers le haut"
+=======
+>>>>>>> ai-features-backup
                           className="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
                         >
                           <ChevronUp className="size-3.5 text-gray-500" />
@@ -382,8 +388,11 @@ export default function MedicalFormsPage() {
                         <button
                           onClick={() => moveField(field.id, "down")}
                           disabled={idx === formData.fields.length - 1}
+<<<<<<< HEAD
                           aria-label="Déplacer le champ vers le bas"
                           title="Déplacer vers le bas"
+=======
+>>>>>>> ai-features-backup
                           className="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 transition-colors"
                         >
                           <ChevronDown className="size-3.5 text-gray-500" />
@@ -422,7 +431,10 @@ export default function MedicalFormsPage() {
                                   fieldType: e.target.value as any,
                                 })
                               }
+<<<<<<< HEAD
                               title="Type de champ"
+=======
+>>>>>>> ai-features-backup
                               className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 transition-colors"
                             >
                               {FIELD_TYPES.map((t) => (
@@ -517,8 +529,11 @@ export default function MedicalFormsPage() {
                       {/* Delete field */}
                       <button
                         onClick={() => removeField(field.id)}
+<<<<<<< HEAD
                         aria-label="Supprimer le champ"
                         title="Supprimer"
+=======
+>>>>>>> ai-features-backup
                         className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 transition-colors"
                       >
                         <Trash2 className="size-4" />

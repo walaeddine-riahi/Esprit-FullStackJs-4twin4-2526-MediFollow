@@ -47,10 +47,9 @@ export default function RegisterPage() {
 
       if (result.success) {
         setSuccess(true);
-        // Redirect to questionnaire to complete medical profile
         setTimeout(() => {
-          router.push("/questionnaire-profil");
-        }, 1500);
+          router.push("/login");
+        }, 2000);
       } else {
         setError(result.error || "Erreur lors de l'inscription");
       }
@@ -266,7 +265,7 @@ export default function RegisterPage() {
                       Compte créé avec succès !
                     </p>
                     <p className="text-sm text-green-700">
-                      Redirection vers votre profil médical...
+                      Redirection vers la page de connexion...
                     </p>
                   </div>
                 </div>

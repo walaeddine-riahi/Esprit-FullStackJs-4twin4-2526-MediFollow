@@ -12,6 +12,7 @@ import {
   Thermometer,
   Wind,
   User,
+<<<<<<< HEAD
   FileText,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
@@ -21,6 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import PatientDocumentsViewer from "@/components/PatientDocumentsViewer";
 import DoctorNotesSection from "@/components/DoctorNotesSection";
 import PatientAISummary from "@/components/PatientAISummary";
+=======
+} from "lucide-react";
+import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { getPatientWithRelations } from "@/lib/actions/patient.actions";
+import { Badge } from "@/components/ui/badge";
+import PatientDocumentsViewer from "@/components/PatientDocumentsViewer";
+>>>>>>> ai-features-backup
 
 export default async function PatientDetailPage({
   params,
@@ -39,9 +47,12 @@ export default async function PatientDetailPage({
     notFound();
   }
 
+<<<<<<< HEAD
   // Fetch patient analyses
   const { analyses } = await getPatientAnalyses(params.id);
 
+=======
+>>>>>>> ai-features-backup
   const fullName = `${patient.user.firstName} ${patient.user.lastName}`;
   const age =
     new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
@@ -86,6 +97,7 @@ export default async function PatientDetailPage({
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* AI Summary Section */}
       <div className="mb-8">
         <PatientAISummary
@@ -102,6 +114,8 @@ export default async function PatientDetailPage({
         />
       </div>
 
+=======
+>>>>>>> ai-features-backup
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Patient Info */}
         <div className="lg:col-span-1 space-y-6">
@@ -461,6 +475,7 @@ export default async function PatientDetailPage({
             patientId={patient.id}
             doctorUserId={user.id}
           />
+<<<<<<< HEAD
 
           {/* Situation Reports */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
@@ -492,6 +507,8 @@ export default async function PatientDetailPage({
 
           {/* Doctor Notes */}
           <DoctorNotesSection patientId={patient.id} doctorId={user.id} />
+=======
+>>>>>>> ai-features-backup
         </div>
       </div>
     </div>

@@ -17,7 +17,6 @@ import {
 import { LoginSchema, RegisterSchema } from "@/lib/validation";
 import { generateUserWallet } from "@/lib/actions/blockchain-access.actions";
 import { encryptPrivateKey } from "@/lib/encryption";
-import { AuditService } from "@/lib/services/audit.service";
 
 export async function login(formData: FormData) {
   try {
@@ -31,7 +30,11 @@ export async function login(formData: FormData) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: validated.email },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        nurseProfile: true,
+        coordinatorProfile: true,
+      },
     });
 
     if (!user) {
@@ -105,10 +108,6 @@ export async function login(formData: FormData) {
       path: "/",
     });
 
-    // Log the login action to audit log
-    await AuditService.logLogin(user.id);
-    console.log("📝 [LOGIN] Audit log created for user:", user.email);
-
     return {
       success: true,
       user: {
@@ -117,9 +116,7 @@ export async function login(formData: FormData) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        mustChangePassword: (user as any).mustChangePassword,
       },
-      mustChangePassword: (user as any).mustChangePassword,
     };
   } catch (error: any) {
     console.error("Login error:", error);
@@ -155,13 +152,7 @@ export async function register(formData: FormData) {
     // Generate individual Aptos wallet for this user
     const wallet = await generateUserWallet();
 
-    // Generate unique medical record number
-    const timestamp = Date.now().toString();
-    const random = Math.random().toString(36).substring(2, 8);
-    const medicalRecordNumber =
-      `MRN${timestamp.slice(-8)}${random}`.toUpperCase();
-
-    // Create user (default role: PATIENT) with associated Patient profile
+    // Create user (default role: PATIENT)
     const user = await (prisma as any).user.create({
       data: {
         email: validated.email,
@@ -172,62 +163,7 @@ export async function register(formData: FormData) {
         role: "PATIENT",
         blockchainAddress: wallet.address,
         blockchainPrivateKey: encryptPrivateKey(wallet.privateKey),
-        // Create associated Patient profile with default values
-        patient: {
-          create: {
-            medicalRecordNumber,
-            // Default date of birth: 18 years ago from today
-            dateOfBirth: new Date(
-              new Date().setFullYear(new Date().getFullYear() - 18)
-            ),
-            gender: "OTHER",
-            isActive: true,
-          },
-        },
       },
-      include: {
-        patient: true,
-      },
-    });
-
-    // Auto-login after registration
-    const accessToken = generateAccessToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role as any,
-    });
-
-    const refreshToken = generateRefreshToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role as any,
-    });
-
-    // Store refresh token in database
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        refreshToken,
-        expiresAt,
-      },
-    });
-
-    // Set cookies
-    cookies().set("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 15, // 15 minutes
-      path: "/",
-    });
-
-    cookies().set("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
     });
 
     return {
@@ -237,13 +173,7 @@ export async function register(formData: FormData) {
     };
   } catch (error: any) {
     console.error("Register error:", error);
-    console.error("Register error details:", {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      stack: error.stack,
-    });
-    return { success: false, error: error.message || "Erreur lors de l'inscription" };
+    return { success: false, error: "Erreur lors de l'inscription" };
   }
 }
 
@@ -251,21 +181,6 @@ export async function logout() {
   try {
     const cookieStore = cookies();
     const refreshToken = cookieStore.get("refreshToken")?.value;
-    const accessToken = cookieStore.get("accessToken")?.value;
-
-    // Get current user info for audit log
-    let currentUserId: string | null = null;
-    if (accessToken) {
-      try {
-        const { verifyAccessToken } = await import("@/lib/utils");
-        const payload = verifyAccessToken(accessToken);
-        if (payload) {
-          currentUserId = payload.userId;
-        }
-      } catch (e) {
-        console.error("Error getting user for logout audit:", e);
-      }
-    }
 
     if (refreshToken) {
       // Delete session from database
@@ -277,12 +192,6 @@ export async function logout() {
     // Clear cookies
     cookies().delete("accessToken");
     cookies().delete("refreshToken");
-
-    // Log the logout action to audit log
-    if (currentUserId) {
-      await AuditService.logLogout(currentUserId);
-      console.log("📝 [LOGOUT] Audit log created for user:", currentUserId);
-    }
 
     return { success: true };
   } catch (error) {
@@ -311,7 +220,11 @@ export async function getCurrentUser() {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { patient: true },
+      include: { 
+        patient: true,
+        nurseProfile: true,
+        coordinatorProfile: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -326,92 +239,13 @@ export async function getCurrentUser() {
       role: user.role,
       phoneNumber: user.phoneNumber,
       patient: user.patient,
+      nurseProfile: user.nurseProfile,
+      coordinatorProfile: user.coordinatorProfile,
       hasFaceDescriptor: (user as any).faceDescriptor !== null,
       blockchainAddress: (user as any).blockchainAddress ?? null,
     };
   } catch (error) {
     console.error("Get current user error:", error);
     return null;
-  }
-}
-
-/**
- * Change password for first-time login
- * Called when user connects for the first time and must change their temporary password
- */
-export async function changePasswordFirstLogin(
-  userId: string,
-  newPassword: string
-) {
-  try {
-    const { hashPassword } = await import("@/lib/utils");
-
-    // Validate password strength
-    if (newPassword.length < 8) {
-      return {
-        success: false,
-        error: "Le mot de passe doit contenir au moins 8 caractères",
-      };
-    }
-
-    if (!/[A-Z]/.test(newPassword)) {
-      return {
-        success: false,
-        error: "Le mot de passe doit contenir au moins une lettre majuscule",
-      };
-    }
-
-    if (!/[a-z]/.test(newPassword)) {
-      return {
-        success: false,
-        error: "Le mot de passe doit contenir au moins une lettre minuscule",
-      };
-    }
-
-    if (!/[0-9]/.test(newPassword)) {
-      return {
-        success: false,
-        error: "Le mot de passe doit contenir au moins un chiffre",
-      };
-    }
-
-    if (!/[!@#$%^&*]/.test(newPassword)) {
-      return {
-        success: false,
-        error:
-          "Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*)",
-      };
-    }
-
-    // Hash the new password
-    const hashedPassword = await hashPassword(newPassword);
-
-    // Update user: set new password and clear mustChangePassword flag
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        passwordHash: hashedPassword,
-        mustChangePassword: false,
-      },
-    });
-
-    console.log(
-      "[changePasswordFirstLogin] Password changed for user:",
-      userId
-    );
-
-    return {
-      success: true,
-      message: "Votre mot de passe a été changé avec succès",
-    };
-  } catch (error) {
-    console.error("[changePasswordFirstLogin] Error:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Erreur lors du changement de mot de passe",
-    };
   }
 }

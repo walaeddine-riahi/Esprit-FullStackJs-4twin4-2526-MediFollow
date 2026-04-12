@@ -27,7 +27,10 @@ import {
   Copy,
   Check,
   ExternalLink,
+<<<<<<< HEAD
   FlaskConical,
+=======
+>>>>>>> ai-features-backup
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
@@ -166,11 +169,14 @@ function DoctorLayoutInner({ children }: { children: ReactNode }) {
       href: "/dashboard/doctor/analytics",
     },
     {
+<<<<<<< HEAD
       icon: FlaskConical,
       label: "Demandes d'Analyses",
       href: "/dashboard/doctor/analyses",
     },
     {
+=======
+>>>>>>> ai-features-backup
       icon: FileText,
       label: "Rapports",
       href: "/dashboard/doctor/reports",
@@ -180,11 +186,14 @@ function DoctorLayoutInner({ children }: { children: ReactNode }) {
       label: "Formulaires",
       href: "/dashboard/doctor/forms",
     },
+<<<<<<< HEAD
     {
       icon: ClipboardList,
       label: "Questionnaires",
       href: "/dashboard/questionnaires",
     },
+=======
+>>>>>>> ai-features-backup
   ];
 
   return (

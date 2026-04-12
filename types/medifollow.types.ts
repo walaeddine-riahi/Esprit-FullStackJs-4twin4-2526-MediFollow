@@ -12,6 +12,8 @@ export enum Role {
   PATIENT = "PATIENT",
   DOCTOR = "DOCTOR",
   ADMIN = "ADMIN",
+  NURSE = "NURSE",
+  COORDINATOR = "COORDINATOR",
 }
 
 export enum Gender {
@@ -76,6 +78,29 @@ export enum NotificationChannel {
   EMAIL = "EMAIL",
   SMS = "SMS",
   PUSH = "PUSH",
+}
+
+export enum CommunicationType {
+  REMINDER = "REMINDER",
+  GUIDANCE = "GUIDANCE",
+  FOLLOW_UP = "FOLLOW_UP",
+}
+
+export enum ComplianceStatus {
+  COMPLIANT = "COMPLIANT",
+  PARTIAL = "PARTIAL",
+  NON_COMPLIANT = "NON_COMPLIANT",
+}
+
+export enum VitalStatus {
+  NORMAL = "NORMAL",
+  A_VERIFIER = "A_VERIFIER",
+  CRITIQUE = "CRITIQUE",
+}
+
+export enum ReviewStatus {
+  PENDING = "PENDING",
+  REVIEWED = "REVIEWED",
 }
 
 // ============================================
@@ -596,4 +621,155 @@ export type PatientFormData = {
   temperatureMax?: string;
   spo2Min?: string;
   spo2Max?: string;
+};
+
+// ============================================
+// NURSE & COORDINATOR TYPES
+// ============================================
+
+export type NurseProfile = {
+  id: string;
+  userId: string;
+  department?: string | null;
+  shift?: string | null;
+  phone?: string | null;
+  profileImage?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type CoordinatorProfile = {
+  id: string;
+  userId: string;
+  department?: string | null;
+  phone?: string | null;
+  profileImage?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NurseProfileWithUser = NurseProfile & {
+  user: SafeUser;
+};
+
+export type CoordinatorProfileWithUser = CoordinatorProfile & {
+  user: SafeUser;
+};
+
+export type NurseAssignment = {
+  id: string;
+  nurseId: string;
+  patientId: string;
+  assignedAt: Date;
+  assignedBy?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PatientCommunication = {
+  id: string;
+  patientId: string;
+  coordinatorId: string;
+  type: CommunicationType;
+  subject?: string | null;
+  message: string;
+  sentAt: Date;
+  readAt?: Date | null;
+  isRead: boolean;
+};
+
+export type PatientCommunicationWithCoordinator = PatientCommunication & {
+  coordinator: SafeUser;
+};
+
+export type ComplianceRecord = {
+  id: string;
+  patientId: string;
+  date: Date;
+  vitalsSubmitted: boolean;
+  vitalsCount: number;
+  symptomsReported: boolean;
+  symptomsCount: number;
+  questionnairesCompleted: boolean;
+  questionnairesCount: number;
+  status: ComplianceStatus;
+  lastCheckedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ComplianceRecordWithPatient = ComplianceRecord & {
+  patient: PatientWithUser;
+};
+
+// ============================================
+// NURSE ACTION TYPES
+// ============================================
+
+export type NurseAssignmentInput = {
+  nurseId: string;
+  patientId: string;
+  assignedBy?: string;
+};
+
+export type NurseProfileUpdateInput = {
+  department?: string;
+  shift?: string;
+  phone?: string;
+  profileImage?: string;
+};
+
+export type NurseDashboardStats = {
+  totalAssignedPatients: number;
+  patientsNeedingDataEntry: number;
+  activeAlerts: number;
+  entriesMadeToday: number;
+  recentEntries: VitalRecord[];
+};
+
+// ============================================
+// COORDINATOR ACTION TYPES
+// ============================================
+
+export type CoordinatorProfileUpdateInput = {
+  department?: string;
+  phone?: string;
+  profileImage?: string;
+};
+
+export type CommunicationCreateInput = {
+  patientId: string;
+  coordinatorId: string;
+  type: CommunicationType;
+  subject?: string;
+  message: string;
+};
+
+export type CoordinatorDashboardStats = {
+  totalPatientsMonitored: number;
+  compliantToday: number;
+  nonCompliantToday: number;
+  pendingQuestionnaires: number;
+  recentCommunications: PatientCommunication[];
+};
+
+export type PatientComplianceDetail = {
+  patient: PatientWithUser;
+  complianceRecords: ComplianceRecord[];
+  recentVitals: VitalRecord[];
+  recentSymptoms: Symptom[];
+  recentQuestionnaires: Questionnaire[];
+  communications: PatientCommunication[];
+};
+
+// ============================================
+// VITAL RECORD WITH ENTRY TRACKING
+// ============================================
+
+export type VitalRecordWithEntry = VitalRecord & {
+  enteredBy?: string | null;
+  enteredByRole?: Role | null;
+  enteredByUser?: SafeUser | null;
+  patient: PatientWithUser;
 };

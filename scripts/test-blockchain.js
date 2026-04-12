@@ -113,7 +113,7 @@ async function main() {
   console.log("📋 Next Steps:");
   console.log("   1. Check transactions on Aptos Explorer");
   console.log(
-    "   2. Visit admin dashboard: http://localhost:3000/admin/blockchain"
+    "   2. Visit admin dashboard: http://localhost:3000/dashboard/admin/blockchain"
   );
   console.log("   3. Open monitoring page: public/blockchain-monitor.html");
   console.log("\n🔗 Aptos Account:");

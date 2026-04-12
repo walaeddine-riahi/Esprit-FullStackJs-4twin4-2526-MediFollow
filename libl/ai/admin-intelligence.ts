@@ -256,7 +256,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: `User management summary: ${totalUsers} users total, ${activeUsers} active, ${inactiveUsers} inactive.`,
-          navigationPath: "/dashboard/admin/users",
+          navigationPath: "/admin/users",
           suggestions: roleSummary.length
             ? roleSummary
             : ["Open the users page", "Filter by role", "Check inactive accounts"],
@@ -284,7 +284,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
           success: true,
           result: {
             answer: "Please provide a user name or email to search, for example: search user \"john\".",
-            navigationPath: "/dashboard/admin/users",
+            navigationPath: "/admin/users",
             suggestions: ["search user \"john\"", "find user jane@hospital.com", "user details for Marie"],
           },
         };
@@ -308,7 +308,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
           success: true,
           result: {
             answer: `No users found for \"${searchTerm}\".`,
-            navigationPath: "/dashboard/admin/users",
+            navigationPath: "/admin/users",
             suggestions: ["Try a shorter keyword", "Search by email", "Open user management"],
             data: { searchTerm, matches: [] },
           },
@@ -323,7 +323,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: `Found ${matches.length} user(s) for \"${searchTerm}\".`,
-          navigationPath: "/dashboard/admin/users",
+          navigationPath: "/admin/users",
           suggestions,
           data: {
             searchTerm,
@@ -365,7 +365,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         result: {
           answer:
             "Access review summary generated. Check role distribution and validate least-privilege access for ADMIN, COORDINATOR, DOCTOR, NURSE, and PATIENT accounts.",
-          navigationPath: "/dashboard/admin/settings",
+          navigationPath: "/admin/settings",
           suggestions: byRole.length ? byRole.slice(0, 5) : ["Open settings", "Review role assignments", "Audit inactive accounts"],
           data: { roleCounts, totalUsers: users.length },
         },
@@ -388,7 +388,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: `There are ${openAlerts} open alerts, including ${criticalOpen} critical ones, for ${activePatients} active patients. Immediate attention is recommended for critical alerts.`,
-          navigationPath: "/dashboard/admin/alerts",
+          navigationPath: "/admin/alerts",
           suggestions: [
             "Review critical alerts first.",
             "Ensure patient safety protocols are followed.",
@@ -408,7 +408,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: "Opening alerts supervision.",
-          navigationPath: "/dashboard/admin/alerts",
+          navigationPath: "/admin/alerts",
           suggestions: ["Show unresolved critical alerts today", "Open analytics"],
         },
       };
@@ -436,7 +436,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: `There are ${count} unresolved critical alerts today.`,
-          navigationPath: "/dashboard/admin/alerts",
+          navigationPath: "/admin/alerts",
           suggestions: ["Filter by CRITICAL + OPEN", "Review AI next actions for top 3"],
           data: { unresolvedCriticalToday: count },
         },
@@ -488,7 +488,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
             highBpPatients.length > 0
               ? `Found ${highBpPatients.length} patients with repeated high BP in the last 7 days.`
               : "No patients with repeated high BP in the last 7 days.",
-          navigationPath: "/dashboard/admin/analytics",
+          navigationPath: "/admin/analytics",
           suggestions: highBpPatients.map((p) => `${p.name}: ${p.highReadings} high readings`),
           data: { repeatedHighBpPatients: highBpPatients },
         },
@@ -524,7 +524,7 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
       success: true,
       result: {
         answer: `I analyzed your request. Current baseline: ${openAlerts} open alerts, ${criticalOpen} critical open alerts, ${activePatients} active patients. Try: \"unresolved critical alerts today\" or \"patients with repeated high BP\".`,
-        navigationPath: "/dashboard/admin",
+        navigationPath: "/admin",
       },
     };
   } catch (error) {

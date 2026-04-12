@@ -105,8 +105,18 @@ export class NotificationService {
     recipient: any,
     payload: NotificationPayload
   ): Promise<void> {
+    console.log("📱 SMS Send Attempt:", {
+      userId: recipient.id,
+      phoneNumber: recipient.phoneNumber,
+      hasPhoneNumber: !!recipient.phoneNumber,
+      hasTwilioSid: !!process.env.TWILIO_ACCOUNT_SID,
+      hasTwilioToken: !!process.env.TWILIO_AUTH_TOKEN,
+      hasMessagingServiceSid: !!process.env.TWILIO_MESSAGING_SERVICE_SID,
+      smsText: payload.smsMessage || payload.message,
+    });
+
     if (!recipient.phoneNumber) {
-      console.warn(`No phone number for user ${recipient.id}`);
+      console.warn(`❌ No phone number for user ${recipient.id}`);
       return;
     }
 
@@ -114,13 +124,29 @@ export class NotificationService {
       const smsText =
         payload.smsMessage || this.getTruncatedMessage(payload.message, 160);
 
-      await twilioClient.messages.create({
+      console.log("📞 Sending SMS via Twilio:", {
+        to: recipient.phoneNumber,
         body: smsText,
-        from: process.env.TWILIO_PHONE_NUMBER,
+        messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+      });
+
+      // Use Messaging Service SID (recommended by Twilio) instead of From number
+      const result = await twilioClient.messages.create({
+        body: smsText,
+        messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID!,
         to: recipient.phoneNumber,
       });
+
+      console.log("✅ SMS Sent Successfully:", {
+        messageSid: result.sid,
+        status: result.status,
+        to: result.to,
+      });
     } catch (error) {
-      console.error("❌ SMS Send Error:", error);
+      console.error("❌ SMS Send Error:", {
+        error: error instanceof Error ? error.message : String(error),
+        fullError: error,
+      });
       throw error;
     }
   }

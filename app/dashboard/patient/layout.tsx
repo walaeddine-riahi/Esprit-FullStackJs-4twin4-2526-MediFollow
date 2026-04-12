@@ -26,6 +26,7 @@ import {
   Search,
   ClipboardList,
   Beaker,
+  BookOpen,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
@@ -185,6 +186,11 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
       icon: Beaker,
       label: "Analyses Médicales",
       href: "/dashboard/patient/analyses",
+    },
+    {
+      icon: BookOpen,
+      label: "Guide de suivi",
+      href: "/dashboard/patient/guide",
     },
   ];
 

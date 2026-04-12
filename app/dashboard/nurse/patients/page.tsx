@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import {
   getNursePatients,
+  getAllPatientsForNurse,
   assignPatientToDoctor,
   getAllDoctors,
 } from "@/lib/actions/nurse.actions";
@@ -62,9 +63,9 @@ export default function NursePatientPage() {
 
       setCurrentNurseId(currentUser.id);
 
-      // Fetch assigned patients and doctors in parallel
+      // Fetch all patients and doctors in parallel
       const [patientsResult, doctorsResult] = await Promise.all([
-        getNursePatients(currentUser.id),
+        getAllPatientsForNurse(),
         getAllDoctors(),
       ]);
 

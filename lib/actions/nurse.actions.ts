@@ -9,7 +9,7 @@ import {
 import { AuditService } from "@/lib/services/audit.service";
 
 /**
- * Get all patients assigned to a nurse
+ * Get all patients assigned to a nurse (patients with reminders from this nurse)
  */
 export async function getNursePatients(nurseId: string) {
   try {
@@ -38,6 +38,45 @@ export async function getNursePatients(nurseId: string) {
     };
   } catch (error) {
     console.error("Error fetching nurse patients:", error);
+    return { success: false, error: "Failed to fetch patients" };
+  }
+}
+
+/**
+ * Get ALL patients in the system for nurse management
+ */
+export async function getAllPatientsForNurse() {
+  try {
+    const patients = await prisma.patient.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            isActive: true,
+            createdAt: true,
+          },
+        },
+        vitalRecords: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
+        },
+        alerts: {
+          where: { status: "OPEN" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      success: true,
+      patients,
+    };
+  } catch (error) {
+    console.error("Error fetching all patients:", error);
     return { success: false, error: "Failed to fetch patients" };
   }
 }

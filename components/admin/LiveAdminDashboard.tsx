@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import Pusher from "pusher-js";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -264,53 +265,40 @@ export default function LiveAdminDashboard({
   }, []);
 
   useEffect(() => {
-    // Try to initialize Pusher if available, otherwise use polling
-    try {
-      const PusherModule = require("pusher-js");
-      const Pusher = PusherModule.default || PusherModule;
+    const pusher = new Pusher("ba707a9085e391ba151b", { cluster: "eu" });
+    const channel = pusher.subscribe("admin-updates");
 
-      const pusher = new Pusher("ba707a9085e391ba151b", { cluster: "eu" });
-      const channel = pusher.subscribe("admin-updates");
+    channel.bind(
+      "new-alert",
+      async (payload: { title?: string; desc?: string }) => {
+        await refreshStats();
+        addFeedEntry({
+          type: "alert",
+          title: payload.title || "New alert",
+          desc: payload.desc || "",
+        });
+        flashCard(["totalAlerts", "criticalAlerts", "openAlerts"]);
+      }
+    );
 
-      channel.bind(
-        "new-alert",
-        async (payload: { title?: string; desc?: string }) => {
-          await refreshStats();
-          addFeedEntry({
-            type: "alert",
-            title: payload.title || "New alert",
-            desc: payload.desc || "",
-          });
-          flashCard(["totalAlerts", "criticalAlerts", "openAlerts"]);
-        }
-      );
+    channel.bind(
+      "new-signup",
+      async (payload: { title?: string; desc?: string }) => {
+        await refreshStats();
+        addFeedEntry({
+          type: "signup",
+          title: payload.title || "New user",
+          desc: payload.desc || "",
+        });
+        flashCard(["totalUsers", "totalPatients", "totalDoctors"]);
+      }
+    );
 
-      channel.bind(
-        "new-signup",
-        async (payload: { title?: string; desc?: string }) => {
-          await refreshStats();
-          addFeedEntry({
-            type: "signup",
-            title: payload.title || "New user",
-            desc: payload.desc || "",
-          });
-          flashCard(["totalUsers", "totalPatients", "totalDoctors"]);
-        }
-      );
-
-      return () => {
-        channel.unbind_all();
-        pusher.unsubscribe("admin-updates");
-        pusher.disconnect();
-      };
-    } catch (error) {
-      // Pusher not available, use polling instead
-      const interval = setInterval(() => {
-        void refreshStats();
-      }, 30000); // Poll every 30 seconds
-
-      return () => clearInterval(interval);
-    }
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe("admin-updates");
+      pusher.disconnect();
+    };
   }, [refreshStats, addFeedEntry, flashCard]);
 
   const resolvedRate =
@@ -320,22 +308,22 @@ export default function LiveAdminDashboard({
 
   const quickActions = [
     {
-      href: "/dashboard/admin/alerts",
+      href: "/admin/alerts",
       label: "Review incidents",
       desc: "Prioritize open and critical alerts",
     },
     {
-      href: "/dashboard/admin/users",
+      href: "/admin/users",
       label: "Manage users",
       desc: "Roles, access, and account status",
     },
     {
-      href: "/dashboard/admin/analytics",
+      href: "/admin/analytics",
       label: "Open analytics",
       desc: "Trends and care performance",
     },
     {
-      href: "/dashboard/admin/audit",
+      href: "/admin/audit",
       label: "Audit logs",
       desc: "Track admin operations and events",
     },
@@ -460,7 +448,7 @@ export default function LiveAdminDashboard({
               Incident Operations
             </h3>
             <Link
-              href="/dashboard/admin/alerts"
+              href="/admin/alerts"
               className="glass-panel inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-cyan-300/25 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-cyan-100 transition hover:border-slate-400 dark:hover:border-cyan-300 hover:text-slate-900 dark:hover:text-white"
             >
               Open incidents
@@ -475,7 +463,6 @@ export default function LiveAdminDashboard({
                 <span className="text-emerald-600">{resolvedRate}%</span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-900/45">
-                {/* eslint-disable-next-line @next/next/no-style-component-with-dynamic-styles */}
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all duration-700"
                   style={{ width: `${resolvedRate}%` }}
@@ -489,7 +476,6 @@ export default function LiveAdminDashboard({
                 <span className="text-rose-600">{openRate}%</span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-900/45">
-                {/* eslint-disable-next-line @next/next/no-style-component-with-dynamic-styles */}
                 <div
                   className="h-full rounded-full bg-rose-500 transition-all duration-700"
                   style={{ width: `${openRate}%` }}
@@ -503,7 +489,6 @@ export default function LiveAdminDashboard({
                 <span className="text-amber-600">{criticalRate}%</span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-900/45">
-                {/* eslint-disable-next-line @next/next/no-style-component-with-dynamic-styles */}
                 <div
                   className="h-full rounded-full bg-amber-500 transition-all duration-700"
                   style={{ width: `${criticalRate}%` }}
@@ -572,7 +557,6 @@ export default function LiveAdminDashboard({
                 type="button"
                 onClick={() => void askCopilot(aiQuery)}
                 disabled={aiLoading || !aiQuery.trim()}
-                title="Send query to AI copilot"
                 className="glass-neon inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 px-3 text-white disabled:opacity-50"
               >
                 <Send size={15} />

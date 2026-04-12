@@ -75,8 +75,10 @@ export default function LoginPage() {
           router.push("/dashboard/doctor");
         } else if (role === "NURSE") {
           router.push("/dashboard/nurse");
+        } else if (role === "COORDINATOR") {
+          router.push("/dashboard/coordinator");
         } else if (role === "ADMIN") {
-          router.push("/dashboard/admin");
+          router.push("/admin");
         } else if (role === "AUDITOR") {
           router.push("/dashboard/auditor");
         } else {

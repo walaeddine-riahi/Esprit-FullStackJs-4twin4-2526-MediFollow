@@ -161,9 +161,12 @@ export default function FaceLoginModal({ open, onClose }: FaceLoginModalProps) {
 
               setTimeout(() => {
                 const role = data.user.role;
-                if (role === "PATIENT") router.push("/patients");
+                if (role === "PATIENT") router.push("/dashboard/patient");
                 else if (role === "DOCTOR") router.push("/dashboard/doctor");
-                else router.push("/admin");
+                else if (role === "COORDINATOR")
+                  router.push("/dashboard/coordinator");
+                else if (role === "ADMIN") router.push("/admin");
+                else router.push("/login");
               }, 1800);
             } else {
               setStatus("error");

@@ -26,6 +26,7 @@ model User {
   blockchainAddress       String?   // Aptos wallet address (public) for blockchain access control
   blockchainPrivateKey    String?   // Aptos wallet private key (encrypted at rest)
   isActive                Boolean   @default(true)
+  isApproved              Boolean   @default(true)  // Approval status for coordinators
   mustChangePassword      Boolean   @default(false)  // Force password change on first login
   lastLogin               DateTime?
   resetPasswordToken      String?   // Token for password reset
@@ -49,6 +50,10 @@ model User {
   questionnaireTemplates QuestionnaireTemplate[] @relation("QuestionnaireTemplates")  // Questionnaires created by this doctor
   analysisRequests AnalysisRequest[] @relation("DoctorAnalysisRequests")  // Analysis requests created by this doctor
   sessions      Session[]
+  // Coordinator relations
+  coordinatorAssignments  CoordinatorPatient[] @relation("CoordinatorAssignments")
+  coordinatorRemindersSent CoordinatorReminder[] @relation("CoordinatorRemindersSent")
+  coordinatorFlagsRaised   CoordinatorEntryFlag[] @relation("CoordinatorFlagsRaised")
 
   @@map("users")
 }
@@ -82,6 +87,21 @@ model Patient {
   medications           Medication[]
   vitalThresholds       VitalThresholds?
   isActive              Boolean   @default(true)
+  questionnaireCompleted Boolean  @default(false) // Post-registration questionnaire
+  
+  // Medical profile (post-registration questionnaire)
+  specialty             MedicalSpecialty? // Service hospitalier (cardiologie, etc.)
+  hospital              String?  // Hôpital/Clinique
+  department            String?  // Service específique
+  height                Float?   // cm
+  weight                Float?   // kg
+  
+  // Medical history (antécédents)
+  medicalBackground     MedicalBackground?
+  
+  // Current medications
+  currentMedications    CurrentMedication[]
+  
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -99,6 +119,10 @@ model Patient {
   // TODO_MERGE #3: Added from branche_patient - questionnaire system
   questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")  // Questionnaires assigned to this patient
   analysisRequests      AnalysisRequest[] @relation("PatientAnalysisRequests")  // Analysis requests for this patient
+  // Coordinator relations (from espace-cordinator merge)
+  coordinatorAssignments CoordinatorPatient[]
+  coordinatorReminders   CoordinatorReminder[]
+  coordinatorFlags       CoordinatorEntryFlag[]
 
   @@map("patients")
 }
@@ -121,31 +145,57 @@ enum BloodType {
 }
 
 // ============================================
-// MEDICAL SPECIALTIES ENUM (TODO_MERGE #1)
+// MEDICAL SPECIALTIES (Post-Registration)
 // ============================================
-
 enum MedicalSpecialty {
   CARDIOLOGY
-  NEUROLOGY
-  ORTHOPEDICS
   PULMONOLOGY
   GASTROENTEROLOGY
+  NEUROLOGY
   ENDOCRINOLOGY
   RHEUMATOLOGY
-  NEPHROLOGY
-  HEMATOLOGY
   ONCOLOGY
-  PSYCHIATRY
-  DERMATOLOGY
-  ENT
-  OPHTHALMOLOGY
+  NEPHROLOGY
   GENERAL_MEDICINE
   OTHER
 }
 
 // ============================================
+// MEDICAL BACKGROUND (Post-Registration)
+// ============================================
+type MedicalBackground {
+  diabetes         Boolean @default(false)
+  hypertension     Boolean @default(false)
+  cardiacDisease   Boolean @default(false)
+  asthmaOuBpco    Boolean @default(false)
+  cancer           Boolean @default(false)
+  otherConditions  String? // Autres conditions
+}
+
+// ============================================
+// CURRENT MEDICATION Model
+// ============================================
+model CurrentMedication {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  patientId String   @db.ObjectId
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  medication String  // Nom du médicament
+  dose       String  // Dosage (ex: "1g")
+  frequency  String  // Fréquence (ex: "3/day")
+  reason     String? // Raison de la prise
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("current_medications")
+}
+
+
+// ============================================
 // DOCTOR PROFILE
 // ============================================
+
 
 model DoctorProfile {
   id              String            @id @default(auto()) @map("_id") @db.ObjectId
@@ -173,7 +223,7 @@ model DoctorProfile {
 model NurseProfile {
   id              String            @id @default(auto()) @map("_id") @db.ObjectId
   userId          String            @unique @db.ObjectId
-  licenseNumber   String            @unique
+  licenseNumber   String?
   bio             String?
   phone           String?
   location        String?
@@ -283,6 +333,7 @@ model VitalRecord {
   reviewedBy          User?           @relation("VitalRecordReviews", fields: [reviewedById], references: [id])
   blockchainProof     BlockchainProof?
   alerts              Alert[]         // Alerts triggered by this vital
+  coordinatorFlags    CoordinatorEntryFlag[]  // Flags raised by coordinators
 
   @@index([patientId])
   @@index([recordedAt])
@@ -807,6 +858,64 @@ model PatientCheckup {
   @@index([doctorId])
   @@index([createdAt])
   @@map("patient_checkups")
+}
+
+// ============================================
+// COORDINATOR (Care coordination management)
+// ============================================
+
+model CoordinatorPatient {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  coordinatorId  String   @db.ObjectId
+  patientId      String   @db.ObjectId
+  assignedAt     DateTime @default(now())
+  notes          String?
+
+  coordinator    User     @relation("CoordinatorAssignments", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([coordinatorId, patientId])
+  @@index([coordinatorId])
+  @@index([patientId])
+  @@map("coordinator_patients")
+}
+
+model CoordinatorReminder {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  coordinatorId  String   @db.ObjectId
+  patientId      String   @db.ObjectId
+  message        String
+  channels       String[]
+  createdAt      DateTime @default(now())
+
+  coordinator    User     @relation("CoordinatorRemindersSent", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([coordinatorId])
+  @@index([patientId])
+  @@index([createdAt])
+  @@map("coordinator_reminders")
+}
+
+model CoordinatorEntryFlag {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  coordinatorId  String    @db.ObjectId
+  patientId      String    @db.ObjectId
+  vitalRecordId  String?   @db.ObjectId
+  flagType       String
+  note           String
+  status         String    @default("OPEN")
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  coordinator    User      @relation("CoordinatorFlagsRaised", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  vitalRecord    VitalRecord? @relation(fields: [vitalRecordId], references: [id], onDelete: SetNull)
+
+  @@index([coordinatorId])
+  @@index([patientId])
+  @@index([status])
+  @@map("coordinator_entry_flags")
 }
 
 // ============================================

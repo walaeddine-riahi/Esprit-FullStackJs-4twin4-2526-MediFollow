@@ -1,105 +1,166 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
 import {
-  Menu,
-  X,
-  AlertCircle,
-  BarChart3,
   Users,
+  AlertCircle,
   FileText,
-  Settings,
+  TrendingUp,
+  Building2,
+  LayoutDashboard,
+  UserCircle,
+  Zap,
+  ClipboardList,
   Download,
   Clock,
-  Search,
-  CheckSquare,
-  Activity,
 } from "lucide-react";
 
-export function AdminSidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+const managementLinks: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  exact?: boolean;
+}[] = [
+  {
+    href: "/admin",
+    icon: <LayoutDashboard size={20} />,
+    label: "Overview",
+    exact: true,
+  },
+  { href: "/admin/users", icon: <Users size={20} />, label: "User Registry" },
+  {
+    href: "/admin/pending-patients",
+    icon: <Clock size={20} />,
+    label: "Pending Patients",
+  },
+  {
+    href: "/admin/services",
+    icon: <Building2 size={20} />,
+    label: "Service Management",
+  },
+  {
+    href: "/admin/questionnaires",
+    icon: <ClipboardList size={20} />,
+    label: "Questionnaires",
+  },
+  {
+    href: "/admin/alerts",
+    icon: <AlertCircle size={20} />,
+    label: "Incidents",
+  },
+  { href: "/admin/audit", icon: <FileText size={20} />, label: "Audit Logs" },
+];
+
+const infraLinks: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  exact?: boolean;
+}[] = [
+  {
+    href: "/admin/profile",
+    icon: <UserCircle size={20} />,
+    label: "Mon Profil",
+  },
+  {
+    href: "/admin/analytics",
+    icon: <TrendingUp size={20} />,
+    label: "Analytics",
+  },
+  { href: "/admin/export", icon: <Download size={20} />, label: "Data Export" },
+];
+
+function NavItem({
+  href,
+  icon,
+  label,
+  active,
+  badge = 0,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all ${
+        active
+          ? "glass-neon bg-gradient-to-r from-cyan-500/35 to-indigo-500/35 text-white dark:text-white"
+          : "text-slate-600 dark:text-cyan-100/80 hover:bg-slate-200/60 dark:hover:bg-cyan-500/12"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {icon}
+        <span className="text-sm font-bold tracking-tight">{label}</span>
+      </div>
+      {badge > 0 && (
+        <span className="rounded-lg bg-cyan-400/20 px-2 py-0.5 text-[10px] font-black text-cyan-700 dark:text-cyan-200">
+          {badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+export default function AdminSidebar() {
   const pathname = usePathname();
 
-  const menuItems = [
-    { icon: AlertCircle, label: "Alertes", href: "/dashboard/admin/alerts" },
-    { icon: BarChart3, label: "Analyses", href: "/dashboard/admin/analytics" },
-    { icon: Users, label: "Utilisateurs", href: "/dashboard/admin/users" },
-    { icon: Activity, label: "Services", href: "/dashboard/admin/services" },
-    {
-      icon: FileText,
-      label: "Questionnaires",
-      href: "/dashboard/admin/questionnaires",
-    },
-    {
-      icon: Clock,
-      label: "Patients en Attente",
-      href: "/dashboard/admin/pending-patients",
-    },
-    { icon: Download, label: "Export", href: "/dashboard/admin/export" },
-    { icon: Search, label: "Recherche", href: "/dashboard/admin/search" },
-    { icon: CheckSquare, label: "Audit", href: "/dashboard/admin/audit" },
-    { icon: Settings, label: "Paramètres", href: "/dashboard/admin/settings" },
-  ];
+  const isActive = (href: string, exact?: boolean) => {
+    if (exact) return pathname === href;
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
   return (
-    <>
-      {/* Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white transition-all duration-300 z-40 ${
-          isOpen ? "w-64" : "w-20"
-        }`}
-      >
-        {/* Logo */}
-        <div className="p-4 border-b border-slate-700">
-          <Link href="/dashboard/admin" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center font-bold text-slate-900">
-              A
-            </div>
-            {isOpen && <span className="font-bold text-lg">Admin</span>}
-          </Link>
+    <aside className="glass-panel fixed left-0 top-0 hidden h-full w-72 border-r border-slate-200 dark:border-cyan-300/20 lg:block z-40">
+      <div className="flex h-20 items-center px-8">
+        <Link href="/admin" className="flex items-center gap-3">
+          <div className="glass-neon flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-indigo-500 text-white">
+            <Zap size={20} fill="currentColor" />
+          </div>
+          <span className="text-xl font-black text-slate-800 dark:text-white">
+            MediFollow
+            <span className="text-cyan-500 dark:text-cyan-300">.</span>
+          </span>
+        </Link>
+      </div>
+      <div className="px-4 py-4 overflow-y-auto h-[calc(100vh-80px)]">
+        <div className="mb-2 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-cyan-200/80">
+          MANAGEMENT
         </div>
-
-        {/* Menu Items */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-
-            return (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-300 hover:bg-slate-700/50"
-                  }`}
-                >
-                  <Icon size={20} />
-                  {isOpen && (
-                    <span className="text-sm font-medium">{item.label}</span>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
+        <nav className="space-y-1">
+          {managementLinks.map((link) => (
+            <NavItem
+              key={link.href}
+              href={link.href}
+              icon={link.icon}
+              label={link.label}
+              active={isActive(link.href, link.exact)}
+            />
+          ))}
         </nav>
-
-        {/* Toggle Button */}
-        <div className="p-4 border-t border-slate-700">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
-          >
-            {isOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+        <div className="mb-2 mt-8 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-cyan-200/80">
+          INFRASTRUCTURE
+        </div>
+        <nav className="space-y-1">
+          {infraLinks.map((link) => (
+            <NavItem
+              key={link.href}
+              href={link.href}
+              icon={link.icon}
+              label={link.label}
+              active={isActive(link.href, link.exact)}
+            />
+          ))}
+        </nav>
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-cyan-300/20">
+          <LogoutButton />
         </div>
       </div>
-
-      {/* Spacer */}
-      {isOpen && <div className="w-64" />}
-    </>
+    </aside>
   );
 }

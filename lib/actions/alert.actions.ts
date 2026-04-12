@@ -549,7 +549,7 @@ export async function updateAlertStatus(id: string, status: string) {
       },
     });
 
-    revalidatePath("/dashboard/admin");
+    revalidatePath("/admin");
     revalidatePath("/dashboard/doctor");
 
     return { success: true, alert, message: "Statut de l'alerte mis à jour" };

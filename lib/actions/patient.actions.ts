@@ -942,6 +942,15 @@ export async function getPatientProfile(
             faceDescriptor: true,
           },
         },
+        currentMedications: {
+          select: {
+            id: true,
+            medication: true,
+            dose: true,
+            frequency: true,
+            reason: true,
+          },
+        },
       },
     });
 

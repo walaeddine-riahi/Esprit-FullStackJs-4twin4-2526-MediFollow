@@ -1,180 +1,218 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Command } from "lucide-react";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+} from "@/components/ui/command";
 
-interface CommandItem {
-  id: string;
-  title: string;
-  description?: string;
-  href?: string;
-  action?: () => void;
-}
+type CommandEntry = {
+  label: string;
+  path: string;
+  group: "Navigation" | "Operations";
+};
 
-export function AdminCommandPalette() {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+type CopilotResult = {
+  answer: string;
+  navigationPath?: string;
+  suggestions?: string[];
+};
+
+const COMMANDS: CommandEntry[] = [
+  { label: "Open Overview", path: "/admin", group: "Navigation" },
+  { label: "Open Users", path: "/admin/users", group: "Navigation" },
+  { label: "Open Services", path: "/admin/services", group: "Navigation" },
+  { label: "Open Alerts", path: "/admin/alerts", group: "Navigation" },
+  { label: "Open Audit Logs", path: "/admin/audit", group: "Navigation" },
+  { label: "Open Analytics", path: "/admin/analytics", group: "Navigation" },
+  { label: "Open Export", path: "/admin/export", group: "Operations" },
+  { label: "Open Profile", path: "/admin/profile", group: "Operations" },
+  { label: "Open Settings", path: "/admin/settings", group: "Operations" },
+];
+
+export default function AdminCommandPalette() {
   const router = useRouter();
-
-  const commands: CommandItem[] = [
-    {
-      id: "alerts",
-      title: "Alertes",
-      href: "/dashboard/admin/alerts",
-      description: "Voir toutes les alertes",
-    },
-    {
-      id: "analytics",
-      title: "Analyses",
-      href: "/dashboard/admin/analytics",
-      description: "Voir les statistiques",
-    },
-    {
-      id: "users",
-      title: "Utilisateurs",
-      href: "/dashboard/admin/users",
-      description: "Gérer les utilisateurs",
-    },
-    {
-      id: "services",
-      title: "Services",
-      href: "/dashboard/admin/services",
-      description: "Gérer les services",
-    },
-    {
-      id: "questionnaires",
-      title: "Questionnaires",
-      href: "/dashboard/admin/questionnaires",
-      description: "Gérer les questionnaires",
-    },
-    {
-      id: "pending",
-      title: "Patients en Attente",
-      href: "/dashboard/admin/pending-patients",
-      description: "Approuver les patients",
-    },
-    {
-      id: "export",
-      title: "Export",
-      href: "/dashboard/admin/export",
-      description: "Exporter les données",
-    },
-    {
-      id: "audit",
-      title: "Audit",
-      href: "/dashboard/admin/audit",
-      description: "Voir les logs d'audit",
-    },
-    {
-      id: "settings",
-      title: "Paramètres",
-      href: "/dashboard/admin/settings",
-      description: "Configuration du système",
-    },
-  ];
-
-  const filtered = commands.filter(
-    (cmd) =>
-      cmd.title.toLowerCase().includes(search.toLowerCase()) ||
-      cmd.description?.toLowerCase().includes(search.toLowerCase())
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const [copilotError, setCopilotError] = useState<string | null>(null);
+  const [copilotResult, setCopilotResult] = useState<CopilotResult | null>(
+    null
   );
 
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isInputLike =
+        tag === "input" || tag === "textarea" || target?.isContentEditable;
+      if (isInputLike) return;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setOpen((prev) => !prev);
       }
     };
 
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const handleSelect = (item: CommandItem) => {
-    if (item.href) router.push(item.href);
-    if (item.action) item.action();
+  const grouped = useMemo(() => {
+    return {
+      Navigation: COMMANDS.filter((item) => item.group === "Navigation"),
+      Operations: COMMANDS.filter((item) => item.group === "Operations"),
+    };
+  }, []);
+
+  const onSelect = (path: string) => {
     setOpen(false);
-    setSearch("");
+    router.push(path);
+  };
+
+  const askCopilot = async () => {
+    if (!query.trim()) return;
+
+    try {
+      setCopilotLoading(true);
+      setCopilotError(null);
+      setCopilotResult(null);
+
+      const response = await fetch("/api/admin/copilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+
+      const result = await response.json();
+      if (result.success && result.result) {
+        setCopilotResult(result.result as CopilotResult);
+      } else {
+        setCopilotError(
+          result?.error || "Copilot failed to process the command."
+        );
+      }
+    } catch {
+      setCopilotError("Copilot is unavailable right now.");
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
+  const onInputChange = (value: string) => {
+    setQuery(value);
+    if (!value.trim()) {
+      setCopilotResult(null);
+      setCopilotError(null);
+    }
+  };
+
+  const canAsk = query.trim().length > 0;
+
+  const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && canAsk) {
+      event.preventDefault();
+      void askCopilot();
+    }
   };
 
   return (
-    <>
-      {/* Command Palette Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm text-slate-600 dark:text-slate-400"
-      >
-        <Search size={16} />
-        <span className="hidden sm:inline">Recherche...</span>
-        <kbd className="hidden sm:inline ml-auto text-xs px-2 py-1 rounded bg-slate-200 dark:bg-slate-700">
-          ⌘K
-        </kbd>
-      </button>
+    <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandInput
+        value={query}
+        onValueChange={onInputChange}
+        onKeyDown={onInputKeyDown}
+        placeholder="Search commands or ask anything... (press Enter)"
+      />
+      <CommandList>
+        <CommandEmpty>No command found.</CommandEmpty>
 
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50"
-          onClick={() => setOpen(false)}
-        />
-      )}
+        {canAsk && (
+          <CommandGroup heading="AI Copilot">
+            <CommandItem
+              value={`ask ${query}`}
+              keywords={[query]}
+              onSelect={askCopilot}
+            >
+              Ask Copilot: {query}
+            </CommandItem>
+          </CommandGroup>
+        )}
 
-      {/* Command Palette */}
-      {open && (
-        <div className="fixed top-1/4 left-1/2 transform -translate-x-1/2 w-full max-w-md z-50 shadow-lg rounded-lg overflow-hidden bg-white dark:bg-slate-800">
-          {/* Search Input */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-            <Command size={20} className="text-slate-400" />
-            <input
-              autoFocus
-              type="text"
-              placeholder="Rechercher par commande..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-500"
-            />
-          </div>
+        {canAsk && <CommandSeparator />}
 
-          {/* Results */}
-          <div className="max-h-[400px] overflow-y-auto">
-            {filtered.length > 0 ? (
-              <div className="p-2">
-                {filtered.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelect(item)}
-                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors mb-1"
-                  >
-                    <div className="font-medium text-slate-900 dark:text-white">
-                      {item.title}
-                    </div>
-                    {item.description && (
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {item.description}
+        <CommandGroup heading="Navigation">
+          {grouped.Navigation.map((item) => (
+            <CommandItem key={item.path} onSelect={() => onSelect(item.path)}>
+              {item.label}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        <CommandGroup heading="Operations">
+          {grouped.Operations.map((item) => (
+            <CommandItem key={item.path} onSelect={() => onSelect(item.path)}>
+              {item.label}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+
+        <div className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+          <span>Shortcut</span>
+          <CommandShortcut>Ctrl + K</CommandShortcut>
+        </div>
+        <div className="px-3 pb-2 text-[11px] text-slate-500 dark:text-slate-400">
+          Type anything and press Enter to ask Copilot.
+        </div>
+
+        {(copilotLoading || copilotError || copilotResult) && (
+          <div className="px-3 pb-3">
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+              {copilotLoading && (
+                <p className="text-slate-600 dark:text-slate-300">
+                  Analyzing your command...
+                </p>
+              )}
+              {copilotError && (
+                <p className="text-red-600 dark:text-red-400">{copilotError}</p>
+              )}
+              {copilotResult && (
+                <>
+                  <p className="text-slate-800 dark:text-slate-100">
+                    {copilotResult.answer}
+                  </p>
+                  {copilotResult.navigationPath && (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(copilotResult.navigationPath!)}
+                      className="mt-2 text-left text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                    >
+                      Open suggested page
+                    </button>
+                  )}
+                  {Array.isArray(copilotResult.suggestions) &&
+                    copilotResult.suggestions.length > 0 && (
+                      <div className="mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+                        {copilotResult.suggestions.slice(0, 4).map((s, idx) => (
+                          <p key={`${idx}-${s}`}>- {s}</p>
+                        ))}
                       </div>
                     )}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-                Aucune commande trouvée
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
-
-          {/* Footer */}
-          <div className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700">
-            Appuyez sur{" "}
-            <kbd className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-700">
-              ESC
-            </kbd>{" "}
-            pour fermer
-          </div>
-        </div>
-      )}
-    </>
+        )}
+      </CommandList>
+    </CommandDialog>
   );
 }

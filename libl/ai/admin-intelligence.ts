@@ -1,7 +1,14 @@
 import prisma from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
-import { AlertSeverity, AlertStatus, AlertType } from "@/types/medifollow.types";
-import { notifyAlert, sendAdminAlertSMS } from "@/lib/actions/notification.actions";
+import {
+  AlertSeverity,
+  AlertStatus,
+  AlertType,
+} from "@/types/medifollow.types";
+import {
+  notifyAlert,
+  sendAdminAlertSMS,
+} from "@/lib/actions/notification.actions";
 
 type NextBestAction = {
   title: string;
@@ -16,14 +23,20 @@ type CopilotResponse = {
   data?: Record<string, unknown>;
 };
 
-const AI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+const AI_API_VERSION =
+  process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
 
 const NON_DUMMY_ALERT_WHERE = {
   NOT: {
     AND: [
       { alertType: AlertType.SYSTEM },
       { severity: AlertSeverity.LOW },
-      { message: { contains: "collection 'alerts'", mode: "insensitive" as const } },
+      {
+        message: {
+          contains: "collection 'alerts'",
+          mode: "insensitive" as const,
+        },
+      },
     ],
   },
 } as const;
@@ -32,7 +45,11 @@ function clampConfidence(value: number): number {
   return Math.max(0.35, Math.min(0.98, Number(value.toFixed(2))));
 }
 
-async function askAzureJson(systemPrompt: string, userPrompt: string, maxTokens = 1200): Promise<any | null> {
+async function askAzureJson(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens = 1200
+): Promise<any | null> {
   const apiKey = process.env.AZURE_OPENAI_API_KEY;
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
@@ -83,50 +100,71 @@ function buildFallbackActions(alert: any): NextBestAction[] {
   if (status === "OPEN") {
     actions.push({
       title: "Acknowledge alert and assign owner",
-      rationale: "Immediate ownership shortens response time and prevents alert drift.",
+      rationale:
+        "Immediate ownership shortens response time and prevents alert drift.",
       confidence: severity === "CRITICAL" ? 0.95 : 0.88,
     });
   } else {
     actions.push({
       title: "Review latest clinical context",
-      rationale: "Status changed, but a quick clinical review confirms no hidden deterioration.",
+      rationale:
+        "Status changed, but a quick clinical review confirms no hidden deterioration.",
       confidence: 0.81,
     });
   }
 
-  if (message.includes("oxygen") || message.includes("saturation") || message.includes("spo2")) {
+  if (
+    message.includes("oxygen") ||
+    message.includes("saturation") ||
+    message.includes("spo2")
+  ) {
     actions.push({
       title: "Request immediate pulse-ox recheck",
-      rationale: "Oxygen fluctuations can escalate quickly and should be confirmed within minutes.",
+      rationale:
+        "Oxygen fluctuations can escalate quickly and should be confirmed within minutes.",
       confidence: 0.9,
     });
-  } else if (message.includes("cardiaque") || message.includes("heart") || message.includes("bpm")) {
+  } else if (
+    message.includes("cardiaque") ||
+    message.includes("heart") ||
+    message.includes("bpm")
+  ) {
     actions.push({
       title: "Repeat heart rate in 10 minutes",
-      rationale: "Short-interval retest helps separate transient spikes from sustained tachycardia.",
+      rationale:
+        "Short-interval retest helps separate transient spikes from sustained tachycardia.",
       confidence: 0.86,
     });
-  } else if (message.includes("pression") || message.includes("bp") || message.includes("systolic")) {
+  } else if (
+    message.includes("pression") ||
+    message.includes("bp") ||
+    message.includes("systolic")
+  ) {
     actions.push({
       title: "Schedule blood pressure triage",
-      rationale: "Blood pressure anomalies require trend confirmation before escalation decisions.",
+      rationale:
+        "Blood pressure anomalies require trend confirmation before escalation decisions.",
       confidence: 0.87,
     });
   } else {
     actions.push({
       title: "Contact responsible care team",
-      rationale: "Shared awareness across care staff reduces missed interventions.",
+      rationale:
+        "Shared awareness across care staff reduces missed interventions.",
       confidence: 0.8,
     });
   }
 
   actions.push({
     title: "Set follow-up check in 30 minutes",
-    rationale: "A scheduled follow-up creates closure and reduces unresolved critical queues.",
+    rationale:
+      "A scheduled follow-up creates closure and reduces unresolved critical queues.",
     confidence: severity === "CRITICAL" ? 0.92 : 0.78,
   });
 
-  return actions.slice(0, 3).map((a) => ({ ...a, confidence: clampConfidence(a.confidence) }));
+  return actions
+    .slice(0, 3)
+    .map((a) => ({ ...a, confidence: clampConfidence(a.confidence) }));
 }
 
 export async function getNextBestActionsForAlert(alertId: string): Promise<{
@@ -176,7 +214,8 @@ export async function getNextBestActionsForAlert(alertId: string): Promise<{
           severity: alert.severity,
           status: alert.status,
           message: alert.message,
-          patientName: `${alert.patient.user.firstName} ${alert.patient.user.lastName}`.trim(),
+          patientName:
+            `${alert.patient.user.firstName} ${alert.patient.user.lastName}`.trim(),
           data: alert.data,
         },
         null,
@@ -188,7 +227,8 @@ export async function getNextBestActionsForAlert(alertId: string): Promise<{
       return {
         success: true,
         actions: fallback,
-        summary: "Fallback recommendations generated from alert severity, status, and vital context.",
+        summary:
+          "Fallback recommendations generated from alert severity, status, and vital context.",
       };
     }
 
@@ -201,7 +241,11 @@ export async function getNextBestActionsForAlert(alertId: string): Promise<{
       .slice(0, 3);
 
     if (actions.length === 0) {
-      return { success: true, actions: fallback, summary: "Fallback recommendations generated." };
+      return {
+        success: true,
+        actions: fallback,
+        summary: "Fallback recommendations generated.",
+      };
     }
 
     while (actions.length < 3) {
@@ -211,17 +255,25 @@ export async function getNextBestActionsForAlert(alertId: string): Promise<{
     return {
       success: true,
       actions,
-      summary: String(aiPayload.summary || "AI recommendations generated based on current alert context."),
+      summary: String(
+        aiPayload.summary ||
+          "AI recommendations generated based on current alert context."
+      ),
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to generate next best actions",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate next best actions",
     };
   }
 }
 
-export async function runAdminCopilot(query: string): Promise<{ success: boolean; result?: CopilotResponse; error?: string }> {
+export async function runAdminCopilot(
+  query: string
+): Promise<{ success: boolean; result?: CopilotResponse; error?: string }> {
   try {
     const q = query.trim().toLowerCase();
     if (!q) return { success: false, error: "Empty query" };
@@ -259,7 +311,11 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
           navigationPath: "/admin/users",
           suggestions: roleSummary.length
             ? roleSummary
-            : ["Open the users page", "Filter by role", "Check inactive accounts"],
+            : [
+                "Open the users page",
+                "Filter by role",
+                "Check inactive accounts",
+              ],
           data: { totalUsers, activeUsers, inactiveUsers, roleCounts },
         },
       };
@@ -276,16 +332,25 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         (query.match(/"([^"]+)"/)?.[1] ||
           query.match(/'([^']+)'/)?.[1] ||
           query
-            .replace(/.*(?:search|find|lookup)\s+(?:for\s+)?(?:specific\s+)?(?:user\s+details\s+for\s+|user\s+)?/i, "")
-            .trim()) ?? "";
+            .replace(
+              /.*(?:search|find|lookup)\s+(?:for\s+)?(?:specific\s+)?(?:user\s+details\s+for\s+|user\s+)?/i,
+              ""
+            )
+            .trim()) ??
+        "";
 
       if (!searchTerm) {
         return {
           success: true,
           result: {
-            answer: "Please provide a user name or email to search, for example: search user \"john\".",
+            answer:
+              'Please provide a user name or email to search, for example: search user "john".',
             navigationPath: "/admin/users",
-            suggestions: ["search user \"john\"", "find user jane@hospital.com", "user details for Marie"],
+            suggestions: [
+              'search user "john"',
+              "find user jane@hospital.com",
+              "user details for Marie",
+            ],
           },
         };
       }
@@ -298,7 +363,14 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
             { email: { contains: searchTerm, mode: "insensitive" } },
           ],
         },
-        select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          isActive: true,
+        },
         take: 5,
         orderBy: { createdAt: "desc" },
       });
@@ -309,14 +381,19 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
           result: {
             answer: `No users found for \"${searchTerm}\".`,
             navigationPath: "/admin/users",
-            suggestions: ["Try a shorter keyword", "Search by email", "Open user management"],
+            suggestions: [
+              "Try a shorter keyword",
+              "Search by email",
+              "Open user management",
+            ],
             data: { searchTerm, matches: [] },
           },
         };
       }
 
       const suggestions = matches.map(
-        (u) => `${u.firstName} ${u.lastName} (${u.role}, ${u.isActive ? "active" : "inactive"})`
+        (u) =>
+          `${u.firstName} ${u.lastName} (${u.role}, ${u.isActive ? "active" : "inactive"})`
       );
 
       return {
@@ -366,7 +443,13 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
           answer:
             "Access review summary generated. Check role distribution and validate least-privilege access for ADMIN, COORDINATOR, DOCTOR, NURSE, and PATIENT accounts.",
           navigationPath: "/admin/settings",
-          suggestions: byRole.length ? byRole.slice(0, 5) : ["Open settings", "Review role assignments", "Audit inactive accounts"],
+          suggestions: byRole.length
+            ? byRole.slice(0, 5)
+            : [
+                "Open settings",
+                "Review role assignments",
+                "Audit inactive accounts",
+              ],
           data: { roleCounts, totalUsers: users.length },
         },
       };
@@ -379,8 +462,16 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
       q.includes("alerts unresolved")
     ) {
       const [openAlerts, criticalOpen, activePatients] = await Promise.all([
-        prisma.alert.count({ where: { ...NON_DUMMY_ALERT_WHERE, status: AlertStatus.OPEN } }),
-        prisma.alert.count({ where: { ...NON_DUMMY_ALERT_WHERE, severity: AlertSeverity.CRITICAL, status: AlertStatus.OPEN } }),
+        prisma.alert.count({
+          where: { ...NON_DUMMY_ALERT_WHERE, status: AlertStatus.OPEN },
+        }),
+        prisma.alert.count({
+          where: {
+            ...NON_DUMMY_ALERT_WHERE,
+            severity: AlertSeverity.CRITICAL,
+            status: AlertStatus.OPEN,
+          },
+        }),
         prisma.patient.count({ where: { isActive: true } }),
       ]);
 
@@ -403,19 +494,28 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
       };
     }
 
-    if (q.includes("open alerts") || q.includes("go to alerts") || q.includes("alerts page")) {
+    if (
+      q.includes("open alerts") ||
+      q.includes("go to alerts") ||
+      q.includes("alerts page")
+    ) {
       return {
         success: true,
         result: {
           answer: "Opening alerts supervision.",
           navigationPath: "/admin/alerts",
-          suggestions: ["Show unresolved critical alerts today", "Open analytics"],
+          suggestions: [
+            "Show unresolved critical alerts today",
+            "Open analytics",
+          ],
         },
       };
     }
 
     if (
-      (q.includes("critical") && q.includes("today") && (q.includes("unresolved") || q.includes("open"))) ||
+      (q.includes("critical") &&
+        q.includes("today") &&
+        (q.includes("unresolved") || q.includes("open"))) ||
       q.includes("unresolved critical alerts today")
     ) {
       const start = new Date();
@@ -437,15 +537,22 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         result: {
           answer: `There are ${count} unresolved critical alerts today.`,
           navigationPath: "/admin/alerts",
-          suggestions: ["Filter by CRITICAL + OPEN", "Review AI next actions for top 3"],
+          suggestions: [
+            "Filter by CRITICAL + OPEN",
+            "Review AI next actions for top 3",
+          ],
           data: { unresolvedCriticalToday: count },
         },
       };
     }
 
     if (
-      (q.includes("repeated") || q.includes("repeat") || q.includes("multiple")) &&
-      (q.includes("blood pressure") || q.includes("high bp") || q.includes("bp"))
+      (q.includes("repeated") ||
+        q.includes("repeat") ||
+        q.includes("multiple")) &&
+      (q.includes("blood pressure") ||
+        q.includes("high bp") ||
+        q.includes("bp"))
     ) {
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const patients = await prisma.patient.findMany({
@@ -461,7 +568,9 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         },
       });
 
-      const userIds = Array.from(new Set(patients.map((p) => p.userId).filter(Boolean)));
+      const userIds = Array.from(
+        new Set(patients.map((p) => p.userId).filter(Boolean))
+      );
       const users = userIds.length
         ? await prisma.user.findMany({
             where: { id: { in: userIds } },
@@ -472,9 +581,13 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
 
       const highBpPatients = patients
         .map((p) => {
-          const highReadings = p.vitalRecords.filter((r: any) => (r.systolicBP ?? 0) >= 140 || (r.diastolicBP ?? 0) >= 90).length;
+          const highReadings = p.vitalRecords.filter(
+            (r: any) => (r.systolicBP ?? 0) >= 140 || (r.diastolicBP ?? 0) >= 90
+          ).length;
           const user = userMap.get(p.userId);
-          const name = user ? `${user.firstName} ${user.lastName}`.trim() : "Unknown patient";
+          const name = user
+            ? `${user.firstName} ${user.lastName}`.trim()
+            : "Unknown patient";
           return { name, highReadings };
         })
         .filter((p) => p.highReadings >= 2)
@@ -489,15 +602,25 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
               ? `Found ${highBpPatients.length} patients with repeated high BP in the last 7 days.`
               : "No patients with repeated high BP in the last 7 days.",
           navigationPath: "/admin/analytics",
-          suggestions: highBpPatients.map((p) => `${p.name}: ${p.highReadings} high readings`),
+          suggestions: highBpPatients.map(
+            (p) => `${p.name}: ${p.highReadings} high readings`
+          ),
           data: { repeatedHighBpPatients: highBpPatients },
         },
       };
     }
 
     const [openAlerts, criticalOpen, activePatients] = await Promise.all([
-      prisma.alert.count({ where: { ...NON_DUMMY_ALERT_WHERE, status: AlertStatus.OPEN } }),
-      prisma.alert.count({ where: { ...NON_DUMMY_ALERT_WHERE, severity: AlertSeverity.CRITICAL, status: AlertStatus.OPEN } }),
+      prisma.alert.count({
+        where: { ...NON_DUMMY_ALERT_WHERE, status: AlertStatus.OPEN },
+      }),
+      prisma.alert.count({
+        where: {
+          ...NON_DUMMY_ALERT_WHERE,
+          severity: AlertSeverity.CRITICAL,
+          status: AlertStatus.OPEN,
+        },
+      }),
       prisma.patient.count({ where: { isActive: true } }),
     ]);
 
@@ -512,7 +635,10 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
         success: true,
         result: {
           answer: aiPayload.answer,
-          navigationPath: typeof aiPayload.navigationPath === "string" ? aiPayload.navigationPath : undefined,
+          navigationPath:
+            typeof aiPayload.navigationPath === "string"
+              ? aiPayload.navigationPath
+              : undefined,
           suggestions: Array.isArray(aiPayload.suggestions)
             ? aiPayload.suggestions.map((s: any) => String(s)).slice(0, 5)
             : [],
@@ -530,7 +656,8 @@ export async function runAdminCopilot(query: string): Promise<{ success: boolean
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Copilot processing failed",
+      error:
+        error instanceof Error ? error.message : "Copilot processing failed",
     };
   }
 }
@@ -543,11 +670,17 @@ function average(values: number[]): number {
 function hasRecentEarlyWarningAlert(alerts: any[]): boolean {
   return alerts.some((a) => {
     const msg = String(a?.message || "").toLowerCase();
-    return msg.includes("early warning") || msg.includes("alerte precoce") || msg.includes("anomaly");
+    return (
+      msg.includes("early warning") ||
+      msg.includes("alerte precoce") ||
+      msg.includes("anomaly")
+    );
   });
 }
 
-export async function detectAndCreateEarlyWarningAlert(patientId: string): Promise<{ success: boolean; created: boolean; message?: string }> {
+export async function detectAndCreateEarlyWarningAlert(
+  patientId: string
+): Promise<{ success: boolean; created: boolean; message?: string }> {
   try {
     const [patient, recentVitals, existingRecentAlerts] = await Promise.all([
       prisma.patient.findUnique({
@@ -570,41 +703,83 @@ export async function detectAndCreateEarlyWarningAlert(patientId: string): Promi
     ]);
 
     if (!patient || recentVitals.length < 4) {
-      return { success: true, created: false, message: "Not enough data for anomaly detection" };
+      return {
+        success: true,
+        created: false,
+        message: "Not enough data for anomaly detection",
+      };
     }
 
     if (hasRecentEarlyWarningAlert(existingRecentAlerts)) {
-      return { success: true, created: false, message: "Recent early warning already exists" };
+      return {
+        success: true,
+        created: false,
+        message: "Recent early warning already exists",
+      };
     }
 
     const latest = recentVitals[0];
     const prev = recentVitals.slice(1, 4);
     const older = recentVitals.slice(4, 8);
 
-    const avgPrevSys = average(prev.map((v: any) => v.systolicBP).filter((v): v is number => typeof v === "number"));
-    const avgPrevDia = average(prev.map((v: any) => v.diastolicBP).filter((v): v is number => typeof v === "number"));
-    const avgPrevSpo2 = average(prev.map((v: any) => v.oxygenSaturation).filter((v): v is number => typeof v === "number"));
-    const avgPrevHr = average(prev.map((v: any) => v.heartRate).filter((v): v is number => typeof v === "number"));
-    const avgOlderHr = average(older.map((v: any) => v.heartRate).filter((v): v is number => typeof v === "number"));
+    const avgPrevSys = average(
+      prev
+        .map((v: any) => v.systolicBP)
+        .filter((v): v is number => typeof v === "number")
+    );
+    const avgPrevDia = average(
+      prev
+        .map((v: any) => v.diastolicBP)
+        .filter((v): v is number => typeof v === "number")
+    );
+    const avgPrevSpo2 = average(
+      prev
+        .map((v: any) => v.oxygenSaturation)
+        .filter((v): v is number => typeof v === "number")
+    );
+    const avgPrevHr = average(
+      prev
+        .map((v: any) => v.heartRate)
+        .filter((v): v is number => typeof v === "number")
+    );
+    const avgOlderHr = average(
+      older
+        .map((v: any) => v.heartRate)
+        .filter((v): v is number => typeof v === "number")
+    );
 
     const flags: string[] = [];
     let score = 0;
 
     const lastThreeHighBp = recentVitals
       .slice(0, 3)
-      .filter((v: any) => (v.systolicBP ?? 0) >= 140 || (v.diastolicBP ?? 0) >= 90).length;
+      .filter(
+        (v: any) => (v.systolicBP ?? 0) >= 140 || (v.diastolicBP ?? 0) >= 90
+      ).length;
 
-    if (lastThreeHighBp >= 2 && ((latest.systolicBP ?? 0) > avgPrevSys + 6 || (latest.diastolicBP ?? 0) > avgPrevDia + 4)) {
+    if (
+      lastThreeHighBp >= 2 &&
+      ((latest.systolicBP ?? 0) > avgPrevSys + 6 ||
+        (latest.diastolicBP ?? 0) > avgPrevDia + 4)
+    ) {
       flags.push("Repeated high blood pressure with upward trend");
       score += 2;
     }
 
-    if (typeof latest.oxygenSaturation === "number" && latest.oxygenSaturation <= 93 && avgPrevSpo2 - latest.oxygenSaturation >= 2) {
+    if (
+      typeof latest.oxygenSaturation === "number" &&
+      latest.oxygenSaturation <= 93 &&
+      avgPrevSpo2 - latest.oxygenSaturation >= 2
+    ) {
       flags.push("Oxygen saturation drop compared to recent baseline");
       score += 2;
     }
 
-    if (typeof latest.heartRate === "number" && latest.heartRate >= 110 && avgPrevHr >= avgOlderHr + 8) {
+    if (
+      typeof latest.heartRate === "number" &&
+      latest.heartRate >= 110 &&
+      avgPrevHr >= avgOlderHr + 8
+    ) {
       flags.push("Progressive tachycardia pattern");
       score += 1;
     }
@@ -619,9 +794,10 @@ export async function detectAndCreateEarlyWarningAlert(patientId: string): Promi
     }
 
     const severity = score >= 4 ? AlertSeverity.CRITICAL : AlertSeverity.HIGH;
-    const patientName = `${patient.user.firstName} ${patient.user.lastName}`.trim();
+    const patientName =
+      `${patient.user.firstName} ${patient.user.lastName}`.trim();
     const confidence = clampConfidence(0.55 + score * 0.1);
-    const message = `AI Early Warning: ${flags.join("; ")}.`; 
+    const message = `AI Early Warning: ${flags.join("; ")}.`;
 
     const alert = await prisma.alert.create({
       data: {
@@ -644,20 +820,34 @@ export async function detectAndCreateEarlyWarningAlert(patientId: string): Promi
       desc: `${patientName}: ${flags[0] || "Clinical anomaly detected"}`,
     });
 
-    await sendAdminAlertSMS(`AI EARLY WARNING\nPatient: ${patientName}\n${flags[0] || "Anomaly detected"}`);
+    await sendAdminAlertSMS(
+      `AI EARLY WARNING\nPatient: ${patientName}\n${flags[0] || "Anomaly detected"}`
+    );
     await notifyAlert(
       patientId,
       "AI Early Warning",
       `${patientName}: ${flags.join("; ")}`,
-      { alertType: "VITAL", alertId: alert.id, anomalyType: "EARLY_WARNING", confidence }
+      {
+        alertType: "VITAL",
+        alertId: alert.id,
+        anomalyType: "EARLY_WARNING",
+        confidence,
+      }
     );
 
-    return { success: true, created: true, message: "Early warning alert created" };
+    return {
+      success: true,
+      created: true,
+      message: "Early warning alert created",
+    };
   } catch (error) {
     return {
       success: false,
       created: false,
-      message: error instanceof Error ? error.message : "Early warning detection failed",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Early warning detection failed",
     };
   }
 }

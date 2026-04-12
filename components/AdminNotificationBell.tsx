@@ -77,7 +77,10 @@ export default function AdminNotificationBell() {
     }
   }, [items, clearedAt]);
 
-  const unreadCount = useMemo(() => items.filter((item) => !item.read).length, [items]);
+  const unreadCount = useMemo(
+    () => items.filter((item) => !item.read).length,
+    [items]
+  );
 
   const upsertNotification = (
     event: "new-alert" | "new-signup",
@@ -88,11 +91,17 @@ export default function AdminNotificationBell() {
     createdAt?: string
   ) => {
     setItems((prev) => {
-      if (clearedAt && createdAt && new Date(createdAt) <= new Date(clearedAt)) {
+      if (
+        clearedAt &&
+        createdAt &&
+        new Date(createdAt) <= new Date(clearedAt)
+      ) {
         return prev;
       }
 
-      if (prev.some((item) => item.event === event && item.entityId === entityId)) {
+      if (
+        prev.some((item) => item.event === event && item.entityId === entityId)
+      ) {
         return prev;
       }
 
@@ -114,7 +123,9 @@ export default function AdminNotificationBell() {
   useEffect(() => {
     const loadSummary = async () => {
       try {
-        const response = await fetch("/api/admin/notifications", { cache: "no-store" });
+        const response = await fetch("/api/admin/notifications", {
+          cache: "no-store",
+        });
         const result = await response.json();
 
         if (!result?.success) {
@@ -158,8 +169,14 @@ export default function AdminNotificationBell() {
           });
 
           if (initialItems.length > 0) {
-            initialItems.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-            setItems((prev) => (prev.length > 0 ? prev : initialItems.slice(0, 20)));
+            initialItems.sort(
+              (left, right) =>
+                new Date(right.createdAt).getTime() -
+                new Date(left.createdAt).getTime()
+            );
+            setItems((prev) =>
+              prev.length > 0 ? prev : initialItems.slice(0, 20)
+            );
           }
 
           knownAlertIdsRef.current = alertIds;
@@ -173,7 +190,14 @@ export default function AdminNotificationBell() {
           .reverse()
           .forEach((item) => {
             if (!knownAlertIdsRef.current.has(item.id)) {
-              upsertNotification("new-alert", item.id, item.title, item.desc, item.target, item.createdAt);
+              upsertNotification(
+                "new-alert",
+                item.id,
+                item.title,
+                item.desc,
+                item.target,
+                item.createdAt
+              );
             }
           });
 
@@ -182,7 +206,14 @@ export default function AdminNotificationBell() {
           .reverse()
           .forEach((item) => {
             if (!knownSignupIdsRef.current.has(item.id)) {
-              upsertNotification("new-signup", item.id, item.title, item.desc, item.target, item.createdAt);
+              upsertNotification(
+                "new-signup",
+                item.id,
+                item.title,
+                item.desc,
+                item.target,
+                item.createdAt
+              );
             }
           });
 
@@ -208,28 +239,40 @@ export default function AdminNotificationBell() {
 
     const channel = pusher.subscribe("admin-updates");
 
-    const pushItem = (event: "new-alert" | "new-signup", payload: NotificationPayload) => {
-      const target = event === "new-signup"
-        ? payload.userId
-          ? `/admin/users/${payload.userId}`
-          : "/admin/users"
-        : payload.alertId
-          ? `/admin/alerts/${payload.alertId}`
-          : "/admin/alerts";
+    const pushItem = (
+      event: "new-alert" | "new-signup",
+      payload: NotificationPayload
+    ) => {
+      const target =
+        event === "new-signup"
+          ? payload.userId
+            ? `/admin/users/${payload.userId}`
+            : "/admin/users"
+          : payload.alertId
+            ? `/admin/alerts/${payload.alertId}`
+            : "/admin/alerts";
 
-      const entityId = event === "new-signup" ? payload.userId || `${Date.now()}` : payload.alertId || `${Date.now()}`;
+      const entityId =
+        event === "new-signup"
+          ? payload.userId || `${Date.now()}`
+          : payload.alertId || `${Date.now()}`;
       upsertNotification(
         event,
         entityId,
         payload.title || (event === "new-alert" ? "New alert" : "New sign up"),
-        payload.desc || (event === "new-alert" ? "A new alert was created." : "A new user signed up."),
+        payload.desc ||
+          (event === "new-alert"
+            ? "A new alert was created."
+            : "A new user signed up."),
         target
       );
       router.refresh();
     };
 
-    const onNewAlert = (payload: NotificationPayload) => pushItem("new-alert", payload);
-    const onNewSignup = (payload: NotificationPayload) => pushItem("new-signup", payload);
+    const onNewAlert = (payload: NotificationPayload) =>
+      pushItem("new-alert", payload);
+    const onNewSignup = (payload: NotificationPayload) =>
+      pushItem("new-signup", payload);
 
     channel.bind("new-alert", onNewAlert);
     channel.bind("new-signup", onNewSignup);
@@ -242,7 +285,10 @@ export default function AdminNotificationBell() {
     };
   }, [router]);
 
-  const badgeLabel = useMemo(() => (unreadCount > 99 ? "99+" : String(unreadCount)), [unreadCount]);
+  const badgeLabel = useMemo(
+    () => (unreadCount > 99 ? "99+" : String(unreadCount)),
+    [unreadCount]
+  );
 
   const toggleOpen = () => {
     setIsOpen((prev) => {
@@ -272,7 +318,11 @@ export default function AdminNotificationBell() {
   };
 
   const handleItemClick = (item: NotificationItem) => {
-    setItems((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry)));
+    setItems((prev) =>
+      prev.map((entry) =>
+        entry.id === item.id ? { ...entry, read: true } : entry
+      )
+    );
     setIsOpen(false);
     router.push(item.target);
   };
@@ -296,7 +346,9 @@ export default function AdminNotificationBell() {
       {isOpen && (
         <div className="absolute right-0 top-12 z-50 w-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Notifications admin</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              Notifications admin
+            </p>
             {items.length > 0 && (
               <div className="flex items-center gap-3">
                 <button
@@ -325,24 +377,37 @@ export default function AdminNotificationBell() {
             ) : (
               <ul>
                 {items.map((item) => (
-                  <li key={item.id} className="border-b border-slate-100 last:border-b-0 dark:border-slate-800">
+                  <li
+                    key={item.id}
+                    className="border-b border-slate-100 last:border-b-0 dark:border-slate-800"
+                  >
                     <button
                       type="button"
                       onClick={() => handleItemClick(item)}
                       className={`w-full px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${item.read ? "opacity-75" : "bg-indigo-50/40 dark:bg-indigo-950/10"}`}
                     >
-                    <div className="mb-1 flex items-start gap-2">
-                      {item.event === "new-alert" ? (
-                        <AlertCircle size={14} className="mt-0.5 shrink-0 text-indigo-500" />
-                      ) : (
-                        <UserPlus size={14} className="mt-0.5 shrink-0 text-emerald-500" />
-                      )}
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{item.title}</p>
-                    </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300">{item.desc}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      {new Date(item.createdAt).toLocaleString("fr-FR")}
-                    </p>
+                      <div className="mb-1 flex items-start gap-2">
+                        {item.event === "new-alert" ? (
+                          <AlertCircle
+                            size={14}
+                            className="mt-0.5 shrink-0 text-indigo-500"
+                          />
+                        ) : (
+                          <UserPlus
+                            size={14}
+                            className="mt-0.5 shrink-0 text-emerald-500"
+                          />
+                        )}
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {item.title}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        {item.desc}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {new Date(item.createdAt).toLocaleString("fr-FR")}
+                      </p>
                     </button>
                   </li>
                 ))}

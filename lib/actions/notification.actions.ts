@@ -342,6 +342,7 @@ export async function markAllNotificationsRead(userId: string) {
   return { success: true };
 }
 
+<<<<<<< HEAD
 export async function deleteNotification(notificationId: string) {
   try {
     await prisma.notification.delete({
@@ -366,6 +367,8 @@ export async function deleteAllNotifications(userId: string) {
   }
 }
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 // ============================================
 // EMAIL TEMPLATE
 // ============================================

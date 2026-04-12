@@ -15,7 +15,10 @@ import {
   ChevronRight,
   MoreVertical,
   Calendar,
+<<<<<<< HEAD
   BookOpen,
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -332,12 +335,15 @@ export default function PatientDashboard() {
               Graphiques
             </button>
           </Link>
+<<<<<<< HEAD
           <Link href="/dashboard/patient/guide">
             <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
               <BookOpen size={16} />
               Guide de suivi
             </button>
           </Link>
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         </div>
 
         {/* Recent Measurements - YouTube Video List Style */}

@@ -1,8 +1,14 @@
 "use client";
 
+<<<<<<< HEAD
 import React, { ReactNode, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useParams } from "next/navigation";
+=======
+import { ReactNode, useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 import {
   LayoutDashboard,
   Activity,
@@ -26,10 +32,14 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
+<<<<<<< HEAD
 import {
   getCoordinatorAlerts,
   getPatientBasicInfo,
 } from "@/lib/actions/coordinator.actions";
+=======
+import { getCoordinatorAlerts } from "@/lib/actions/coordinator.actions";
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 
 interface NavItem {
@@ -51,17 +61,23 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+<<<<<<< HEAD
   const params = useParams();
   const patientId = params?.patientId as string | undefined;
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [openAlertsCount, setOpenAlertsCount] = useState(0);
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+<<<<<<< HEAD
   const [selectedPatient, setSelectedPatient] = useState<{
     firstName: string;
     lastName: string;
   } | null>(null);
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -76,6 +92,7 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+<<<<<<< HEAD
     if (patientId) {
       loadPatientInfo(patientId);
     } else {
@@ -98,6 +115,8 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
     function handleClickOutside(event: MouseEvent) {
       if (
         notificationsRef.current &&
@@ -244,9 +263,15 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
                   ? pathname === item.href
                   : pathname.startsWith(item.href);
               return (
+<<<<<<< HEAD
                 <React.Fragment key={item.href}>
                   <Link
                     href={item.href}
+=======
+                <Link
+                  key={item.href}
+                  href={item.href}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                   className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                     isActive
                       ? "bg-gradient-to-r from-blue-500/10 to-blue-400/10 dark:from-blue-500/20 dark:to-blue-400/20 text-blue-600 dark:text-blue-400 shadow-sm"
@@ -264,6 +289,7 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
                     </span>
                   )}
                 </Link>
+<<<<<<< HEAD
                 {item.label === "Mes patients" && selectedPatient && (
                   <div className="ml-12 mt-1 mb-2 py-1.5 px-3 bg-blue-50/50 dark:bg-blue-900/10 border-l-2 border-blue-500 rounded-r-lg animate-in fade-in slide-in-from-left-2 transition-all">
                     <div className="flex items-center gap-2">
@@ -275,6 +301,8 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
                   </div>
                 )}
               </React.Fragment>
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
               );
             })}
           </div>

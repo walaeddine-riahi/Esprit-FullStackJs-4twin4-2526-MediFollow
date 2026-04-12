@@ -146,15 +146,22 @@ export async function getCoordinatorPatientIds(coordinatorId: string) {
   return Array.from(ids);
 }
 
+<<<<<<< HEAD
 /** Vérifie si une entrée vitale est complète selon le protocole supervision (TA + FC + temp + SpO2 + Poids + FreqResp) */
+=======
+/** Vérifie si une entrée vitale est complète selon le protocole minimal (TA + FC + temp + SpO2) */
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 function getVitalCompleteness(v: {
   systolicBP?: number | null;
   diastolicBP?: number | null;
   heartRate?: number | null;
   temperature?: number | null;
   oxygenSaturation?: number | null;
+<<<<<<< HEAD
   weight?: number | null;
   symptoms?: any;
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 }) {
   const issues: string[] = [];
   if (v.systolicBP == null || v.diastolicBP == null) {
@@ -163,6 +170,7 @@ function getVitalCompleteness(v: {
   if (v.heartRate == null) issues.push("Fréquence cardiaque manquante");
   if (v.temperature == null) issues.push("Température manquante");
   if (v.oxygenSaturation == null) issues.push("Saturation O₂ manquante");
+<<<<<<< HEAD
   if (v.weight == null) issues.push("Poids manquant");
   
   // Respiratory rate is stored inside symptoms JSON
@@ -172,6 +180,10 @@ function getVitalCompleteness(v: {
   const totalParams = 7;
   const filled = totalParams - issues.length;
   const score = Math.round((filled / totalParams) * 100);
+=======
+  const filled = 5 - issues.length;
+  const score = Math.round((filled / 5) * 100);
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   return { score, issues, isComplete: issues.length === 0 };
 }
 
@@ -382,12 +394,16 @@ export async function getCoordinatorPatientsDetailed() {
         id: true,
         medicalRecordNumber: true,
         userId: true,
+<<<<<<< HEAD
         department: true,
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
       },
       orderBy: { medicalRecordNumber: "asc" },
     });
 
   const userIds = patients.map((p) => p.userId);
+<<<<<<< HEAD
   const patientIds = patients.map((p) => p.id);
 
   const [users, allGrants, allAssignments] = await Promise.all([
@@ -441,12 +457,33 @@ export async function getCoordinatorPatientsDetailed() {
     validPatients.map(async (p) => {
       const compliance = await computeComplianceForPatient(p.id);
 
+=======
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phoneNumber: true,
+    },
+  });
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]));
+  const validPatients = patients.filter((p) => userById[p.userId]);
+
+  const detailed = await Promise.all(
+    validPatients.map(async (p) => {
+      const compliance = await computeComplianceForPatient(p.id);
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
       return {
         ...p,
         user: userById[p.userId],
         compliance,
+<<<<<<< HEAD
         assignedDoctors: grantsByPatientUserId[p.userId] || [],
         nextDeadline: assignmentByPatientId[p.id]?.dueDate || null,
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         assignmentNotes: null,
         assignedAt: null,
       };
@@ -703,6 +740,7 @@ export async function escalateCoordinatorAlert(alertId: string, note: string) {
     return { success: false, error: auth.error };
   }
   const patientIds = await getCoordinatorPatientIds(auth.user.id);
+<<<<<<< HEAD
   const alert = await prisma.alert.findUnique({ 
     where: { id: alertId },
     include: { patient: true }
@@ -729,6 +767,41 @@ export async function escalateCoordinatorAlert(alertId: string, note: string) {
   revalidatePath("/dashboard/coordinator/reviews");
   revalidatePath("/dashboard/coordinator/alerts");
   return { success: true, message: "Patient notifié de l'escalade" };
+=======
+  const alert = await prisma.alert.findUnique({ where: { id: alertId } });
+  if (!alert || !patientIds.includes(alert.patientId)) {
+    return { success: false, error: "Alerte introuvable" };
+  }
+  const n = note.trim();
+  const newAlert = await prisma.alert.create({
+    data: {
+      patientId: alert.patientId,
+      alertType: AlertType.SYSTEM,
+      severity: AlertSeverity.HIGH,
+      message: `Escalade coordinateur : ${n}`,
+      status: AlertStatus.OPEN,
+      data: {
+        escalatedFromAlertId: alertId,
+        coordinatorId: auth.user.id,
+      },
+    },
+  });
+
+  try {
+    const { NotificationService } = await import(
+      "@/lib/services/notification.service"
+    );
+    await NotificationService.notifyAlert(newAlert.id);
+  } catch (notificationError) {
+    console.error(
+      "[escalateCoordinatorAlert] failed to notify patient",
+      notificationError
+    );
+  }
+
+  revalidatePath("/dashboard/coordinator/alerts");
+  return { success: true, message: "Escalade enregistrée" };
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 }
 
 export async function generateEscalationMotif(alertId: string) {
@@ -869,7 +942,10 @@ export async function flagCoordinatorEntry(
   }
   const patientRow = await prisma.patient.findUnique({
     where: { id: patientId },
+<<<<<<< HEAD
     select: { userId: true },
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   });
   if (!patientRow) {
     return { success: false, error: "Patient introuvable" };
@@ -910,13 +986,17 @@ export async function flagCoordinatorEntry(
       note,
     },
   });
+<<<<<<< HEAD
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   revalidatePath("/dashboard/coordinator");
   revalidatePath("/dashboard/coordinator/reviews");
   revalidatePath(`/dashboard/coordinator/patients/${patientId}`);
   return { success: true, message: "Signalement enregistré" };
 }
 
+<<<<<<< HEAD
 export async function requestPatientReMeasure(
   patientId: string,
   note?: string
@@ -952,6 +1032,8 @@ export async function requestPatientReMeasure(
   return { success: true, message: "Demande envoyée au patient" };
 }
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 export async function resolveCoordinatorFlag(flagId: string) {
   const auth = await requireCoordinator();
   if (!auth.ok || !auth.user) {
@@ -1072,7 +1154,11 @@ export async function getUnifiedReviews() {
     if ((a.status === "RESOLVED" || a.status === "CLOSED" || a.resolvedAt) && a.resolvedAt && a.resolvedAt >= today) {
       stats.closedToday++;
     }
+<<<<<<< HEAD
     if (a.status !== "OPEN") continue;
+=======
+    if (a.status !== "OPEN" && a.status !== "ACKNOWLEDGED") continue;
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 
     stats.critiques++;
     stats.total++;
@@ -1112,12 +1198,16 @@ export async function closeUnifiedReview(id: string, sourceType: string) {
     } else {
       await prisma.alert.update({
         where: { id },
+<<<<<<< HEAD
         data: { 
           status: "ACKNOWLEDGED", 
           acknowledgedById: auth.user.id, 
           acknowledgedAt: new Date(), 
           resolution: "Signalement acquitté par le coordinateur" 
         },
+=======
+        data: { status: "RESOLVED", resolvedById: auth.user.id, resolvedAt: new Date(), resolution: "Clôturé par le coordinateur depuis Revues" },
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
       });
     }
 
@@ -1127,6 +1217,7 @@ export async function closeUnifiedReview(id: string, sourceType: string) {
     return { success: false, error: "Impossible de clôturer l'élément." };
   }
 }
+<<<<<<< HEAD
 
 export async function getPatientBasicInfo(patientId: string) {
   try {
@@ -1159,3 +1250,5 @@ export async function getPatientBasicInfo(patientId: string) {
   }
 }
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469

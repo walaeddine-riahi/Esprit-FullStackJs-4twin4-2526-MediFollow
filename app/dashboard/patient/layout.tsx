@@ -27,17 +27,23 @@ import {
   ClipboardList,
   Beaker,
   BookOpen,
+<<<<<<< HEAD
   Trash2,
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
 import { getPatientAlerts } from "@/lib/actions/alert.actions";
 import { getPatientProfile } from "@/lib/actions/patient.actions";
+<<<<<<< HEAD
 import { 
   getUserNotifications, 
   deleteNotification, 
   deleteAllNotifications 
 } from "@/lib/actions/notification.actions";
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AlertStatus } from "@/types/medifollow.types";
 
@@ -61,12 +67,19 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+<<<<<<< HEAD
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [profileImage, setProfileImage] = useState<string>("");
   const [openAlertsCount, setOpenAlertsCount] = useState(0);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [combinedNotifications, setCombinedNotifications] = useState<any[]>([]);
+=======
+  const [user, setUser] = useState<any>(null);
+  const [profileImage, setProfileImage] = useState<string>("");
+  const [openAlertsCount, setOpenAlertsCount] = useState(0);
+  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -110,6 +123,7 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
       if (patientRes.ok) {
         const { patientId } = await patientRes.json();
         if (patientId) {
+<<<<<<< HEAD
           const [alertsRes, notificationsRes] = await Promise.all([
             getPatientAlerts(patientId, AlertStatus.OPEN),
             getUserNotifications(currentUser.id, true)
@@ -176,6 +190,21 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
       setCombinedNotifications(prev => prev.filter(n => n.uiCategory === "ALERT"));
       setUnreadNotificationsCount(0);
     }
+=======
+          const alertsRes = await getPatientAlerts(patientId, AlertStatus.OPEN);
+          if (alertsRes.success) {
+            const alerts = alertsRes.alerts ?? [];
+            setRecentAlerts(alerts.slice(0, 10));
+            setOpenAlertsCount(
+              alerts.filter(
+                (a: any) => a.severity === "CRITICAL" || a.severity === "HIGH"
+              ).length
+            );
+          }
+        }
+      }
+    } catch {}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   }
 
   async function handleLogout() {
@@ -455,18 +484,28 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+<<<<<<< HEAD
                     title="Notifications et Alertes"
                   >
                     <Bell className="size-5 text-gray-700 dark:text-gray-300" />
                     {(openAlertsCount > 0 || unreadNotificationsCount > 0) && (
                       <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold shadow-lg shadow-red-500/50">
                         {openAlertsCount + unreadNotificationsCount}
+=======
+                    title="Alertes"
+                  >
+                    <Bell className="size-5 text-gray-700 dark:text-gray-300" />
+                    {openAlertsCount > 0 && (
+                      <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold shadow-lg shadow-red-500/50">
+                        {openAlertsCount}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                       </span>
                     )}
                   </button>
                   {showNotifications && (
                     <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-950 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+<<<<<<< HEAD
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                             Notifications
@@ -480,6 +519,11 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                             </button>
                           )}
                         </div>
+=======
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                          Notifications
+                        </h3>
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                         <button
                           aria-label="Fermer"
                           onClick={() => setShowNotifications(false)}
@@ -489,7 +533,11 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                         </button>
                       </div>
                       <div className="max-h-[400px] overflow-y-auto">
+<<<<<<< HEAD
                         {combinedNotifications.length === 0 ? (
+=======
+                        {recentAlerts.length === 0 ? (
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                           <div className="flex flex-col items-center justify-center py-10 px-4">
                             <Bell className="size-10 text-gray-300 dark:text-gray-700 mb-3" />
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -497,6 +545,7 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                             </p>
                           </div>
                         ) : (
+<<<<<<< HEAD
                           combinedNotifications.map((item: any) => {
                             const isAlert = item.uiCategory === "ALERT";
                             
@@ -581,6 +630,61 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                       >
                         Voir tout le centre de suivi
                       </Link>
+=======
+                          recentAlerts.map((alert: any) => {
+                            const severityColors: Record<string, string> = {
+                              LOW: "bg-blue-50 text-blue-700 border-blue-200",
+                              MEDIUM:
+                                "bg-yellow-50 text-yellow-700 border-yellow-200",
+                              HIGH: "bg-orange-50 text-orange-700 border-orange-200",
+                              CRITICAL: "bg-red-50 text-red-700 border-red-200",
+                            };
+                            return (
+                              <Link
+                                key={alert.id}
+                                href="/dashboard/patient/alerts"
+                                onClick={() => setShowNotifications(false)}
+                                className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+                              >
+                                <div className="size-9 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                  <Bell className="size-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                      {alert.alertType ?? "Alerte"}
+                                    </p>
+                                    <span
+                                      className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex-shrink-0 ${severityColors[alert.severity] ?? ""}`}
+                                    >
+                                      {alert.severity === "CRITICAL"
+                                        ? "CRITIQUE"
+                                        : alert.severity === "HIGH"
+                                          ? "ÉLEVÉ"
+                                          : alert.severity === "MEDIUM"
+                                            ? "MOYEN"
+                                            : "BAS"}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                                    {alert.message}
+                                  </p>
+                                </div>
+                              </Link>
+                            );
+                          })
+                        )}
+                      </div>
+                      {recentAlerts.length > 0 && (
+                        <Link
+                          href="/dashboard/patient/alerts"
+                          onClick={() => setShowNotifications(false)}
+                          className="block px-4 py-3 text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-gray-200 dark:border-gray-800"
+                        >
+                          Voir toutes les alertes
+                        </Link>
+                      )}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                     </div>
                   )}
                 </div>
@@ -782,6 +886,7 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+<<<<<<< HEAD
       {/* ── Notification Detail Modal ────────────────────────────────────────── */}
       {selectedNotif && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedNotif(null)}>
@@ -844,6 +949,8 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
     </div>
   );
 }

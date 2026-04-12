@@ -24,6 +24,13 @@ export default function CoordinatorAlertsPage() {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [escNote, setEscNote] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [aiGenerating, setAiGenerating] = useState<Record<string, boolean>>({});
+  const [aiMotifError, setAiMotifError] = useState<Record<string, string>>({});
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   const [aiTriageText, setAiTriageText] = useState("");
   const [aiTriageLoading, setAiTriageLoading] = useState(false);
   const [aiTriageResult, setAiTriageResult] = useState<any>(null);
@@ -78,7 +85,39 @@ export default function CoordinatorAlertsPage() {
     }
   }
 
+<<<<<<< HEAD
 
+=======
+  async function escalate(id: string) {
+    const note = (escNote[id] || "").trim();
+    if (!note) return;
+    setBusy(id);
+    await escalateCoordinatorAlert(id, note);
+    setEscNote((s) => ({ ...s, [id]: "" }));
+    await load();
+    setBusy(null);
+  }
+
+  async function generateMotif(id: string) {
+    setAiGenerating((s) => ({ ...s, [id]: true }));
+    setAiMotifError((s) => ({ ...s, [id]: "" }));
+    try {
+      const res = await generateEscalationMotif(id);
+      if (res.success && res.motif) {
+        setEscNote((s) => ({ ...s, [id]: res.motif }));
+        setAiMotifError((s) => ({ ...s, [id]: "" }));
+      } else {
+        const errMsg = res.error || "Erreur inconnue lors de la génération";
+        setAiMotifError((s) => ({ ...s, [id]: errMsg }));
+      }
+    } catch (error: any) {
+      const errMsg = error?.message || "Erreur lors de l'appel API";
+      setAiMotifError((s) => ({ ...s, [id]: errMsg }));
+    } finally {
+      setAiGenerating((s) => ({ ...s, [id]: false }));
+    }
+  }
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 
   if (loading) {
     return (
@@ -217,6 +256,7 @@ export default function CoordinatorAlertsPage() {
                     {statusLabel[a.status] ?? a.status}
                   </span>
                 </div>
+<<<<<<< HEAD
                 <div className="mt-4 border-t border-blue-200/50 dark:border-blue-900/30 pt-4 flex justify-end">
                   <button
                     onClick={() => router.push(`/dashboard/coordinator/patients/${a.patientId}`)}
@@ -224,6 +264,50 @@ export default function CoordinatorAlertsPage() {
                   >
                     Gérer l&apos;alerte (Patient)
                   </button>
+=======
+                <div className="mt-4 border-t border-blue-200/50 dark:border-blue-900/30 pt-4">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
+                    <Shield className="size-3" />
+                    Escalade (nouvelle alerte système)
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      value={escNote[a.id] ?? ""}
+                      onChange={(e) =>
+                        setEscNote((s) => ({ ...s, [a.id]: e.target.value }))
+                      }
+                      placeholder="Motif d'escalade…"
+                      className="flex-1 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      disabled={aiGenerating[a.id]}
+                      onClick={() => generateMotif(a.id)}
+                      title="Générer automatiquement avec l'IA"
+                      className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50"
+                    >
+                      {aiGenerating[a.id] ? (
+                        <Loader2 className="size-4 animate-spin inline" />
+                      ) : (
+                        <Sparkles className="size-4 inline" />
+                      )}
+                      {aiGenerating[a.id] ? " …" : " Auto"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy === a.id || !(escNote[a.id] || "").trim()}
+                      onClick={() => escalate(a.id)}
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {busy === a.id ? "…" : "Escalader"}
+                    </button>
+                  </div>
+                  {aiMotifError[a.id] && (
+                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      ⚠️ {aiMotifError[a.id]}
+                    </p>
+                  )}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                 </div>
               </div>
             ))

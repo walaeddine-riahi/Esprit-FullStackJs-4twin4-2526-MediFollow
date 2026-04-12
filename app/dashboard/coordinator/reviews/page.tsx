@@ -9,7 +9,10 @@ import {
   getUnifiedReviews,
   closeUnifiedReview,
   escalateCoordinatorAlert,
+<<<<<<< HEAD
   requestPatientReMeasure,
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 } from "@/lib/actions/coordinator.actions";
 import { formatDateTime } from "@/lib/utils";
 
@@ -24,6 +27,7 @@ function ReviewCard({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [busy, setBusy] = useState(false);
+<<<<<<< HEAD
   const [remeasureSent, setRemeasureSent] = useState(false);
 
   const runAiAnalysis = async () => {
@@ -49,6 +53,39 @@ function ReviewCard({
       setAnalyzing(false);
     }
   };
+=======
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchAnalysis = async () => {
+      setAnalyzing(true);
+      try {
+        const res = await fetch("/api/coordinator/review-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            title: review.title,
+            note: review.note,
+            vitalRecord: review.vitalRecord,
+          }),
+        });
+        const data = await res.json();
+        if (mounted && data.success) {
+          setAiAnalysis(data.analysis);
+        }
+      } catch (err) {
+        // Ignorer silencieusement pour le client
+      } finally {
+        if (mounted) setAnalyzing(false);
+      }
+    };
+    fetchAnalysis();
+    return () => {
+      mounted = false;
+    };
+  }, [review]);
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 
   const handleClose = async () => {
     setBusy(true);
@@ -60,15 +97,22 @@ function ReviewCard({
   const handleEscalate = async () => {
     setBusy(true);
     if (review.sourceType === "ALERT") {
+<<<<<<< HEAD
       const enrichment = aiAnalysis ? `\n\nAnalyse IA : ${aiAnalysis}` : "";
       await escalateCoordinatorAlert(
         review.id,
         "Expertise médicale demandée par le coordinateur." + enrichment
+=======
+      await escalateCoordinatorAlert(
+        review.id,
+        "Escalade depuis Revues & signalements (Analyse IA)"
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
       );
     }
     await handleClose(); // On clôture la révision après escalade
   };
 
+<<<<<<< HEAD
   const handleRequestReMeasure = async () => {
     setBusy(true);
     // Use AI analysis results as the note for the patient if available
@@ -84,6 +128,8 @@ function ReviewCard({
     setBusy(false);
   };
 
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   const isCritique = review.reviewType === "Critique";
   const borderCol = isCritique
     ? "border-l-4 border-l-red-500 border-gray-200 dark:border-gray-800"
@@ -161,6 +207,7 @@ function ReviewCard({
               SpO₂ {review.vitalRecord.oxygenSaturation}%
             </span>
           )}
+<<<<<<< HEAD
           {review.vitalRecord.symptoms?.respiratoryRate && (
             <span className="bg-gray-100 dark:bg-[#252525] text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
               F.R. {review.vitalRecord.symptoms.respiratoryRate} rpm
@@ -207,6 +254,8 @@ function ReviewCard({
               </div>
             )}
           </div>
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         </div>
       )}
 
@@ -216,6 +265,7 @@ function ReviewCard({
           <span className="text-xs font-bold text-emerald-700 dark:text-emerald-500">
             Analyse IA
           </span>
+<<<<<<< HEAD
           {!aiAnalysis && !analyzing && (
             <button
               onClick={runAiAnalysis}
@@ -224,6 +274,8 @@ function ReviewCard({
               Lancer l'analyse
             </button>
           )}
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         </div>
         {analyzing ? (
           <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300/70 text-sm">
@@ -249,6 +301,7 @@ function ReviewCard({
         )}
         {!isCritique && (
           <button
+<<<<<<< HEAD
             onClick={handleRequestReMeasure}
             disabled={busy || remeasureSent}
             className={`px-4 py-2 border rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
@@ -261,12 +314,30 @@ function ReviewCard({
           </button>
         )}
 
+=======
+            disabled={busy}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            Demander re-mesure
+          </button>
+        )}
+        <button
+          disabled={busy}
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          Contacter le patient
+        </button>
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         <button
           onClick={handleClose}
           disabled={busy}
           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
         >
+<<<<<<< HEAD
           {busy ? "..." : "Acquitter"}
+=======
+          {busy ? "..." : "Clôturer"}
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         </button>
       </div>
     </div>

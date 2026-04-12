@@ -1,12 +1,17 @@
 "use client";
 
+<<<<<<< HEAD
 import { Search, ChevronRight, CheckCircle2, AlertCircle, Filter, Building2, Stethoscope, X } from "lucide-react";
+=======
+import { Search, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react";
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { getCoordinatorPatientsDetailed } from "@/lib/actions/coordinator.actions";
+<<<<<<< HEAD
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -40,6 +45,8 @@ const getDeadlineColor = (date: any) => {
   if (diffDays <= 1) return "text-amber-500 dark:text-amber-400 font-bold";
   return "text-blue-600 dark:text-blue-400 font-medium";
 };
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 
 export default function CoordinatorPatientsPage() {
   const router = useRouter();
@@ -48,6 +55,7 @@ export default function CoordinatorPatientsPage() {
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<any[]>([]);
   const [query, setQuery] = useState(initialQ);
+<<<<<<< HEAD
   const [deptFilter, setDeptFilter] = useState("");
   const [doctorFilter, setDoctorFilter] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -62,6 +70,10 @@ export default function CoordinatorPatientsPage() {
     return Array.from(new Set(docs)).sort();
   }, [patients]);
 
+=======
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
   useEffect(() => {
     (async () => {
       const user = await getCurrentUser();
@@ -101,12 +113,18 @@ export default function CoordinatorPatientsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+<<<<<<< HEAD
     return patients.filter((p) => {
       // 1. Search Query
+=======
+    if (!q) return patients;
+    return patients.filter((p) => {
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
       const name =
         `${p.user?.firstName ?? ""} ${p.user?.lastName ?? ""}`.toLowerCase();
       const mrn = (p.medicalRecordNumber ?? "").toLowerCase();
       const email = (p.user?.email ?? "").toLowerCase();
+<<<<<<< HEAD
       const matchesSearch =
         !q || name.includes(q) || mrn.includes(q) || email.includes(q);
 
@@ -127,6 +145,11 @@ export default function CoordinatorPatientsPage() {
     setDeptFilter("");
     setDoctorFilter("");
   };
+=======
+      return name.includes(q) || mrn.includes(q) || email.includes(q);
+    });
+  }, [patients, query]);
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
 
   if (loading) {
     return (
@@ -147,6 +170,7 @@ export default function CoordinatorPatientsPage() {
           questionnaires).
         </p>
 
+<<<<<<< HEAD
         <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
@@ -202,6 +226,16 @@ export default function CoordinatorPatientsPage() {
               </button>
             )}
           </div>
+=======
+        <div className="mt-6 relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher par nom, dossier, email…"
+            className="w-full rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-2.5 pl-10 pr-4 text-sm text-gray-900 dark:text-white focus:border-blue-400 focus:outline-none"
+          />
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
         </div>
 
         <div className="mt-8 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
@@ -217,17 +251,23 @@ export default function CoordinatorPatientsPage() {
                 <th className="px-4 py-3 font-semibold hidden md:table-cell">
                   Dossier
                 </th>
+<<<<<<< HEAD
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">
                   Département
                 </th>
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">
                   Docteur(s)
                 </th>
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                 <th className="px-4 py-3 font-semibold">Conformité</th>
                 <th className="px-4 py-3 font-semibold hidden sm:table-cell">
                   Questionnaires (7j)
                 </th>
+<<<<<<< HEAD
                 <th className="px-4 py-3 font-semibold">Échéance</th>
+=======
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                 <th className="px-4 py-3 font-semibold">Aujourd&apos;hui</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
@@ -260,6 +300,7 @@ export default function CoordinatorPatientsPage() {
                     <td className="px-4 py-3 hidden md:table-cell text-gray-600 dark:text-gray-300">
                       {p.medicalRecordNumber || "—"}
                     </td>
+<<<<<<< HEAD
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                         {p.department || "Général"}
@@ -281,6 +322,11 @@ export default function CoordinatorPatientsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-20 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+=======
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-24 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                           <div
                             className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
                             style={{
@@ -294,6 +340,7 @@ export default function CoordinatorPatientsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell text-gray-600 dark:text-gray-300">
+<<<<<<< HEAD
                       {p.compliance?.questionnaireCount7d ?? 0}
                     </td>
                     <td className="px-4 py-3">
@@ -307,6 +354,9 @@ export default function CoordinatorPatientsPage() {
                           </span>
                         )}
                       </div>
+=======
+                      {p.compliance?.questionnaireCount7d ?? 0} / objectif 1+
+>>>>>>> b6803c37bc075264a1d77927df0907ecd80bf469
                     </td>
                     <td className="px-4 py-3">
                       {p.compliance?.hasVitalToday ? (

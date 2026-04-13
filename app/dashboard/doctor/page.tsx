@@ -30,34 +30,15 @@ import {
   Copy,
   Check,
   ExternalLink,
-<<<<<<< HEAD
-  ClipboardList,
-=======
->>>>>>> ai-features-backup
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useRef } from "react";
 
-<<<<<<< HEAD
-import {
-  getAllAlerts,
-  getAlertStats,
-  getAlertsByDoctorSpecialty,
-  getAlertStatsByDoctorSpecialty,
-} from "@/lib/actions/alert.actions";
-import { getCurrentUser, logout } from "@/lib/actions/auth.actions";
-import { getDoctorProfile } from "@/lib/actions/doctor.actions";
-import {
-  getDashboardStats,
-  getDashboardStatsByDoctorSpecialty,
-} from "@/lib/actions/patient.actions";
-=======
 import { getAllAlerts, getAlertStats } from "@/lib/actions/alert.actions";
 import { getCurrentUser, logout } from "@/lib/actions/auth.actions";
 import { getDoctorProfile } from "@/lib/actions/doctor.actions";
 import { getDashboardStats } from "@/lib/actions/patient.actions";
->>>>>>> ai-features-backup
 import { formatDateTime } from "@/lib/utils";
 import { AlertStatus } from "@/types/medifollow.types";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -153,40 +134,20 @@ export default function DoctorDashboard() {
         setProfileImage(profileResult.data.profileImage);
       }
 
-<<<<<<< HEAD
-      // Load alert stats filtered by doctor's specialty
-      const statsResult = await getAlertStatsByDoctorSpecialty(currentUser.id);
-=======
       // Load alert stats
       const statsResult = await getAlertStats();
->>>>>>> ai-features-backup
       if (statsResult.success && statsResult.stats) {
         setStats(statsResult.stats);
       }
 
-<<<<<<< HEAD
-      // Load comprehensive dashboard stats filtered by doctor's specialty
-      const dashStatsResult = await getDashboardStatsByDoctorSpecialty(
-        currentUser.id
-      );
-=======
       // Load comprehensive dashboard stats
       const dashStatsResult = await getDashboardStats();
->>>>>>> ai-features-backup
       if (dashStatsResult.success && dashStatsResult.stats) {
         setDashboardStats(dashStatsResult.stats);
       }
 
-<<<<<<< HEAD
-      // Load recent alerts filtered by doctor's specialty
-      const alertsResult = await getAlertsByDoctorSpecialty(
-        currentUser.id,
-        AlertStatus.OPEN
-      );
-=======
       // Load recent alerts
       const alertsResult = await getAllAlerts(AlertStatus.OPEN);
->>>>>>> ai-features-backup
       if (alertsResult.success && alertsResult.alerts) {
         setRecentAlerts(alertsResult.alerts.slice(0, 10));
       }
@@ -866,15 +827,6 @@ export default function DoctorDashboard() {
                 Rapports
               </button>
             </Link>
-<<<<<<< HEAD
-            <Link href="/dashboard/questionnaires">
-              <button className="flex items-center gap-2 rounded-full border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-5 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors whitespace-nowrap">
-                <ClipboardList size={18} />
-                Questionnaires
-              </button>
-            </Link>
-=======
->>>>>>> ai-features-backup
           </div>
 
           {/* Recent Alerts - Kick Style */}
@@ -1046,11 +998,6 @@ export default function DoctorDashboard() {
               <button
                 onClick={() => setWalletModalOpen(false)}
                 className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-<<<<<<< HEAD
-                aria-label="Fermer le modal du wallet"
-                title="Fermer"
-=======
->>>>>>> ai-features-backup
               >
                 <X className="size-5 text-gray-500" />
               </button>

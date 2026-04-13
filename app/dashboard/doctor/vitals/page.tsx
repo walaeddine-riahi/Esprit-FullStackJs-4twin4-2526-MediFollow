@@ -1,12 +1,7 @@
 import { redirect } from "next/navigation";
 import { Activity, Heart, Thermometer, Droplets, Wind } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-<<<<<<< HEAD
-import { getPatientsByDoctorSpecialtyWithAllVitals } from "@/lib/actions/patient.actions";
-import { getDoctorProfile } from "@/lib/actions/doctor.actions";
-=======
 import { getAllPatientsWithAllVitals } from "@/lib/actions/patient.actions";
->>>>>>> ai-features-backup
 import AddVitalButton from "@/components/AddVitalButton";
 import VitalsTableActions from "@/components/VitalsTableActions";
 
@@ -20,13 +15,7 @@ export default async function DoctorVitalsPage() {
     redirect("/login");
   }
 
-<<<<<<< HEAD
-  // Get doctor's specialty and patients matching that specialty with all vitals
-  const doctorProfile = await getDoctorProfile(user.id);
-  const patients = await getPatientsByDoctorSpecialtyWithAllVitals(user.id);
-=======
   const patients = await getAllPatientsWithAllVitals();
->>>>>>> ai-features-backup
 
   // Get all recent vitals from all patients
   const allVitals = patients
@@ -70,19 +59,8 @@ export default async function DoctorVitalsPage() {
             Signes Vitaux
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-<<<<<<< HEAD
-            Vue d'ensemble des signes vitaux de vos patients
-          </p>
-          {doctorProfile?.data?.specialty && (
-            <p className="text-sm text-green-600 dark:text-green-400 mt-2 font-medium">
-              Spécialité:{" "}
-              <span className="capitalize">{doctorProfile.data.specialty}</span>
-            </p>
-          )}
-=======
             Vue d'ensemble des signes vitaux de tous vos patients
           </p>
->>>>>>> ai-features-backup
         </div>
         <AddVitalButton patients={patients} />
       </div>

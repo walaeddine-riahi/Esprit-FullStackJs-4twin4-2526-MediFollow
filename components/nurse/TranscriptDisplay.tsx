@@ -34,7 +34,7 @@ export function TranscriptDisplay({
         <div className="flex items-center gap-2 mb-2">
           <Volume2 className="text-blue-600 dark:text-blue-400" size={16} />
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {isListening ? "Écoute en cours..." : "Transcription"}
+            {isListening ? "Listening..." : "Transcription"}
           </h3>
         </div>
         
@@ -46,7 +46,7 @@ export function TranscriptDisplay({
             </span>
             {isListening && !transcript && !interimTranscript && (
               <span className="text-gray-400 italic">
-                Parlez maintenant...
+                Speak now...
               </span>
             )}
           </p>

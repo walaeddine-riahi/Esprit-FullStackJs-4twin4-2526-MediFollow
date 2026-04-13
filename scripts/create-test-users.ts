@@ -33,10 +33,10 @@ async function createTestUsers() {
     // 2. Create Nurse User
     const nursePassword = await bcrypt.hash("nurse123", 10);
     const nurse = await prisma.user.upsert({
-      where: { email: "nurse@medifollow.com" },
+      where: { email: "eya@medifollow.com" },
       update: {},
       create: {
-        email: "nurse@medifollow.com",
+        email: "eya@medifollow.com",
         passwordHash: nursePassword,
         firstName: "Sophie",
         lastName: "Martin",
@@ -129,7 +129,7 @@ async function createTestUsers() {
     console.log("  Email: admin@medifollow.com");
     console.log("  Password: admin123\n");
     console.log("Nurse:");
-    console.log("  Email: nurse@medifollow.com");
+    console.log("  Email: eya@medifollow.com");
     console.log("  Password: nurse123\n");
     console.log("Coordinator:");
     console.log("  Email: coordinator@medifollow.com");

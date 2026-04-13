@@ -90,7 +90,7 @@ export default function NursePatientDetailPage({
             <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900"></div>
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            Chargement...
+            Loading...
           </p>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function NursePatientDetailPage({
   if (!patient) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white dark:bg-black">
-        <p className="text-gray-500 dark:text-gray-400">Patient non trouvé</p>
+        <p className="text-gray-500 dark:text-gray-400">Patient not found</p>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function NursePatientDetailPage({
       setAiReport(result.report);
       setShowReportDialog(true);
     } else if (!result.success && 'error' in result) {
-      alert("Erreur lors de la génération du rapport: " + result.error);
+      alert("Error generating report: " + result.error);
     }
   }
 
@@ -130,7 +130,7 @@ export default function NursePatientDetailPage({
             className="inline-flex items-center gap-2 text-green-600 dark:text-green-400 hover:underline mb-4"
           >
             <ArrowLeft size={16} />
-            Retour aux patients
+            Back to Patients
           </Link>
           <div className="flex items-start justify-between">
             <div>
@@ -154,7 +154,7 @@ export default function NursePatientDetailPage({
                 href={`/dashboard/nurse/enter-data?patientId=${patient.id}`}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                Entrer des données
+                Enter Data
               </Link>
             </div>
           </div>
@@ -169,17 +169,17 @@ export default function NursePatientDetailPage({
               <AlertCircle className="text-red-600 dark:text-red-400" size={24} />
               <div className="flex-1">
                 <p className="font-semibold text-red-900 dark:text-red-300">
-                  {activeAlerts} alerte{activeAlerts > 1 ? "s" : ""} active{activeAlerts > 1 ? "s" : ""}
+                  {activeAlerts} alert{activeAlerts > 1 ? "s" : ""} active
                 </p>
                 <p className="text-sm text-red-700 dark:text-red-400">
-                  Ce patient nécessite une attention immédiate
+                  This patient requires immediate attention
                 </p>
               </div>
               <Link
                 href="/dashboard/nurse/alerts"
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               >
-                Voir les alertes
+                View Alerts
               </Link>
             </div>
           </div>
@@ -189,15 +189,15 @@ export default function NursePatientDetailPage({
           {/* Patient Info Card */}
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Informations patient
+              Patient Information
             </h2>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <User className="text-gray-400" size={18} />
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Âge</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Age</p>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {age} ans
+                    {age} years
                   </p>
                 </div>
               </div>
@@ -205,7 +205,7 @@ export default function NursePatientDetailPage({
               <div className="flex items-center gap-3">
                 <Calendar className="text-gray-400" size={18} />
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Genre</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Gender</p>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {patient.gender}
                   </p>
@@ -228,7 +228,7 @@ export default function NursePatientDetailPage({
                 <div className="flex items-start gap-3">
                   <FileText className="text-gray-400 mt-1" size={18} />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Diagnostic</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Diagnosis</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {patient.diagnosis}
                     </p>
@@ -241,14 +241,14 @@ export default function NursePatientDetailPage({
           {/* Latest Vitals Card */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Dernières constantes vitales
+              Latest Vitals
             </h2>
             {vitalRecords.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {vitalRecords[0].systolicBP && vitalRecords[0].diastolicBP && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Pression artérielle
+                      Blood Pressure
                     </p>
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {vitalRecords[0].systolicBP}/{vitalRecords[0].diastolicBP}
@@ -260,7 +260,7 @@ export default function NursePatientDetailPage({
                 {vitalRecords[0].heartRate && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Fréquence cardiaque
+                      Heart Rate
                     </p>
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {vitalRecords[0].heartRate}
@@ -284,7 +284,7 @@ export default function NursePatientDetailPage({
                 {vitalRecords[0].oxygenSaturation && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Saturation O₂
+                      O₂ Saturation
                     </p>
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {vitalRecords[0].oxygenSaturation}
@@ -295,7 +295,7 @@ export default function NursePatientDetailPage({
 
                 {vitalRecords[0].weight && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Poids</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Weight</p>
                     <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {vitalRecords[0].weight}
                     </p>
@@ -331,7 +331,7 @@ export default function NursePatientDetailPage({
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Historique des entrées
+              Entry History
             </h2>
             <TrendingUp className="text-gray-400" size={20} />
           </div>
@@ -352,7 +352,7 @@ export default function NursePatientDetailPage({
                     <div>
                       <div className="flex items-center gap-3 mb-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {new Date(record.recordedAt).toLocaleDateString("fr-FR", {
+                          {new Date(record.recordedAt).toLocaleDateString("en-US", {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
@@ -362,7 +362,7 @@ export default function NursePatientDetailPage({
                         </p>
                         {record.enteredByRole === "NURSE" && (
                           <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs rounded-full">
-                            Entré par infirmier(ère)
+                            Entered by Nurse
                           </span>
                         )}
                         {record.status && record.status !== "NORMAL" && (

@@ -11,8 +11,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-<<<<<<< HEAD
-=======
     // Get patient ID
     let patientId: string;
     if (user.role === "PATIENT") {
@@ -33,7 +31,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
->>>>>>> ai-features-backup
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -53,38 +50,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-<<<<<<< HEAD
-    // Determine upload path based on user role
-    let blobPath: string;
-    let saveToMedicalDocument = false;
-    let patientId: string | null = null;
-
-    if (user.role === "PATIENT") {
-      // Patient upload
-      const patient = await prisma.patient.findUnique({
-        where: { userId: user.id },
-      });
-      if (!patient) {
-        return NextResponse.json(
-          { error: "Patient not found" },
-          { status: 404 }
-        );
-      }
-      patientId = patient.id;
-      blobPath = `medical-documents/${patientId}`;
-      saveToMedicalDocument = true;
-    } else if (user.role === "DOCTOR") {
-      // Doctor upload (for analysis requests)
-      blobPath = `analysis-requests/${user.id}`;
-    } else {
-      return NextResponse.json(
-        { error: "Only patients and doctors can upload documents" },
-        { status: 403 }
-      );
-    }
-
-=======
->>>>>>> ai-features-backup
     // Get Azure Storage configuration
     const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
     const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || "uploads";
@@ -99,11 +64,7 @@ export async function POST(request: NextRequest) {
     // Create unique blob name
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-<<<<<<< HEAD
-    const blobName = `${blobPath}/${timestamp}-${sanitizedFileName}`;
-=======
     const blobName = `medical-documents/${patientId}/${timestamp}-${sanitizedFileName}`;
->>>>>>> ai-features-backup
 
     // Create BlobServiceClient
     const blobServiceClient =
@@ -136,27 +97,6 @@ export async function POST(request: NextRequest) {
     // Get blob URL (without SAS - will be generated on demand)
     const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobName}`;
 
-<<<<<<< HEAD
-    // Save document metadata to database only for patients
-    let documentId: string | null = null;
-    if (saveToMedicalDocument && patientId) {
-      const document = await prisma.medicalDocument.create({
-        data: {
-          patientId,
-          fileName: sanitizedFileName,
-          originalName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-          category: (category || "OTHER") as any,
-          description: description || null,
-          azureBlobUrl: blobUrl,
-          azureContainerName: containerName,
-          azureBlobName: blobName,
-        },
-      });
-      documentId = document.id;
-    }
-=======
     // Save document metadata to database
     const document = await prisma.medicalDocument.create({
       data: {
@@ -172,24 +112,15 @@ export async function POST(request: NextRequest) {
         azureBlobName: blobName,
       },
     });
->>>>>>> ai-features-backup
 
     return NextResponse.json({
       success: true,
       data: {
-<<<<<<< HEAD
-        id: documentId,
-        fileName: sanitizedFileName,
-        fileUrl: blobUrl,
-        fileSize: file.size,
-        uploadedAt: new Date(),
-=======
         id: document.id,
         fileName: document.fileName,
         fileUrl: blobUrl,
         fileSize: document.fileSize,
         uploadedAt: document.uploadedAt,
->>>>>>> ai-features-backup
       },
     });
   } catch (error) {

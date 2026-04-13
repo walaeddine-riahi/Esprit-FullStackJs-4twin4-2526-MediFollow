@@ -15,8 +15,6 @@ import {
   decryptPrivateKey,
   isEncrypted,
 } from "@/lib/encryption";
-import { AuditService } from "@/lib/services/audit.service";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 // Check if blockchain is enabled (for development)
 const isBlockchainEnabled = process.env.BLOCKCHAIN_ENABLED !== "false";
@@ -184,50 +182,12 @@ export async function grantDoctorAccess(
     );
     console.log(`   Transaction: ${executedTransaction.hash}`);
 
-    // Log blockchain transaction to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainTransaction(
-        userId,
-        executedTransaction.hash,
-        "GRANT_ACCESS",
-        patientId,
-        {
-          doctorWallet: doctorWalletAddress,
-          durationDays,
-          status: "SUCCESS",
-        }
-      );
-      console.log(
-        "📝 [BLOCKCHAIN_TX] Access grant logged:",
-        executedTransaction.hash
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain transaction:", auditError);
-    }
-
     return {
       success: true,
       transactionHash: executedTransaction.hash,
     };
   } catch (error) {
     console.error("Error granting access:", error);
-
-    // Log blockchain error to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainError(
-        userId,
-        "GRANT_ACCESS_FAILED",
-        error instanceof Error ? error.message : "Unknown error",
-        { doctorWalletAddress, patientId }
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain error:", auditError);
-    }
-
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to grant access",
@@ -269,49 +229,12 @@ export async function revokeDoctorAccess(
       `🚫 Access revoked for doctor ${doctorWalletAddress} from patient ${patientId}`
     );
 
-    // Log blockchain transaction to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainTransaction(
-        userId,
-        executedTransaction.hash,
-        "REVOKE_ACCESS",
-        patientId,
-        {
-          doctorWallet: doctorWalletAddress,
-          status: "SUCCESS",
-        }
-      );
-      console.log(
-        "📝 [BLOCKCHAIN_TX] Access revoke logged:",
-        executedTransaction.hash
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain transaction:", auditError);
-    }
-
     return {
       success: true,
       transactionHash: executedTransaction.hash,
     };
   } catch (error) {
     console.error("Error revoking access:", error);
-
-    // Log blockchain error to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainError(
-        userId,
-        "REVOKE_ACCESS_FAILED",
-        error instanceof Error ? error.message : "Unknown error",
-        { doctorWalletAddress, patientId }
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain error:", auditError);
-    }
-
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to revoke access",
@@ -356,44 +279,10 @@ export async function verifyDoctorAccess(
 
     const hasAccess = (result as any)[0] as boolean;
 
-    // Log blockchain access verification to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainAccessVerified(
-        userId,
-        doctorWalletAddress,
-        patientId,
-        hasAccess
-      );
-      console.log("📝 [BLOCKCHAIN_VERIFY] Access verification logged:", {
-        doctorWalletAddress,
-        patientId,
-        hasAccess,
-      });
-    } catch (auditError) {
-      console.error("Error logging blockchain verification:", auditError);
-    }
-
     return { hasAccess };
   } catch (error) {
     console.error("Error verifying access:", error);
     const errorMessage = error instanceof Error ? error.message : "";
-
-    // Log blockchain verification error to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainError(
-        userId,
-        "ACCESS_VERIFICATION_FAILED",
-        errorMessage || "Verification failed",
-        { doctorWalletAddress, patientId }
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain verification error:", auditError);
-    }
-
     return {
       hasAccess: false,
       error: errorMessage || "Verification failed",
@@ -431,49 +320,12 @@ export async function logDataAccess(
       transactionHash: committedTxn.hash,
     });
 
-    // Log blockchain transaction to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainTransaction(
-        userId,
-        executedTransaction.hash,
-        "LOG_ACCESS",
-        patientId,
-        {
-          doctorWallet: doctorWalletAddress,
-          status: "SUCCESS",
-        }
-      );
-      console.log(
-        "📝 [BLOCKCHAIN_TX] Data access logged:",
-        executedTransaction.hash
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain transaction:", auditError);
-    }
-
     return {
       success: true,
       transactionHash: executedTransaction.hash,
     };
   } catch (error) {
     console.error("Error logging access:", error);
-
-    // Log blockchain error to audit
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || "SYSTEM";
-      await AuditService.logBlockchainError(
-        userId,
-        "LOG_ACCESS_FAILED",
-        error instanceof Error ? error.message : "Unknown error",
-        { doctorWalletAddress, patientId }
-      );
-    } catch (auditError) {
-      console.error("Error logging blockchain error:", auditError);
-    }
-
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to log access",
@@ -574,31 +426,9 @@ export async function assignWalletToUser(
     });
 
     console.log(`✅ Wallet assigned to user ${userId}: ${address}`);
-
-    // Log wallet allocation to audit
-    try {
-      await AuditService.logWalletAllocation(userId, address);
-      console.log("📝 [WALLET] Wallet allocation logged:", { userId, address });
-    } catch (auditError) {
-      console.error("Error logging wallet allocation:", auditError);
-    }
-
     return { success: true, address };
   } catch (error) {
     console.error("Error assigning wallet:", error);
-
-    // Log wallet allocation error to audit
-    try {
-      await AuditService.logBlockchainError(
-        userId,
-        "WALLET_ALLOCATION_FAILED",
-        error instanceof Error ? error.message : "Unknown error",
-        {}
-      );
-    } catch (auditError) {
-      console.error("Error logging wallet allocation error:", auditError);
-    }
-
     return {
       success: false,
       error:

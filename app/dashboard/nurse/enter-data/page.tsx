@@ -37,7 +37,7 @@ export default function NurseEnterDataPage() {
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, resetTranscript } =
     useVoiceRecognition({
-      language: 'fr-FR',
+      language: 'en-US',
       onResult: async (result) => {
         if (result.isFinal && result.transcript) {
           setVoiceTranscript((prev) => prev + result.transcript + ' ');
@@ -82,7 +82,7 @@ export default function NurseEnterDataPage() {
         // Auto-fill notes with voice transcript
         const notesField = form.querySelector('[name="notes"]') as HTMLTextAreaElement;
         if (notesField && voiceTranscript) {
-          notesField.value = `[Transcription vocale]\n${voiceTranscript}`;
+          notesField.value = `[Voice Transcription]\n${voiceTranscript}`;
         }
       }
     }
@@ -118,7 +118,7 @@ export default function NurseEnterDataPage() {
 
     try {
       if (!selectedPatientId) {
-        setError("Veuillez sélectionner un patient");
+        setError("Please select a patient");
         setSubmitting(false);
         return;
       }
@@ -133,7 +133,7 @@ export default function NurseEnterDataPage() {
       );
 
       if (result.success) {
-        setSuccess("Données enregistrées avec succès!");
+        setSuccess("Data saved successfully!");
         
         // Generate AI report and show dialog BEFORE resetting form
         if (result.vitalRecord?.id) {
@@ -160,11 +160,11 @@ export default function NurseEnterDataPage() {
         setParsedVitals(null);
         setVoiceTranscript("");
       } else {
-        setError(result.error || "Erreur lors de l'enregistrement");
+        setError(result.error || "Error saving data");
       }
     } catch (error) {
       console.error("Submit error:", error);
-      setError("Erreur lors de l'enregistrement");
+      setError("Error saving data");
     } finally {
       setSubmitting(false);
     }
@@ -178,7 +178,7 @@ export default function NurseEnterDataPage() {
             <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-white"></div>
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            Chargement...
+            Loading...
           </p>
         </div>
       </div>
@@ -193,10 +193,10 @@ export default function NurseEnterDataPage() {
           className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline mb-4"
         >
           <ArrowLeft size={16} />
-          Retour au tableau de bord
+          Back to Dashboard
         </Link>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Entrer des données pour un patient
+          Enter Data for Patient
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           Enregistrez les constantes vitales au nom d'un patient

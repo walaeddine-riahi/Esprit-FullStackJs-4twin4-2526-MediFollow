@@ -36,7 +36,7 @@ export function VoiceEntryButton({
       {isParsing ? (
         <>
           <Loader2 className="animate-spin" size={20} />
-          <span>Analyse en cours...</span>
+          <span>Analyzing...</span>
         </>
       ) : isListening ? (
         <>
@@ -50,7 +50,7 @@ export function VoiceEntryButton({
       ) : (
         <>
           <Mic size={20} />
-          <span>Dictée vocale</span>
+          <span>Voice Recording</span>
         </>
       )}
     </button>

@@ -1,8 +1,8 @@
 "use client";
 
-import { ReactNode, useState, useEffect, useRef } from "react";
+import React, { ReactNode, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useParams } from "next/navigation";
 import {
   LayoutDashboard,
   Activity,
@@ -26,7 +26,10 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
-import { getCoordinatorAlerts } from "@/lib/actions/coordinator.actions";
+import {
+  getCoordinatorAlerts,
+  getPatientBasicInfo,
+} from "@/lib/actions/coordinator.actions";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 
 interface NavItem {
@@ -36,7 +39,11 @@ interface NavItem {
   badge?: number;
 }
 
-export default function CoordinatorLayout({ children }: { children: ReactNode }) {
+export default function CoordinatorLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <ThemeProvider>
       <CoordinatorLayoutInner>{children}</CoordinatorLayoutInner>
@@ -48,10 +55,17 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const params = useParams();
+  const patientId = params?.patientId as string | undefined;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [openAlertsCount, setOpenAlertsCount] = useState(0);
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -64,6 +78,28 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
     document.addEventListener("sidebar:open", sidebarHandler);
     return () => document.removeEventListener("sidebar:open", sidebarHandler);
   }, []);
+
+  useEffect(() => {
+    if (patientId) {
+      loadPatientInfo(patientId);
+    } else {
+      setSelectedPatient(null);
+    }
+  }, [patientId]);
+
+  async function loadPatientInfo(pid: string) {
+    try {
+      const res = await getPatientBasicInfo(pid);
+      if (res.success && res.data) {
+        setSelectedPatient({
+          firstName: res.data.firstName,
+          lastName: res.data.lastName,
+        });
+      }
+    } catch (err) {
+      console.error("Error loading patient info in sidebar", err);
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -99,8 +135,7 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
         setRecentAlerts(open.slice(0, 10));
         setOpenAlertsCount(
           open.filter(
-            (a: any) =>
-              a.severity === "CRITICAL" || a.severity === "HIGH"
+            (a: any) => a.severity === "CRITICAL" || a.severity === "HIGH"
           ).length
         );
       }
@@ -212,26 +247,37 @@ function CoordinatorLayoutInner({ children }: { children: ReactNode }) {
                   ? pathname === item.href
                   : pathname.startsWith(item.href);
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-gradient-to-r from-blue-500/10 to-blue-400/10 dark:from-blue-500/20 dark:to-blue-400/20 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-blue-500 to-blue-400 rounded-r-full"></div>
+                <React.Fragment key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-gradient-to-r from-blue-500/10 to-blue-400/10 dark:from-blue-500/20 dark:to-blue-400/20 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-blue-500 to-blue-400 rounded-r-full"></div>
+                    )}
+                    <Icon className="size-5 flex-shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-2 py-0.5 text-xs font-bold text-white shadow-sm shadow-blue-500/50 animate-pulse">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                  {item.label === "Mes patients" && selectedPatient && (
+                    <div className="ml-12 mt-1 mb-2 py-1.5 px-3 bg-blue-50/50 dark:bg-blue-900/10 border-l-2 border-blue-500 rounded-r-lg animate-in fade-in slide-in-from-left-2 transition-all">
+                      <div className="flex items-center gap-2">
+                        <div className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 truncate">
+                          {selectedPatient.firstName} {selectedPatient.lastName}
+                        </span>
+                      </div>
+                    </div>
                   )}
-                  <Icon className="size-5 flex-shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-2 py-0.5 text-xs font-bold text-white shadow-sm shadow-blue-500/50 animate-pulse">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
+                </React.Fragment>
               );
             })}
           </div>

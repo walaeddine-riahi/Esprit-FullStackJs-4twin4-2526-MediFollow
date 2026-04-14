@@ -709,3 +709,182 @@ export async function uploadPatientProfileImage(
     };
   }
 }
+
+/**
+ * Get patients filtered by doctor's specialty
+ */
+export async function getPatientsByDoctorSpecialty(
+  doctorUserId: string
+): Promise<PatientWithUser[]> {
+  try {
+    // Get doctor's profile to retrieve specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile?.specialty) {
+      // If no specialty, return all active patients
+      return await prisma.patient.findMany({
+        where: { isActive: true },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              phoneNumber: true,
+              isActive: true,
+              lastLogin: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+        orderBy: { medicalRecordNumber: "asc" },
+      });
+    }
+
+    // Get patients with matching specialty field
+    const patients = await prisma.patient.findMany({
+      where: {
+        isActive: true,
+        // Match specialty if patient has one defined
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+      orderBy: { medicalRecordNumber: "asc" },
+    });
+
+    return patients;
+  } catch (error) {
+    console.error("Error fetching patients by doctor specialty:", error);
+    return [];
+  }
+}
+
+/**
+ * Get patients by doctor's specialty with all vital records
+ */
+export async function getPatientsByDoctorSpecialtyWithAllVitals(
+  doctorUserId: string
+): Promise<
+  Array<
+    PatientWithUser & {
+      vitalRecords: Array<{
+        id: string;
+        systolicBP?: number;
+        diastolicBP?: number;
+        heartRate?: number;
+        temperature?: number;
+        oxygenSaturation?: number;
+        weight?: number;
+        recordedAt: Date;
+      }>;
+    }
+  >
+> {
+  try {
+    // Get doctor's profile to retrieve specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorUserId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile?.specialty) {
+      // If no specialty, return all active patients with vitals
+      return await prisma.patient.findMany({
+        where: { isActive: true },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              phoneNumber: true,
+              isActive: true,
+              lastLogin: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+          vitalRecords: {
+            select: {
+              id: true,
+              systolicBP: true,
+              diastolicBP: true,
+              heartRate: true,
+              temperature: true,
+              oxygenSaturation: true,
+              weight: true,
+              recordedAt: true,
+            },
+            orderBy: { recordedAt: "desc" },
+          },
+        },
+        orderBy: { medicalRecordNumber: "asc" },
+      });
+    }
+
+    // Get patients with matching specialty and all vitals
+    const patients = await prisma.patient.findMany({
+      where: { isActive: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            phoneNumber: true,
+            isActive: true,
+            lastLogin: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        vitalRecords: {
+          select: {
+            id: true,
+            systolicBP: true,
+            diastolicBP: true,
+            heartRate: true,
+            temperature: true,
+            oxygenSaturation: true,
+            weight: true,
+            recordedAt: true,
+          },
+          orderBy: { recordedAt: "desc" },
+        },
+      },
+      orderBy: { medicalRecordNumber: "asc" },
+    });
+
+    return patients as any;
+  } catch (error) {
+    console.error(
+      "Error fetching patients by doctor specialty with vitals:",
+      error
+    );
+    return [];
+  }
+}

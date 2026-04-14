@@ -26,8 +26,6 @@ model User {
   blockchainAddress       String?   // Aptos wallet address (public) for blockchain access control
   blockchainPrivateKey    String?   // Aptos wallet private key (encrypted at rest)
   isActive                Boolean   @default(true)
-  isApproved              Boolean   @default(true)  // Approval status for coordinators
-  mustChangePassword      Boolean   @default(false)  // Force password change on first login
   lastLogin               DateTime?
   resetPasswordToken      String?   // Token for password reset
   resetPasswordExpires    DateTime? // Expiration date for reset token
@@ -39,21 +37,15 @@ model User {
   patient       Patient?
   doctorProfile DoctorProfile?
   nurseProfile  NurseProfile?
+  coordinatorProfile CoordinatorProfile?
   auditLogs     AuditLog[]
   alertsCreated Alert[]    @relation("AlertCreatedBy")
   alertsAcknowledged Alert[] @relation("AlertAcknowledgedBy")
   alertsResolved Alert[]    @relation("AlertResolvedBy")
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
-  doctorNotes   DoctorNote[]
-  situationReportsCreated SituationReport[] @relation("SituationReportCreatedBy")
-  // TODO_MERGE #2: Added from branche_patient - questionnaire system
-  questionnaireTemplates QuestionnaireTemplate[] @relation("QuestionnaireTemplates")  // Questionnaires created by this doctor
-  analysisRequests AnalysisRequest[] @relation("DoctorAnalysisRequests")  // Analysis requests created by this doctor
+  vitalRecordsEntered VitalRecord[] @relation("VitalRecordEnteredBy")  // Vitals entered by this user (nurse/patient)
+  voiceTranscripts VoiceTranscript[] @relation("VoiceTranscripts")  // Voice entries by nurse
   sessions      Session[]
-  // Coordinator relations
-  coordinatorAssignments  CoordinatorPatient[] @relation("CoordinatorAssignments")
-  coordinatorRemindersSent CoordinatorReminder[] @relation("CoordinatorRemindersSent")
-  coordinatorFlagsRaised   CoordinatorEntryFlag[] @relation("CoordinatorFlagsRaised")
 
   @@map("users")
 }
@@ -61,10 +53,10 @@ model User {
 enum Role {
   PATIENT
   DOCTOR
-  NURSE
   ADMIN
-  AUDITOR
+  NURSE
   COORDINATOR
+  AUDITOR
 }
 
 // ============================================
@@ -87,21 +79,6 @@ model Patient {
   medications           Medication[]
   vitalThresholds       VitalThresholds?
   isActive              Boolean   @default(true)
-  questionnaireCompleted Boolean  @default(false) // Post-registration questionnaire
-  
-  // Medical profile (post-registration questionnaire)
-  specialty             MedicalSpecialty? // Service hospitalier (cardiologie, etc.)
-  hospital              String?  // Hôpital/Clinique
-  department            String?  // Service específique
-  height                Float?   // cm
-  weight                Float?   // kg
-  
-  // Medical history (antécédents)
-  medicalBackground     MedicalBackground?
-  
-  // Current medications
-  currentMedications    CurrentMedication[]
-  
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -113,16 +90,6 @@ model Patient {
   questionnaires        Questionnaire[]
   medicalDocuments      MedicalDocument[]
   medicalAnalyses       MedicalAnalysis[]
-  doctorNotes           DoctorNote[]
-  situationReports      SituationReport[]
-  patientReminders      PatientReminder[]  // Reminders sent by nurses
-  // TODO_MERGE #3: Added from branche_patient - questionnaire system
-  questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")  // Questionnaires assigned to this patient
-  analysisRequests      AnalysisRequest[] @relation("PatientAnalysisRequests")  // Analysis requests for this patient
-  // Coordinator relations (from espace-cordinator merge)
-  coordinatorAssignments CoordinatorPatient[]
-  coordinatorReminders   CoordinatorReminder[]
-  coordinatorFlags       CoordinatorEntryFlag[]
 
   @@map("patients")
 }
@@ -145,63 +112,13 @@ enum BloodType {
 }
 
 // ============================================
-// MEDICAL SPECIALTIES (Post-Registration)
-// ============================================
-enum MedicalSpecialty {
-  CARDIOLOGY
-  PULMONOLOGY
-  GASTROENTEROLOGY
-  NEUROLOGY
-  ENDOCRINOLOGY
-  RHEUMATOLOGY
-  ONCOLOGY
-  NEPHROLOGY
-  GENERAL_MEDICINE
-  OTHER
-}
-
-// ============================================
-// MEDICAL BACKGROUND (Post-Registration)
-// ============================================
-type MedicalBackground {
-  diabetes         Boolean @default(false)
-  hypertension     Boolean @default(false)
-  cardiacDisease   Boolean @default(false)
-  asthmaOuBpco    Boolean @default(false)
-  cancer           Boolean @default(false)
-  otherConditions  String? // Autres conditions
-}
-
-// ============================================
-// CURRENT MEDICATION Model
-// ============================================
-model CurrentMedication {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  patientId String   @db.ObjectId
-  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  
-  medication String  // Nom du médicament
-  dose       String  // Dosage (ex: "1g")
-  frequency  String  // Fréquence (ex: "3/day")
-  reason     String? // Raison de la prise
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@map("current_medications")
-}
-
-
-// ============================================
 // DOCTOR PROFILE
 // ============================================
 
-
 model DoctorProfile {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String            @unique @db.ObjectId
-  // TODO_MERGE #1: Changed from String? to MedicalSpecialty? enum for type safety
-  specialty       MedicalSpecialty?
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  specialty       String?
   bio             String?
   phone           String?
   location        String?
@@ -221,24 +138,38 @@ model DoctorProfile {
 // ============================================
 
 model NurseProfile {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String            @unique @db.ObjectId
-  licenseNumber   String?
-  bio             String?
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  department      String?
+  shift           String?      // "morning" | "afternoon" | "night"
   phone           String?
-  location        String?
-  profileImage    String?      // URL to profile image
-  specialization  String?      // e.g., ICU, Emergency, Cardiology
-  certifications  String[]     // Array of certification names
-  assignedPatients String[]    @db.ObjectId  // Patient IDs assigned to this nurse
+  profileImage    String?      // URL to profile image (Azure Blob Storage)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
   // Relations
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  patientReminders PatientReminder[]
 
   @@map("nurse_profiles")
+}
+
+// ============================================
+// COORDINATOR PROFILE
+// ============================================
+
+model CoordinatorProfile {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String       @unique @db.ObjectId
+  department      String?
+  phone           String?
+  profileImage    String?      // URL to profile image (Azure Blob Storage)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coordinator_profiles")
 }
 
 type Experience {
@@ -313,6 +244,16 @@ model VitalRecord {
   notes               String?
   triggeredRules      Json?           // Array of rules that triggered alerts
   
+  // AI Analysis
+  aiAnalysis          Json?           // AI-generated analysis and insights
+  riskScore           Float?          // 0-100 AI-calculated risk score
+  trendIndicator      String?         // "improving" | "stable" | "declining"
+  aiRecommendations   String?         // AI-generated recommendations
+  
+  // Entry tracking (who entered this data)
+  enteredBy           String?         @db.ObjectId  // User ID who entered this data
+  enteredByRole       Role?                         // Role of person who entered (PATIENT/NURSE)
+  
   // Status & Classification
   status              VitalStatus     @default(NORMAL)  // NORMAL | A_VERIFIER | CRITIQUE
   
@@ -331,9 +272,10 @@ model VitalRecord {
   // Relations
   patient             Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
   reviewedBy          User?           @relation("VitalRecordReviews", fields: [reviewedById], references: [id])
+  enteredByUser       User?           @relation("VitalRecordEnteredBy", fields: [enteredBy], references: [id])
   blockchainProof     BlockchainProof?
   alerts              Alert[]         // Alerts triggered by this vital
-  coordinatorFlags    CoordinatorEntryFlag[]  // Flags raised by coordinators
+  voiceTranscripts    VoiceTranscript[] // Voice entries for this vital
 
   @@index([patientId])
   @@index([recordedAt])
@@ -449,53 +391,6 @@ enum AlertStatus {
   ACKNOWLEDGED
   RESOLVED
   CLOSED
-}
-
-// ============================================
-// PATIENT REMINDERS (Nurse-sent)
-// ============================================
-
-model PatientReminder {
-  id              String            @id @default(auto()) @map("_id") @db.ObjectId
-  patientId       String            @db.ObjectId
-  nurseId         String            @db.ObjectId
-  title           String
-  message         String
-  reminderType    ReminderType      // MEDICATION, APPOINTMENT, VITAL, QUESTIONNAIRE, etc.
-  scheduledFor    DateTime          // When to send/show the reminder
-  isSent          Boolean           @default(false)
-  sentAt          DateTime?
-  isRead          Boolean           @default(false)
-  readAt          DateTime?
-  priority        ReminderPriority  @default(NORMAL)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  // Relations
-  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  nurse           NurseProfile      @relation(fields: [nurseId], references: [id], onDelete: Cascade)
-
-  @@index([patientId])
-  @@index([nurseId])
-  @@index([scheduledFor])
-  @@index([isSent])
-  @@map("patient_reminders")
-}
-
-enum ReminderType {
-  MEDICATION
-  APPOINTMENT
-  VITAL_CHECK
-  QUESTIONNAIRE
-  FOLLOW_UP
-  GENERAL
-}
-
-enum ReminderPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
 }
 
 // ============================================
@@ -627,65 +522,6 @@ enum AnalysisStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
-}
-
-// ============================================
-// AUDIT ACTIONS
-// ============================================
-
-enum AuditAction {
-  // Authentication
-  LOGIN
-  LOGOUT
-  PASSWORD_RESET
-  
-  // User Management
-  CREATE_USER
-  UPDATE_USER
-  DELETE_USER
-  CHANGE_ROLE
-  
-  // Patient Management
-  CREATE_PATIENT
-  UPDATE_PATIENT
-  DELETE_PATIENT
-  VIEW_PATIENT
-  
-  // Medical Records
-  CREATE_VITAL_SIGN
-  UPDATE_VITAL_SIGN
-  DELETE_VITAL_SIGN
-  CREATE_MEDICAL_ANALYSIS
-  UPDATE_MEDICAL_ANALYSIS
-  DELETE_MEDICAL_ANALYSIS
-  
-  // Alerts
-  CREATE_ALERT
-  UPDATE_ALERT
-  ACKNOWLEDGE_ALERT
-  RESOLVE_ALERT
-  DELETE_ALERT
-  
-  // Questionnaires
-  CREATE_QUESTIONNAIRE
-  UPDATE_QUESTIONNAIRE
-  DELETE_QUESTIONNAIRE
-  SUBMIT_QUESTIONNAIRE
-  
-  // Documents
-  UPLOAD_DOCUMENT
-  UPDATE_DOCUMENT
-  DELETE_DOCUMENT
-  DOWNLOAD_DOCUMENT
-  
-  // Access Control
-  GRANT_ACCESS
-  REVOKE_ACCESS
-  
-  // System
-  EXPORT_DATA
-  IMPORT_DATA
-  SYSTEM_CONFIG
 }
 
 // ============================================
@@ -861,64 +697,6 @@ model PatientCheckup {
 }
 
 // ============================================
-// COORDINATOR (Care coordination management)
-// ============================================
-
-model CoordinatorPatient {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  coordinatorId  String   @db.ObjectId
-  patientId      String   @db.ObjectId
-  assignedAt     DateTime @default(now())
-  notes          String?
-
-  coordinator    User     @relation("CoordinatorAssignments", fields: [coordinatorId], references: [id], onDelete: Cascade)
-  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@unique([coordinatorId, patientId])
-  @@index([coordinatorId])
-  @@index([patientId])
-  @@map("coordinator_patients")
-}
-
-model CoordinatorReminder {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  coordinatorId  String   @db.ObjectId
-  patientId      String   @db.ObjectId
-  message        String
-  channels       String[]
-  createdAt      DateTime @default(now())
-
-  coordinator    User     @relation("CoordinatorRemindersSent", fields: [coordinatorId], references: [id], onDelete: Cascade)
-  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@index([coordinatorId])
-  @@index([patientId])
-  @@index([createdAt])
-  @@map("coordinator_reminders")
-}
-
-model CoordinatorEntryFlag {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  coordinatorId  String    @db.ObjectId
-  patientId      String    @db.ObjectId
-  vitalRecordId  String?   @db.ObjectId
-  flagType       String
-  note           String
-  status         String    @default("OPEN")
-  createdAt      DateTime  @default(now())
-  resolvedAt     DateTime?
-
-  coordinator    User      @relation("CoordinatorFlagsRaised", fields: [coordinatorId], references: [id], onDelete: Cascade)
-  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  vitalRecord    VitalRecord? @relation(fields: [vitalRecordId], references: [id], onDelete: SetNull)
-
-  @@index([coordinatorId])
-  @@index([patientId])
-  @@index([status])
-  @@map("coordinator_entry_flags")
-}
-
-// ============================================
 // ACCESS GRANTS (Patient → Doctor blockchain permissions)
 // ============================================
 
@@ -942,255 +720,121 @@ model AccessGrant {
 }
 
 // ============================================
-// DOCTOR NOTES (Medical notes by doctor for patient)
+// NURSE ASSIGNMENTS (Patient → Nurse)
 // ============================================
 
-model DoctorNote {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  patientId String   @db.ObjectId
-  doctorId  String   @db.ObjectId
-  note      String   // Medical note content
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model NurseAssignment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  nurseId     String   @db.ObjectId
+  patientId   String   @db.ObjectId
+  assignedAt  DateTime @default(now())
+  assignedBy  String?  @db.ObjectId  // Admin/Doctor who assigned
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
-  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor    User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-
+  @@unique([nurseId, patientId])
+  @@index([nurseId])
   @@index([patientId])
-  @@index([doctorId])
+  @@index([isActive])
+  @@map("nurse_assignments")
+}
+
+// ============================================
+// PATIENT COMMUNICATION (Coordinator → Patient)
+// ============================================
+
+model PatientCommunication {
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String              @db.ObjectId
+  coordinatorId   String              @db.ObjectId
+  type            CommunicationType
+  subject         String?
+  message         String
+  sentAt          DateTime            @default(now())
+  readAt          DateTime?
+  isRead          Boolean             @default(false)
+  
+  @@index([patientId])
+  @@index([coordinatorId])
+  @@index([sentAt])
+  @@map("patient_communications")
+}
+
+enum CommunicationType {
+  REMINDER
+  GUIDANCE
+  FOLLOW_UP
+}
+
+// ============================================
+// COMPLIANCE TRACKING
+// ============================================
+
+model ComplianceRecord {
+  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId               String            @db.ObjectId
+  date                    DateTime
+  vitalsSubmitted         Boolean           @default(false)
+  vitalsCount             Int               @default(0)
+  symptomsReported        Boolean           @default(false)
+  symptomsCount           Int               @default(0)
+  questionnairesCompleted Boolean           @default(false)
+  questionnairesCount     Int               @default(0)
+  status                  ComplianceStatus
+  lastCheckedAt           DateTime          @default(now())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  
+  @@unique([patientId, date])
+  @@index([patientId])
+  @@index([date])
+  @@index([status])
+  @@map("compliance_records")
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  PARTIAL
+  NON_COMPLIANT
+}
+
+// ============================================
+// VOICE TRANSCRIPTS
+// ============================================
+
+model VoiceTranscript {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  vitalRecordId   String       @db.ObjectId
+  nurseId         String       @db.ObjectId
+  transcript      String       // Raw voice transcription
+  parsedData      Json         // AI-extracted vital signs
+  language        String       // "fr" | "en"
+  confidence      Float?       // 0-1 Speech recognition confidence
+  createdAt       DateTime     @default(now())
+  
+  vitalRecord     VitalRecord  @relation(fields: [vitalRecordId], references: [id], onDelete: Cascade)
+  nurse           User         @relation("VoiceTranscripts", fields: [nurseId], references: [id])
+  
+  @@index([vitalRecordId])
+  @@index([nurseId])
   @@index([createdAt])
-  @@map("doctor_notes")
+  @@map("voice_transcripts")
 }
 
 // ============================================
-// SITUATION REPORTS (AI-assisted clinical reports)
+// AI ANALYSIS CACHE
 // ============================================
 
-model SituationReport {
-  id              String                @id @default(auto()) @map("_id") @db.ObjectId
-  patientId       String                @db.ObjectId
-  doctorId        String                @db.ObjectId
-  title           String                // Report title
-  content         String                // Main report content
-  context         Json?                 // Clinical context: vitals, symptoms, etc.
-  aiSummary       String?               // AI-generated summary
-  status          SituationReportStatus @default(DRAFT)
-  version         Int                   @default(1)
-  isPublished     Boolean               @default(false)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  publishedAt     DateTime?
-
-  // Relations
-  patient         Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor          User                  @relation("SituationReportCreatedBy", fields: [doctorId], references: [id], onDelete: Cascade)
-  versions        SituationReportVersion[]
-
-  @@index([patientId])
-  @@index([doctorId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("situation_reports")
-}
-
-model SituationReportVersion {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  reportId        String    @db.ObjectId
-  versionNumber   Int
-  content         String
-  changeSummary   String?   // What changed in this version
-  createdAt       DateTime  @default(now())
-
-  // Relations
-  report          SituationReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  @@index([reportId])
-  @@index([versionNumber])
-  @@map("situation_report_versions")
-}
-
-enum SituationReportStatus {
-  DRAFT
-  IN_REVIEW
-  PUBLISHED
-  ARCHIVED
-}
-
-// ============================================
-// QUESTIONNAIRE SYSTEM (TODO_MERGE #4-7)
-// ============================================
-
-enum QuestionType {
-  TEXT
-  TEXTAREA
-  NUMBER
-  RATING
-  MULTIPLE_CHOICE
-  CHECKBOX
-  DATE
-  TIME
-  YESNO
-}
-
-model QuestionnaireTemplate {
-  id                String          @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId          String          @db.ObjectId
-  title             String
-  description       String?
-  specialty         MedicalSpecialty
-  questions         QuestionnaireQuestion[]
-  isAiGenerated     Boolean         @default(false)
-  aiPrompt          String?         // The prompt used to generate questions via AI
-  isPublished       Boolean         @default(false)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  // Relations
-  doctor            User            @relation("QuestionnaireTemplates", fields: [doctorId], references: [id], onDelete: Cascade)
-  assignments       QuestionnaireAssignment[]
-
-  @@index([doctorId])
-  @@index([specialty])
-  @@map("questionnaire_templates")
-}
-
-model QuestionnaireQuestion {
-  id                String          @id @default(auto()) @map("_id") @db.ObjectId
-  templateId        String          @db.ObjectId
-  questionNumber    Int
-  questionText      String
-  questionType      QuestionType
-  helpText          String?         // Additional guidance for patient
+model AIAnalysisCache {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  nurseId         String   @db.ObjectId
+  analysisType    String   // "cohort_insights" | "risk_summary" | "predictions"
+  data            Json     // Cached AI response
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
   
-  // Options for multiple choice, checkbox, etc.
-  options           Json?           // Array of {value, label}
-  
-  // Validation
-  isRequired        Boolean         @default(true)
-  minLength         Int?
-  maxLength         Int?
-  minValue          Float?
-  maxValue          Float?
-  
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  // Relations
-  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  responses         QuestionnaireResponse[]
-
-  @@index([templateId])
-  @@map("questionnaire_questions")
-}
-
-enum AssignmentStatus {
-  PENDING           // Not yet started
-  IN_PROGRESS       // Patient started but not completed
-  COMPLETED         // Patient completed
-  EXPIRED           // Due date passed without completion
-}
-
-model QuestionnaireAssignment {
-  id                String          @id @default(auto()) @map("_id") @db.ObjectId
-  templateId        String          @db.ObjectId
-  patientId         String          @db.ObjectId
-  assignedAt        DateTime        @default(now())
-  dueDate           DateTime?       // Deadline for patient to complete
-  
-  status            AssignmentStatus @default(PENDING)
-  completedAt       DateTime?
-  
-  // Score if applicable
-  score             Float?
-  scoreOutOf        Float?          // Total possible score
-  
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  // Relations
-  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  patient           Patient         @relation("QuestionnaireAssignments", fields: [patientId], references: [id], onDelete: Cascade)
-  responses         QuestionnaireResponse[]
-
-  @@index([patientId])
-  @@index([status])
-  @@map("questionnaire_assignments")
-}
-
-model QuestionnaireResponse {
-  id                String          @id @default(auto()) @map("_id") @db.ObjectId
-  assignmentId      String          @db.ObjectId
-  questionId        String          @db.ObjectId
-  
-  // Patient's answer
-  responseText      String?
-  responseNumber    Float?
-  responseJson      Json?           // For complex responses (multiple selections, etc.)
-  
-  answeredAt        DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  // Relations
-  assignment        QuestionnaireAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  question          QuestionnaireQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@index([assignmentId])
-  @@index([questionId])
-  @@map("questionnaire_responses")
-}
-
-// ============================================
-// ANALYSIS REQUESTS (Doctor assigns to patient)
-// ============================================
-
-enum AnalysisRequestStatus {
-  PENDING           // Not yet started by patient
-  IN_PROGRESS       // Patient started
-  SUBMITTED         // Patient submitted results
-  APPROVED          // Doctor reviewed and approved
-  REJECTED          // Doctor rejected, needs resubmission
-  COMPLETED         // Fully completed
-  EXPIRED           // Due date passed
-  CANCELLED         // Cancelled by doctor
-}
-
-model AnalysisRequest {
-  id                String           @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId          String           @db.ObjectId
-  patientId         String           @db.ObjectId
-  
-  analysisType      AnalysisType
-  testName          String           // Ex: "Numération Formule Sanguine", "Blood Pressure"
-  description       String?          // Doctor notes about why this analysis is needed
-  
-  requestedAt       DateTime         @default(now())
-  dueDate           DateTime?        // Deadline for patient to submit
-  status            AnalysisRequestStatus @default(PENDING)
-  
-  // Optional document uploaded by doctor (e.g., lab request form)
-  documentUrl       String?          // E.g., Azure Blob URL
-  documentName      String?
-  
-  // Patient submission
-  submittedAt       DateTime?
-  submittedDocumentUrl String?       // URL to patient's uploaded result
-  submittedDocumentName String?      // Original filename
-  patientNotes      String?          // Notes from patient
-  
-  completedAt       DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  // Relations
-  doctor            User             @relation("DoctorAnalysisRequests", fields: [doctorId], references: [id], onDelete: Cascade)
-  patient           Patient          @relation("PatientAnalysisRequests", fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@index([doctorId])
-  @@index([patientId])
-  @@index([status])
-  @@index([analysisType])
-  @@index([requestedAt])
-  @@map("analysis_requests")
+  @@index([nurseId, analysisType])
+  @@index([expiresAt])
+  @@map("ai_analysis_cache")
 }

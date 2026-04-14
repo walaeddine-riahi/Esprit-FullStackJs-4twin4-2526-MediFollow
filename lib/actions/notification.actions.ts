@@ -14,7 +14,8 @@ function getResend() {
   return new Resend(key);
 }
 
-const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "MediFollow <onboarding@resend.dev>";
+const EMAIL_FROM =
+  process.env.RESEND_FROM_EMAIL || "MediFollow <onboarding@resend.dev>";
 
 // ============================================
 // INFOBIP SMS
@@ -22,7 +23,9 @@ const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "MediFollow <onboarding@rese
 
 function getInfobipConfig() {
   return {
-    apiKey: process.env.INFOBIP_API_KEY || "433c3b0dcfe954ceece1f315f39423b4-ea583b0b-644a-48ab-af7e-aee9e02e3860",
+    apiKey:
+      process.env.INFOBIP_API_KEY ||
+      "433c3b0dcfe954ceece1f315f39423b4-ea583b0b-644a-48ab-af7e-aee9e02e3860",
     baseUrl: process.env.INFOBIP_BASE_URL || "https://x111p4.api.infobip.com",
     // Only set a custom sender when explicitly configured.
     // Leaving it undefined lets Infobip use its registered numeric sender,
@@ -85,7 +88,10 @@ export async function sendEmail(to: string, subject: string, html: string) {
       return { success: true, messageId: result.messageId };
     }
 
-    console.warn("[Notification] No Email provider configured (missing RESEND_API_KEY and SMTP_USER), skipping email to", to);
+    console.warn(
+      "[Notification] No Email provider configured (missing RESEND_API_KEY and SMTP_USER), skipping email to",
+      to
+    );
     return { success: false, reason: "No email provider configured" };
   } catch (error) {
     console.error("❌ Erreur envoi email:", error);
@@ -101,11 +107,16 @@ export async function sendSMS(to: string, text: string) {
   const { apiKey, baseUrl, from } = getInfobipConfig();
   try {
     if (!apiKey) {
-      console.warn("[Notification] Infobip API key not configured, skipping SMS to", to);
+      console.warn(
+        "[Notification] Infobip API key not configured, skipping SMS to",
+        to
+      );
       return { success: false, reason: "Infobip not configured" };
     }
 
-    console.log(`[SMS] Sending to ${to} from ${from}, API key present: ${!!apiKey && apiKey.length > 10}`);
+    console.log(
+      `[SMS] Sending to ${to} from ${from}, API key present: ${!!apiKey && apiKey.length > 10}`
+    );
 
     const response = await fetch(`${baseUrl}/sms/2/text/advanced`, {
       method: "POST",
@@ -160,7 +171,9 @@ export async function sendAdminAlertSMS(text: string) {
   const phone = await getAlertSmsPhone();
 
   if (!phone) {
-    console.warn("[Notification] No admin alert phone configured, skipping alert SMS");
+    console.warn(
+      "[Notification] No admin alert phone configured, skipping alert SMS"
+    );
     return { success: false, reason: "Admin alert phone not configured" };
   }
 
@@ -201,7 +214,11 @@ export async function notifyUser(opts: NotifyOptions) {
   // --- EMAIL ---
   if (channels.includes("EMAIL") && user.email) {
     const html = buildEmailHtml(opts.title, opts.message, user.firstName);
-    const result = await sendEmail(user.email, `[MediFollow] ${opts.title}`, html);
+    const result = await sendEmail(
+      user.email,
+      `[MediFollow] ${opts.title}`,
+      html
+    );
     if (result.success) sentVia.push("EMAIL");
   }
 
@@ -257,10 +274,19 @@ export async function notifyAlert(
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
     include: {
-      user: { select: { id: true, email: true, phoneNumber: true, firstName: true } },
+      user: {
+        select: { id: true, email: true, phoneNumber: true, firstName: true },
+      },
       careTeam: {
         include: {
-          user: { select: { id: true, email: true, phoneNumber: true, firstName: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phoneNumber: true,
+              firstName: true,
+            },
+          },
         },
       },
     },
@@ -268,7 +294,9 @@ export async function notifyAlert(
 
   if (!patient) return;
 
-  const careTeamMembers: Array<{ user: { id: string } }> = Array.isArray((patient as any).careTeam)
+  const careTeamMembers: Array<{ user: { id: string } }> = Array.isArray(
+    (patient as any).careTeam
+  )
     ? (patient as any).careTeam
     : [];
 
@@ -306,7 +334,9 @@ export async function notifyAlert(
   );
 
   const sent = results.filter((r) => r.status === "fulfilled").length;
-  console.log(`[Notification] Alert sent to ${sent}/${recipientIds.size} recipients`);
+  console.log(
+    `[Notification] Alert sent to ${sent}/${recipientIds.size} recipients`
+  );
 }
 
 // ============================================
@@ -342,11 +372,39 @@ export async function markAllNotificationsRead(userId: string) {
   return { success: true };
 }
 
+export async function deleteNotification(notificationId: string) {
+  try {
+    await prisma.notification.delete({
+      where: { id: notificationId },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteNotification] error:", error);
+    return { success: false, error: "Erreur lors de la suppression" };
+  }
+}
+
+export async function deleteAllNotifications(userId: string) {
+  try {
+    await prisma.notification.deleteMany({
+      where: { recipientId: userId },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteAllNotifications] error:", error);
+    return { success: false, error: "Erreur lors de la suppression totale" };
+  }
+}
+
 // ============================================
 // EMAIL TEMPLATE
 // ============================================
 
-function buildEmailHtml(title: string, message: string, firstName?: string | null) {
+function buildEmailHtml(
+  title: string,
+  message: string,
+  firstName?: string | null
+) {
   return `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px;">
       <div style="background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -405,7 +463,7 @@ export async function sendWelcomeEmail(email: string, firstName: string) {
           <li>🔔 Recevoir des alertes personnalisées</li>
         </ul>
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login"
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login"
              style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
             Se connecter
           </a>
@@ -428,9 +486,16 @@ export async function sendWelcomeEmail(email: string, firstName: string) {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "ojaouadi02@gmail.com";
 
-export async function sendNewSignupNotification(firstName: string, lastName: string, email: string) {
-  const now = new Date().toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
-  const approvalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/admin/pending-patients`;
+export async function sendNewSignupNotification(
+  firstName: string,
+  lastName: string,
+  email: string
+) {
+  const now = new Date().toLocaleString("fr-FR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+  const approvalUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/admin/pending-patients`;
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px;">
       <div style="background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -462,7 +527,11 @@ export async function sendNewSignupNotification(firstName: string, lastName: str
     </div>
   `;
 
-  return sendEmail(ADMIN_EMAIL, `Nouvelle inscription : ${firstName} ${lastName}`, html);
+  return sendEmail(
+    ADMIN_EMAIL,
+    `Nouvelle inscription : ${firstName} ${lastName}`,
+    html
+  );
 }
 
 // ============================================
@@ -567,7 +636,10 @@ export const sendDoctorCredentialsEmail = (
 // PATIENT APPROVAL EMAIL
 // ============================================
 
-export async function sendPatientApprovalEmail(email: string, firstName: string) {
+export async function sendPatientApprovalEmail(
+  email: string,
+  firstName: string
+) {
   const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`;
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 24px;">
@@ -629,5 +701,9 @@ export async function sendPatientBannedEmail(email: string, firstName: string) {
     </div>
   `;
 
-  return sendEmail(email, "Votre demande de compte MediFollow a été refusée", html);
+  return sendEmail(
+    email,
+    "Votre demande de compte MediFollow a été refusée",
+    html
+  );
 }

@@ -27,11 +27,17 @@ import {
   ClipboardList,
   Beaker,
   BookOpen,
+  Trash2,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import { logout } from "@/lib/actions/auth.actions";
 import { getPatientAlerts } from "@/lib/actions/alert.actions";
 import { getPatientProfile } from "@/lib/actions/patient.actions";
+import {
+  getUserNotifications,
+  deleteNotification,
+  deleteAllNotifications,
+} from "@/lib/actions/notification.actions";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AlertStatus } from "@/types/medifollow.types";
 
@@ -55,10 +61,12 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [profileImage, setProfileImage] = useState<string>("");
   const [openAlertsCount, setOpenAlertsCount] = useState(0);
-  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [combinedNotifications, setCombinedNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -102,19 +110,85 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
       if (patientRes.ok) {
         const { patientId } = await patientRes.json();
         if (patientId) {
-          const alertsRes = await getPatientAlerts(patientId, AlertStatus.OPEN);
-          if (alertsRes.success) {
-            const alerts = alertsRes.alerts ?? [];
-            setRecentAlerts(alerts.slice(0, 10));
-            setOpenAlertsCount(
-              alerts.filter(
-                (a: any) => a.severity === "CRITICAL" || a.severity === "HIGH"
-              ).length
-            );
+          const [alertsRes, notificationsRes] = await Promise.all([
+            getPatientAlerts(patientId, AlertStatus.OPEN),
+            getUserNotifications(currentUser.id, true),
+          ]);
+
+          let combined: any[] = [];
+          let alertsCount = 0;
+          let notifsCount = 0;
+
+          if (alertsRes.success && alertsRes.alerts) {
+            combined = [
+              ...combined,
+              ...alertsRes.alerts.map((a: any) => ({
+                ...a,
+                uiCategory: "ALERT",
+              })),
+            ];
+            alertsCount = alertsRes.alerts.filter(
+              (a: any) => a.severity === "CRITICAL" || a.severity === "HIGH"
+            ).length;
           }
+
+          if (notificationsRes.success && notificationsRes.notifications) {
+            combined = [
+              ...combined,
+              ...notificationsRes.notifications.map((n: any) => ({
+                ...n,
+                uiCategory: "NOTIFICATION",
+              })),
+            ];
+            notifsCount = notificationsRes.notifications.length;
+          }
+
+          // Sort by creation date
+          combined.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+
+          setCombinedNotifications(combined.slice(0, 15));
+          setOpenAlertsCount(alertsCount);
+          setUnreadNotificationsCount(notifsCount);
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error("[PatientLayout] loadData error:", err);
+    }
+  }
+
+  async function handleDeleteNotification(
+    e: React.MouseEvent,
+    id: string,
+    category: string
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (category === "ALERT") {
+      // In a real medical app, we might Archive or Resolve, but not Delete alerts easily
+      return;
+    }
+
+    const res = await deleteNotification(id);
+    if (res.success) {
+      setCombinedNotifications((prev) => prev.filter((n) => n.id !== id));
+      setUnreadNotificationsCount((prev) => Math.max(0, prev - 1));
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (!user) return;
+    const res = await deleteAllNotifications(user.id);
+    if (res.success) {
+      // Keep only Alerts in the combined list
+      setCombinedNotifications((prev) =>
+        prev.filter((n) => n.uiCategory === "ALERT")
+      );
+      setUnreadNotificationsCount(0);
+    }
   }
 
   async function handleLogout() {
@@ -394,21 +468,31 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title="Alertes"
+                    title="Notifications et Alertes"
                   >
                     <Bell className="size-5 text-gray-700 dark:text-gray-300" />
-                    {openAlertsCount > 0 && (
+                    {(openAlertsCount > 0 || unreadNotificationsCount > 0) && (
                       <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold shadow-lg shadow-red-500/50">
-                        {openAlertsCount}
+                        {openAlertsCount + unreadNotificationsCount}
                       </span>
                     )}
                   </button>
                   {showNotifications && (
                     <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-950 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                          Notifications
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                            Notifications
+                          </h3>
+                          {unreadNotificationsCount > 0 && (
+                            <button
+                              onClick={handleDeleteAll}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 uppercase tracking-tighter bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded transition-all"
+                            >
+                              Tout supprimer
+                            </button>
+                          )}
+                        </div>
                         <button
                           aria-label="Fermer"
                           onClick={() => setShowNotifications(false)}
@@ -418,7 +502,7 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                         </button>
                       </div>
                       <div className="max-h-[400px] overflow-y-auto">
-                        {recentAlerts.length === 0 ? (
+                        {combinedNotifications.length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-10 px-4">
                             <Bell className="size-10 text-gray-300 dark:text-gray-700 mb-3" />
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -426,59 +510,96 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                             </p>
                           </div>
                         ) : (
-                          recentAlerts.map((alert: any) => {
-                            const severityColors: Record<string, string> = {
-                              LOW: "bg-blue-50 text-blue-700 border-blue-200",
-                              MEDIUM:
-                                "bg-yellow-50 text-yellow-700 border-yellow-200",
-                              HIGH: "bg-orange-50 text-orange-700 border-orange-200",
-                              CRITICAL: "bg-red-50 text-red-700 border-red-200",
-                            };
-                            return (
-                              <Link
-                                key={alert.id}
-                                href="/dashboard/patient/alerts"
-                                onClick={() => setShowNotifications(false)}
-                                className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0"
-                              >
-                                <div className="size-9 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                                  <Bell className="size-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2 mb-1">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                      {alert.alertType ?? "Alerte"}
-                                    </p>
-                                    <span
-                                      className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex-shrink-0 ${severityColors[alert.severity] ?? ""}`}
-                                    >
-                                      {alert.severity === "CRITICAL"
-                                        ? "CRITIQUE"
-                                        : alert.severity === "HIGH"
-                                          ? "ÉLEVÉ"
-                                          : alert.severity === "MEDIUM"
-                                            ? "MOYEN"
-                                            : "BAS"}
-                                    </span>
+                          combinedNotifications.map((item: any) => {
+                            const isAlert = item.uiCategory === "ALERT";
+
+                            if (isAlert) {
+                              const severityColors: Record<string, string> = {
+                                LOW: "bg-blue-50 text-blue-700 border-blue-200",
+                                MEDIUM:
+                                  "bg-yellow-50 text-yellow-700 border-yellow-200",
+                                HIGH: "bg-orange-50 text-orange-700 border-orange-200",
+                                CRITICAL:
+                                  "bg-red-50 text-red-700 border-red-200",
+                              };
+                              return (
+                                <Link
+                                  key={`alert-${item.id}`}
+                                  href="/dashboard/patient/alerts"
+                                  onClick={() => setShowNotifications(false)}
+                                  className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+                                >
+                                  <div className="size-9 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                                    <Bell className="size-4" />
                                   </div>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                                    {alert.message}
-                                  </p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                        {item.alertType ?? "Alerte"}
+                                      </p>
+                                      <span
+                                        className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold flex-shrink-0 ${severityColors[item.severity] ?? ""}`}
+                                      >
+                                        {item.severity}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                                      {item.message}
+                                    </p>
+                                  </div>
+                                </Link>
+                              );
+                            } else {
+                              // It's a NOTIFICATION (Reminder, System, etc.)
+                              return (
+                                <div
+                                  key={`notif-${item.id}`}
+                                  onClick={() => setSelectedNotif(item)}
+                                  className="group relative flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0 bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer"
+                                >
+                                  <div className="size-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                                    <Clock className="size-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0 pr-6">
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                        {item.title}
+                                      </p>
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 font-semibold flex-shrink-0">
+                                        {item.type}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                                      {item.message}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Prevent opening detail modal
+                                      handleDeleteNotification(
+                                        e,
+                                        item.id,
+                                        "NOTIFICATION"
+                                      );
+                                    }}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-all duration-200"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
                                 </div>
-                              </Link>
-                            );
+                              );
+                            }
                           })
                         )}
                       </div>
-                      {recentAlerts.length > 0 && (
-                        <Link
-                          href="/dashboard/patient/alerts"
-                          onClick={() => setShowNotifications(false)}
-                          className="block px-4 py-3 text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-gray-200 dark:border-gray-800"
-                        >
-                          Voir toutes les alertes
-                        </Link>
-                      )}
+                      <Link
+                        href="/dashboard/patient/alerts"
+                        onClick={() => setShowNotifications(false)}
+                        className="block px-4 py-3 text-center text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-gray-200 dark:border-gray-800"
+                      >
+                        Voir tout le centre de suivi
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -679,6 +800,94 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
           className="fixed inset-0 z-40 bg-black/20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
+      )}
+      {/* ── Notification Detail Modal ────────────────────────────────────────── */}
+      {selectedNotif && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedNotif(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white dark:bg-gray-950 rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-900 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2.5 rounded-2xl ${selectedNotif.uiCategory === "ALERT" ? "bg-red-100 text-red-600 dark:bg-red-900/30" : "bg-blue-100 text-blue-600 dark:bg-blue-900/30"}`}
+                >
+                  {selectedNotif.uiCategory === "ALERT" ? (
+                    <Bell className="size-5" />
+                  ) : (
+                    <Clock className="size-5" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                    {selectedNotif.uiCategory === "ALERT"
+                      ? selectedNotif.alertType || "Alerte"
+                      : selectedNotif.title}
+                  </h4>
+                  <span
+                    className={`text-[10px] font-black uppercase tracking-widest ${selectedNotif.uiCategory === "ALERT" ? "text-red-500" : "text-blue-500"}`}
+                  >
+                    {selectedNotif.uiCategory === "ALERT"
+                      ? `Sévérité ${selectedNotif.severity}`
+                      : selectedNotif.type}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all font-bold"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 py-10">
+              <div className="prose dark:prose-invert max-w-none">
+                <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-wrap font-medium">
+                  {selectedNotif.message}
+                </p>
+              </div>
+
+              <div className="mt-8 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 border-t border-gray-50 dark:border-gray-900 pt-6">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="size-3.5" />
+                  <span>
+                    {new Date(
+                      selectedNotif.createdAt || selectedNotif.recordedAt
+                    ).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="size-3.5" />
+                  <span>
+                    {new Date(
+                      selectedNotif.createdAt || selectedNotif.recordedAt
+                    ).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-6 py-5 bg-gray-50/50 dark:bg-gray-900/20 border-t border-gray-100 dark:border-gray-900 flex justify-end gap-3">
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="px-6 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:scale-105 transition-all shadow-lg active:scale-95"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

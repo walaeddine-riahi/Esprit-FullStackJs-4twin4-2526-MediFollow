@@ -2,18 +2,53 @@
  * Notification Service
  * Handles multi-channel notifications (Email, SMS, In-app)
  * Integration with SendGrid (Email) and Twilio (SMS)
+ * NOTE: Services are lazy-initialized to avoid webpack bundling issues
  */
 
-import sgMail from "@sendgrid/mail";
-import twilio from "twilio";
 import prisma from "@/lib/prisma";
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+// Lazy-loaded clients
+let sgMail: any = null;
+let twilioClient: any = null;
+let initialized = false;
 
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+/**
+ * Initialize external services (called on first use)
+ */
+function ensureInitialized() {
+  if (initialized) return;
+
+  try {
+    // Lazy import SendGrid
+    if (process.env.SENDGRID_API_KEY && !sgMail) {
+      const sgMailModule = require("@sendgrid/mail");
+      sgMail = sgMailModule.default || sgMailModule;
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    }
+
+    // Lazy import Twilio
+    if (
+      process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      !twilioClient
+    ) {
+      const twilioModule = require("twilio");
+      const twilio = twilioModule.default || twilioModule;
+      twilioClient = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN
+      );
+    }
+
+    initialized = true;
+  } catch (error) {
+    console.warn(
+      "⚠️ Failed to initialize external notification services:",
+      error
+    );
+    // Continue anyway - services are optional
+  }
+}
 
 export type NotificationChannel = "EMAIL" | "SMS" | "IN_APP";
 
@@ -40,6 +75,8 @@ export class NotificationService {
    */
   static async send(payload: NotificationPayload): Promise<void> {
     try {
+      ensureInitialized(); // Initialize services on first use
+
       // Get recipient user details
       const recipient = await prisma.user.findUnique({
         where: { id: payload.recipientId },

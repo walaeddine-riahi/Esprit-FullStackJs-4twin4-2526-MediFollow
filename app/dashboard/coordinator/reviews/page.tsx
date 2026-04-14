@@ -9,6 +9,7 @@ import {
   getUnifiedReviews,
   closeUnifiedReview,
   escalateCoordinatorAlert,
+  requestPatientReMeasure,
 } from "@/lib/actions/coordinator.actions";
 import { formatDateTime } from "@/lib/utils";
 
@@ -23,37 +24,31 @@ function ReviewCard({
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [remeasureSent, setRemeasureSent] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchAnalysis = async () => {
-      setAnalyzing(true);
-      try {
-        const res = await fetch("/api/coordinator/review-analysis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            title: review.title,
-            note: review.note,
-            vitalRecord: review.vitalRecord,
-          }),
-        });
-        const data = await res.json();
-        if (mounted && data.success) {
-          setAiAnalysis(data.analysis);
-        }
-      } catch (err) {
-        // Ignorer silencieusement pour le client
-      } finally {
-        if (mounted) setAnalyzing(false);
+  const runAiAnalysis = async () => {
+    setAnalyzing(true);
+    try {
+      const res = await fetch("/api/coordinator/review-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: review.title,
+          note: review.note,
+          vitalRecord: review.vitalRecord,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiAnalysis(data.analysis);
       }
-    };
-    fetchAnalysis();
-    return () => {
-      mounted = false;
-    };
-  }, [review]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleClose = async () => {
     setBusy(true);
@@ -65,12 +60,28 @@ function ReviewCard({
   const handleEscalate = async () => {
     setBusy(true);
     if (review.sourceType === "ALERT") {
+      const enrichment = aiAnalysis ? `\n\nAnalyse IA : ${aiAnalysis}` : "";
       await escalateCoordinatorAlert(
         review.id,
-        "Escalade depuis Revues & signalements (Analyse IA)"
+        "Expertise médicale demandée par le coordinateur." + enrichment
       );
     }
     await handleClose(); // On clôture la révision après escalade
+  };
+
+  const handleRequestReMeasure = async () => {
+    setBusy(true);
+    // Use AI analysis results as the note for the patient if available
+    const customNote = aiAnalysis
+      ? `Analyse experte : ${aiAnalysis}`
+      : review.note;
+
+    const res = await requestPatientReMeasure(review.patientId, customNote);
+    if (res.success) {
+      setRemeasureSent(true);
+      setTimeout(() => setRemeasureSent(false), 3000);
+    }
+    setBusy(false);
   };
 
   const isCritique = review.reviewType === "Critique";
@@ -150,8 +161,72 @@ function ReviewCard({
               SpO₂ {review.vitalRecord.oxygenSaturation}%
             </span>
           )}
+          {review.vitalRecord.symptoms?.respiratoryRate && (
+            <span className="bg-gray-100 dark:bg-[#252525] text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
+              F.R. {review.vitalRecord.symptoms.respiratoryRate} rpm
+            </span>
+          )}
+          {review.vitalRecord.weight && (
+            <span className="bg-gray-100 dark:bg-[#252525] text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-xs font-bold">
+              Poids {review.vitalRecord.weight} kg
+            </span>
+          )}
         </div>
       )}
+
+      {/* Advanced Clinical Data (Glycemia, CRP, etc.) */}
+      {review.vitalRecord?.symptoms?.advanced &&
+        Object.values(review.vitalRecord.symptoms.advanced).some(
+          (v) => v !== null
+        ) && (
+          <div className="mt-4 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 bg-blue-50/10 dark:bg-blue-900/5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">
+              Analyses complémentaires
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {review.vitalRecord.symptoms.advanced.glycemia && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 uppercase">
+                    Glycémie
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    {review.vitalRecord.symptoms.advanced.glycemia} g/L
+                  </span>
+                </div>
+              )}
+              {review.vitalRecord.symptoms.advanced.crp && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 uppercase">
+                    CRP
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    {review.vitalRecord.symptoms.advanced.crp} mg/L
+                  </span>
+                </div>
+              )}
+              {review.vitalRecord.symptoms.advanced.diuresis && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 uppercase">
+                    Diurèse
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    {review.vitalRecord.symptoms.advanced.diuresis} ml
+                  </span>
+                </div>
+              )}
+              {review.vitalRecord.symptoms.advanced.hydration && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 uppercase">
+                    Hydratation
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                    {review.vitalRecord.symptoms.advanced.hydration}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       <div className="mt-3 bg-gray-50 dark:bg-[#1f2922] border border-emerald-100 dark:border-emerald-900/30 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-2">
@@ -159,6 +234,14 @@ function ReviewCard({
           <span className="text-xs font-bold text-emerald-700 dark:text-emerald-500">
             Analyse IA
           </span>
+          {!aiAnalysis && !analyzing && (
+            <button
+              onClick={runAiAnalysis}
+              className="ml-auto text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded font-bold transition-colors"
+            >
+              Lancer l'analyse
+            </button>
+          )}
         </div>
         {analyzing ? (
           <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300/70 text-sm">
@@ -184,24 +267,27 @@ function ReviewCard({
         )}
         {!isCritique && (
           <button
-            disabled={busy}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            onClick={handleRequestReMeasure}
+            disabled={busy || remeasureSent}
+            className={`px-4 py-2 border rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+              remeasureSent
+                ? "bg-emerald-50 border-emerald-500 text-emerald-700"
+                : "border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
           >
-            Demander re-mesure
+            {busy
+              ? "En cours..."
+              : remeasureSent
+                ? "Demande envoyée ✓"
+                : "Demander re-mesure"}
           </button>
         )}
-        <button
-          disabled={busy}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-        >
-          Contacter le patient
-        </button>
         <button
           onClick={handleClose}
           disabled={busy}
           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
         >
-          {busy ? "..." : "Clôturer"}
+          {busy ? "..." : "Acquitter"}
         </button>
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
   ChevronRight,
   MoreVertical,
   Calendar,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,9 @@ export default function PatientDashboard() {
           <div className="relative mb-4 mx-auto">
             <div className="size-12 animate-spin rounded-full border-3 border-gray-200 border-t-gray-900"></div>
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Chargement...</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            Chargement...
+          </p>
         </div>
       </div>
     );
@@ -149,7 +152,9 @@ export default function PatientDashboard() {
                   <Activity size={16} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Mesures (7j)</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Mesures (7j)
+                  </p>
                   <p className="font-semibold text-gray-900">
                     {recentVitals.length}
                   </p>
@@ -161,7 +166,9 @@ export default function PatientDashboard() {
                     <AlertCircle size={16} className="text-red-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Alertes</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Alertes
+                    </p>
                     <p className="font-semibold text-gray-900">
                       {alerts.length}
                     </p>
@@ -237,7 +244,9 @@ export default function PatientDashboard() {
               {latestVitals?.systolicBP || "--"}/
               {latestVitals?.diastolicBP || "--"}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Tension artérielle</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Tension artérielle
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgSystolicBP?.toFixed(0) || "--"}/
               {stats?.avgDiastolicBP?.toFixed(0) || "--"} mmHg
@@ -258,7 +267,9 @@ export default function PatientDashboard() {
             <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.heartRate || "--"}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Fréquence cardiaque</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Fréquence cardiaque
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgHeartRate?.toFixed(0) || "--"} bpm
             </p>
@@ -278,7 +289,9 @@ export default function PatientDashboard() {
             <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.temperature || "--"}°
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Température</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Température
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgTemperature?.toFixed(1) || "--"}°C
             </p>
@@ -298,7 +311,9 @@ export default function PatientDashboard() {
             <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {latestVitals?.oxygenSaturation || "--"}%
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">SpO2</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              SpO2
+            </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Moy: {stats?.avgOxygenSaturation?.toFixed(1) || "--"}%
             </p>
@@ -329,6 +344,12 @@ export default function PatientDashboard() {
             <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
               <Calendar size={16} />
               Graphiques
+            </button>
+          </Link>
+          <Link href="/dashboard/patient/guide">
+            <button className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <BookOpen size={16} />
+              Guide de suivi
             </button>
           </Link>
         </div>
@@ -418,7 +439,9 @@ export default function PatientDashboard() {
                                 >
                                   {hasAbnormal ? "Anormal" : "Normal"}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">•</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  •
+                                </span>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(vital.recordedAt)}
                                 </span>

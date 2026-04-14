@@ -14,7 +14,6 @@ import {
   AlertSeverity,
   AlertStatus,
 } from "@/types/medifollow.types";
-import { AuditService } from "@/lib/services/audit.service";
 
 export async function checkVitalThresholds(vitalRecord: any) {
   try {
@@ -240,16 +239,7 @@ export async function acknowledgeAlert(alertId: string, userId: string) {
         acknowledgedById: userId,
         acknowledgedAt: new Date(),
       },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
     });
-
-    // Log the acknowledge action to audit log
-    await AuditService.logAcknowledgeAlert(userId, alertId);
-    console.log("📝 [ACKNOWLEDGE_ALERT] Audit log created for alert:", alertId);
 
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/patient");
@@ -275,16 +265,7 @@ export async function resolveAlert(
         resolvedAt: new Date(),
         resolution,
       },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
     });
-
-    // Log the resolve action to audit log
-    await AuditService.logResolveAlert(userId, alertId, resolution);
-    console.log("📝 [RESOLVE_ALERT] Audit log created for alert:", alertId);
 
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/patient");
@@ -293,54 +274,6 @@ export async function resolveAlert(
   } catch (error) {
     console.error("Resolve alert error:", error);
     return { success: false, error: "Erreur" };
-  }
-}
-
-export async function createAlert(
-  patientId: string,
-  alertType: string,
-  severity: string,
-  message: string,
-  data?: any
-) {
-  try {
-    const alert = await prisma.alert.create({
-      data: {
-        patientId,
-        alertType: alertType as any,
-        severity: severity as any,
-        message,
-        data: data || {},
-        status: AlertStatus.OPEN,
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    // Log the create action to audit log
-    try {
-      await AuditService.logCreateAlert(alert.patient.userId, alert.id, {
-        alertType,
-        severity,
-        message,
-        patientId,
-      });
-      console.log("📝 [CREATE_ALERT] Audit log created for alert:", alert.id);
-    } catch (auditError) {
-      console.error("Error creating audit log for alert:", auditError);
-      // Don't fail the alert creation if audit logging fails
-    }
-
-    revalidatePath("/dashboard/doctor");
-    revalidatePath("/dashboard/patient");
-
-    return { success: true, message: "Alerte créée", alert };
-  } catch (error) {
-    console.error("Create alert error:", error);
-    return { success: false, error: "Erreur lors de la création de l'alerte" };
   }
 }
 
@@ -367,194 +300,5 @@ export async function getAlertStats() {
   } catch (error) {
     console.error("Get alert stats error:", error);
     return { success: false, error: "Erreur", stats: null };
-  }
-}
-
-/**
- * Get alerts filtered by doctor's specialty
- * Only shows alerts for patients whose diagnosis matches the doctor's specialty
- */
-export async function getAlertsByDoctorSpecialty(
-  doctorUserId: string,
-  status?: AlertStatus
-) {
-  try {
-    // Get patients via AccessGrants (doctor has explicit access to these patients)
-    const accessGrants = await prisma.accessGrant.findMany({
-      where: {
-        doctorId: doctorUserId,
-        isActive: true,
-      },
-      select: {
-        patientId: true,
-      },
-    });
-
-    const patientIds = accessGrants.map((grant) => grant.patientId);
-
-    // Build where clause for alerts
-    const where: any = {
-      OR: [
-        // 1. Alerts from patients with explicit AccessGrant from this doctor
-        { patientId: { in: patientIds } },
-        // 2. Alerts from patients whose diagnosis matches doctor specialty (legacy support)
-        {
-          patient: {
-            diagnosis: {
-              contains: "CARDIOLOGY",
-              mode: "insensitive",
-            },
-          },
-        },
-      ],
-    };
-
-    if (status) {
-      where.status = status;
-    }
-
-    const alerts = await prisma.alert.findMany({
-      where: where as any,
-      orderBy: { createdAt: "desc" },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-        acknowledgedBy: true,
-        resolvedBy: true,
-      },
-    });
-
-    return { success: true, alerts };
-  } catch (error) {
-    console.error("Get alerts by doctor specialty error:", error);
-    return { success: false, error: "Erreur", alerts: [] };
-  }
-}
-
-/**
- * Get alerts stats filtered by doctor's specialty
- */
-export async function getAlertStatsByDoctorSpecialty(doctorUserId: string) {
-  try {
-    // Get patients via AccessGrants (doctor has explicit access to these patients)
-    const accessGrants = await prisma.accessGrant.findMany({
-      where: {
-        doctorId: doctorUserId,
-        isActive: true,
-      },
-      select: {
-        patientId: true,
-      },
-    });
-
-    const patientIds = accessGrants.map((grant) => grant.patientId);
-
-    // Build where clause for alerts
-    const where: any = {
-      OR: [
-        // 1. Alerts from patients with explicit AccessGrant from this doctor
-        { patientId: { in: patientIds } },
-        // 2. Alerts from patients whose diagnosis matches doctor specialty (legacy support)
-        {
-          patient: {
-            diagnosis: {
-              contains: "CARDIOLOGY",
-              mode: "insensitive",
-            },
-          },
-        },
-      ],
-    };
-
-    const total = await prisma.alert.count({ where });
-    const open = await prisma.alert.count({
-      where: { ...where, status: AlertStatus.OPEN } as any,
-    });
-    const acknowledged = await prisma.alert.count({
-      where: { ...where, status: AlertStatus.ACKNOWLEDGED } as any,
-    });
-    const resolved = await prisma.alert.count({
-      where: { ...where, status: AlertStatus.RESOLVED } as any,
-    });
-    const critical = await prisma.alert.count({
-      where: { ...where, severity: AlertSeverity.CRITICAL } as any,
-    });
-
-    return {
-      success: true,
-      stats: { total, open, acknowledged, resolved, critical },
-    };
-  } catch (error) {
-    console.error("Get alert stats by doctor specialty error:", error);
-    return { success: false, error: "Erreur", stats: null };
-  }
-}
-
-/**
- * Get a single alert by ID
- */
-export async function getAlertById(id: string) {
-  try {
-    const alert = await prisma.alert.findUnique({
-      where: { id },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-        acknowledgedBy: true,
-        resolvedBy: true,
-      },
-    });
-
-    if (!alert) {
-      return { success: false, error: "Alerte non trouvée", alert: null };
-    }
-
-    return { success: true, alert };
-  } catch (error) {
-    console.error("Get alert by ID error:", error);
-    return {
-      success: false,
-      error: "Erreur lors de la récupération de l'alerte",
-      alert: null,
-    };
-  }
-}
-
-/**
- * Update alert status
- */
-export async function updateAlertStatus(id: string, status: string) {
-  try {
-    const validStatuses = [
-      AlertStatus.OPEN,
-      AlertStatus.ACKNOWLEDGED,
-      AlertStatus.RESOLVED,
-    ];
-
-    if (!validStatuses.includes(status as any)) {
-      return { success: false, error: "Statut invalide" };
-    }
-
-    const alert = await prisma.alert.update({
-      where: { id },
-      data: {
-        status: status as any,
-      },
-      include: {
-        patient: {
-          include: { user: true },
-        },
-      },
-    });
-
-    revalidatePath("/admin");
-    revalidatePath("/dashboard/doctor");
-
-    return { success: true, alert, message: "Statut de l'alerte mis à jour" };
-  } catch (error) {
-    console.error("Update alert status error:", error);
-    return { success: false, error: "Erreur lors de la mise à jour du statut" };
   }
 }

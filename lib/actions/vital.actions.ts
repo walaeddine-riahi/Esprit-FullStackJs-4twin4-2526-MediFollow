@@ -16,13 +16,16 @@ import {
   getVitalViolations,
   DEFAULT_VITAL_THRESHOLDS,
 } from "@/lib/utils/vitalValidation";
-import { classifyVitalsWithAI } from "@/lib/services/vitals-ai-status.service";
 
 import { checkVitalThresholds } from "./alert.actions";
-import { AuditService } from "@/lib/services/audit.service";
-import { getCurrentUser } from "@/lib/actions/auth.actions";
+import { analyzePatientRisk, calculateFallbackRiskScore } from "@/lib/ai/riskAnalysis";
 
-export async function createVitalRecord(patientId: string, formData: FormData) {
+export async function createVitalRecord(
+  patientId: string,
+  formData: FormData,
+  enteredBy?: string,
+  enteredByRole?: string
+) {
   try {
     const rawData = {
       systolicBP: formData.get("systolicBP") as string,
@@ -66,107 +69,38 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
     if (validated.weight) vitalData.weight = parseFloat(validated.weight);
     if (validated.notes) vitalData.notes = validated.notes;
 
-    // Get patient info for AI classification
-    const patient = await prisma.patient.findUnique({
-      where: { id: patientId },
-      include: {
-        currentMedications: {
-          select: { medication: true },
-        },
-        user: {
-          select: { id: true },
-        },
+    // Auto-classify vital status and get violations
+    const status = await classifyVitalStatus(
+      {
+        systolicBP: vitalData.systolicBP,
+        diastolicBP: vitalData.diastolicBP,
+        heartRate: vitalData.heartRate,
+        temperature: vitalData.temperature,
+        oxygenSaturation: vitalData.oxygenSaturation,
+        weight: vitalData.weight,
       },
-    });
-
-    if (!patient) {
-      return { success: false, error: "Patient not found" };
-    }
-
-    // Use AI classification first (improved accuracy)
-    let aiHealthStatus;
-    let status: "NORMAL" | "A_VERIFIER" | "CRITIQUE" = "NORMAL";
-
-    try {
-      const age = patient.dateOfBirth
-        ? Math.floor(
-            (Date.now() - new Date(patient.dateOfBirth).getTime()) /
-              (365.25 * 24 * 60 * 60 * 1000)
-          )
-        : undefined;
-
-      aiHealthStatus = await classifyVitalsWithAI(
-        {
-          temperature: vitalData.temperature,
-          heartRate: vitalData.heartRate,
-          oxygenSaturation: vitalData.oxygenSaturation,
-          systolicBP: vitalData.systolicBP,
-          diastolicBP: vitalData.diastolicBP,
-          respiratoryRate: undefined,
-        },
-        {},
-        {
-          age,
-          specialty: patient.specialty || "GENERAL_MEDICINE",
-          medicalHistory: patient.medicalBackground
-            ? Object.entries(patient.medicalBackground as any)
-                .filter(([_, value]) => value === true)
-                .map(([key]) => key)
-            : [],
-          currentMedications:
-            patient.currentMedications?.map((m) => m.medication) || [],
-        }
-      );
-
-      // Map AI severity to VitalStatus
-      const statusMapping: {
-        [key: string]: "NORMAL" | "A_VERIFIER" | "CRITIQUE";
-      } = {
-        EXCELLENT: "NORMAL",
-        GOOD: "NORMAL",
-        FAIR: "A_VERIFIER",
-        POOR: "A_VERIFIER",
-        CRITICAL: "CRITIQUE",
-      };
-
-      status = statusMapping[aiHealthStatus.severity] || "A_VERIFIER";
-      console.log(
-        `[CreateVital] AI Classification: ${aiHealthStatus.severity} → ${status}`
-      );
-    } catch (aiError) {
-      console.error(
-        "[CreateVital] AI classification failed, using rule-based:",
-        aiError
-      );
-      // Fallback to rule-based classification
-      const ruleBasedStatus = await classifyVitalStatus(
-        {
-          systolicBP: vitalData.systolicBP,
-          diastolicBP: vitalData.diastolicBP,
-          heartRate: vitalData.heartRate,
-          temperature: vitalData.temperature,
-          oxygenSaturation: vitalData.oxygenSaturation,
-          weight: vitalData.weight,
-        },
-        patientId
-      );
-      status = ruleBasedStatus;
-    }
+      patientId
+    );
 
     vitalData.status = status;
 
     // Get patient thresholds for violations
-    const thresholds: any =
-      patient?.vitalThresholds || DEFAULT_VITAL_THRESHOLDS;
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+    const thresholds = patient?.vitalThresholds || DEFAULT_VITAL_THRESHOLDS;
     const violations = getVitalViolations(vitalData, thresholds);
 
     if (violations.critical.length > 0 || violations.abnormal.length > 0) {
-      vitalData.triggeredRules = JSON.parse(
-        JSON.stringify({
-          ...violations.triggeredRules,
-          aiAnalysis: aiHealthStatus,
-        })
-      );
+      vitalData.triggeredRules = violations.triggeredRules;
+    }
+
+    // Add entry tracking if provided
+    if (enteredBy) {
+      vitalData.enteredBy = enteredBy;
+    }
+    if (enteredByRole) {
+      vitalData.enteredByRole = enteredByRole;
     }
 
     const vitalRecord = await prisma.vitalRecord.create({
@@ -188,32 +122,15 @@ export async function createVitalRecord(patientId: string, formData: FormData) {
     // Also run legacy thresholds check for compatibility
     await checkVitalThresholds(vitalRecord);
 
-    // Log the create action to audit log
-    try {
-      const currentUser = await getCurrentUser();
-      const auditorId = currentUser?.id || vitalRecord.patient.userId;
-      await AuditService.logCreateVitalSign(auditorId, vitalRecord.id, {
-        patientId,
-        systolicBP: vitalRecord.systolicBP,
-        diastolicBP: vitalRecord.diastolicBP,
-        heartRate: vitalRecord.heartRate,
-        temperature: vitalRecord.temperature,
-        oxygenSaturation: vitalRecord.oxygenSaturation,
-      });
-      console.log(
-        "📝 [CREATE_VITAL_SIGN] Audit log created for vital record:",
-        vitalRecord.id
-      );
-    } catch (auditError) {
-      console.error(
-        "Error creating audit log for vital record creation:",
-        auditError
-      );
-    }
+    // AI Risk Analysis (async, don't block response)
+    runAIAnalysis(vitalRecord.id, patientId, vitalData).catch((error: any) => {
+      console.error("AI analysis error:", error);
+    });
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
     revalidatePath("/dashboard/doctor/vitals");
+    revalidatePath("/dashboard/nurse");
 
     return {
       success: true,
@@ -288,36 +205,9 @@ export async function getVitalRecordById(id: string) {
 
 export async function deleteVitalRecord(id: string) {
   try {
-    // Get the record before deleting for audit log
-    const record = await prisma.vitalRecord.findUnique({
-      where: { id },
-      include: { patient: { include: { user: true } } },
-    });
-
     await prisma.vitalRecord.delete({
       where: { id },
     });
-
-    // Log the delete action to audit log
-    try {
-      const currentUser = await getCurrentUser();
-      const auditorId = currentUser?.id || record?.patient.userId || "SYSTEM";
-      await AuditService.logDeleteVitalSign(auditorId, id, {
-        patientId: record?.patientId,
-        systolicBP: record?.systolicBP,
-        diastolicBP: record?.diastolicBP,
-        heartRate: record?.heartRate,
-      });
-      console.log(
-        "📝 [DELETE_VITAL_SIGN] Audit log created for vital record:",
-        id
-      );
-    } catch (auditError) {
-      console.error(
-        "Error creating audit log for vital record deletion:",
-        auditError
-      );
-    }
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
@@ -368,88 +258,6 @@ export async function updateVitalRecord(id: string, formData: FormData) {
     if (validated.weight) vitalData.weight = parseFloat(validated.weight);
     if (validated.notes !== undefined) vitalData.notes = validated.notes;
 
-    // Get the existing vital record to get patientId and other context
-    const existingRecord = await prisma.vitalRecord.findUnique({
-      where: { id },
-      include: {
-        patient: {
-          include: {
-            currentMedications: {
-              select: { medication: true },
-            },
-            user: true,
-          },
-        },
-      },
-    });
-
-    if (!existingRecord) {
-      return { success: false, error: "Vital record not found" };
-    }
-
-    // Re-classify status with AI
-    let aiHealthStatus;
-    let newStatus: "NORMAL" | "A_VERIFIER" | "CRITIQUE" = "NORMAL";
-
-    try {
-      const age = existingRecord.patient.dateOfBirth
-        ? Math.floor(
-            (Date.now() -
-              new Date(existingRecord.patient.dateOfBirth).getTime()) /
-              (365.25 * 24 * 60 * 60 * 1000)
-          )
-        : undefined;
-
-      aiHealthStatus = await classifyVitalsWithAI(
-        {
-          temperature: vitalData.temperature ?? existingRecord.temperature,
-          heartRate: vitalData.heartRate ?? existingRecord.heartRate,
-          oxygenSaturation:
-            vitalData.oxygenSaturation ?? existingRecord.oxygenSaturation,
-          systolicBP: vitalData.systolicBP ?? existingRecord.systolicBP,
-          diastolicBP: vitalData.diastolicBP ?? existingRecord.diastolicBP,
-          respiratoryRate: undefined,
-        },
-        {},
-        {
-          age,
-          specialty: existingRecord.patient.specialty || "GENERAL_MEDICINE",
-          medicalHistory: existingRecord.patient.medicalBackground
-            ? Object.entries(existingRecord.patient.medicalBackground as any)
-                .filter(([_, value]) => value === true)
-                .map(([key]) => key)
-            : [],
-          currentMedications:
-            existingRecord.patient.currentMedications?.map(
-              (m) => m.medication
-            ) || [],
-        }
-      );
-
-      // Map AI severity to VitalStatus
-      const statusMapping: {
-        [key: string]: "NORMAL" | "A_VERIFIER" | "CRITIQUE";
-      } = {
-        EXCELLENT: "NORMAL",
-        GOOD: "NORMAL",
-        FAIR: "A_VERIFIER",
-        POOR: "A_VERIFIER",
-        CRITICAL: "CRITIQUE",
-      };
-
-      newStatus = statusMapping[aiHealthStatus.severity] || "A_VERIFIER";
-      vitalData.status = newStatus;
-      console.log(
-        `[UpdateVital] AI Classification: ${aiHealthStatus.severity} → ${newStatus}`
-      );
-    } catch (aiError) {
-      console.error(
-        "[UpdateVital] AI classification failed, keeping current status:",
-        aiError
-      );
-      // Don't update status if AI fails
-    }
-
     // Update vital record
     const vitalRecord = await prisma.vitalRecord.update({
       where: { id },
@@ -465,33 +273,6 @@ export async function updateVitalRecord(id: string, formData: FormData) {
 
     // Re-check thresholds
     await checkVitalThresholds(vitalRecord);
-
-    // Log the update action to audit log
-    try {
-      const currentUser = await getCurrentUser();
-      const auditorId = currentUser?.id || vitalRecord.patient.userId;
-      await AuditService.logAction({
-        userId: auditorId,
-        action: "UPDATE_VITAL_SIGN" as any,
-        entityType: "VitalRecord",
-        entityId: id,
-        changes: {
-          updated: {
-            oldValue: null,
-            newValue: vitalData,
-          },
-        },
-      });
-      console.log(
-        "📝 [UPDATE_VITAL_SIGN] Audit log created for vital record:",
-        id
-      );
-    } catch (auditError) {
-      console.error(
-        "Error creating audit log for vital record update:",
-        auditError
-      );
-    }
 
     revalidatePath("/dashboard/patient");
     revalidatePath("/dashboard/doctor");
@@ -718,116 +499,103 @@ export async function getVitalReviewHistory(recordId: string) {
 }
 
 /**
- * Reclassify all vital records using AI classification
- * This is useful for fixing historical vitals that were classified with incorrect logic
- * ADMIN ONLY - Should be called from API endpoint with proper auth
+ * AI Analysis for vital records (runs async in background)
  */
-export async function reclassifyAllVitals() {
+async function runAIAnalysis(
+  vitalRecordId: string,
+  patientId: string,
+  vitalData: any
+) {
   try {
-    console.log("[ReclassifyVitals] Starting batch reclassification...");
-
-    const allVitals = await prisma.vitalRecord.findMany({
+    // Get patient details
+    const patient: any = await prisma.patient.findUnique({
+      where: { id: patientId },
       include: {
-        patient: {
-          include: {
-            currentMedications: true,
-            user: true,
-          },
-        },
+        user: true,
       },
-      orderBy: { recordedAt: "desc" },
     });
 
-    let updated = 0;
-    let failed = 0;
+    if (!patient) return;
 
-    for (const vital of allVitals) {
-      try {
-        const age = vital.patient.dateOfBirth
-          ? Math.floor(
-              (Date.now() - new Date(vital.patient.dateOfBirth).getTime()) /
-                (365.25 * 24 * 60 * 60 * 1000)
-            )
-          : undefined;
+    // Get vital history for trend analysis
+    const vitalHistory = await prisma.vitalRecord.findMany({
+      where: { patientId },
+      orderBy: { recordedAt: "desc" },
+      take: 7,
+      select: {
+        recordedAt: true,
+        systolicBP: true,
+        diastolicBP: true,
+        heartRate: true,
+        temperature: true,
+        oxygenSaturation: true,
+        weight: true,
+      },
+    });
 
-        const aiHealthStatus = await classifyVitalsWithAI(
-          {
-            temperature: vital.temperature || undefined,
-            heartRate: vital.heartRate || undefined,
-            oxygenSaturation: vital.oxygenSaturation || undefined,
-            systolicBP: vital.systolicBP || undefined,
-            diastolicBP: vital.diastolicBP || undefined,
-            respiratoryRate: undefined,
-          },
-          {},
-          {
-            age,
-            specialty: vital.patient.specialty || "GENERAL_MEDICINE",
-            medicalHistory: vital.patient.medicalBackground
-              ? Object.entries(vital.patient.medicalBackground as any)
-                  .filter(([_, value]) => value === true)
-                  .map(([key]) => key)
-              : [],
-            currentMedications:
-              vital.patient.currentMedications?.map((m) => m.medication) || [],
-          }
-        );
-
-        const statusMapping: {
-          [key: string]: "NORMAL" | "A_VERIFIER" | "CRITIQUE";
-        } = {
-          EXCELLENT: "NORMAL",
-          GOOD: "NORMAL",
-          FAIR: "A_VERIFIER",
-          POOR: "A_VERIFIER",
-          CRITICAL: "CRITIQUE",
-        };
-
-        const newStatus =
-          statusMapping[aiHealthStatus.severity] || "A_VERIFIER";
-
-        if (vital.status !== newStatus) {
-          await prisma.vitalRecord.update({
-            where: { id: vital.id },
-            data: {
-              status: newStatus,
-              triggeredRules: JSON.parse(JSON.stringify(aiHealthStatus)),
-            },
-          });
-
-          console.log(
-            `[ReclassifyVitals] Updated ${vital.id}: ${vital.status} → ${newStatus}`
-          );
-          updated++;
-        }
-      } catch (vitErr) {
-        console.error(`[ReclassifyVitals] Failed for id ${vital.id}:`, vitErr);
-        failed++;
-      }
-    }
-
-    console.log(
-      `[ReclassifyVitals] Completed: ${updated} updated, ${failed} failed`
+    // Calculate age
+    const age = Math.floor(
+      (new Date().getTime() - new Date(patient.dateOfBirth).getTime()) /
+        (365.25 * 24 * 60 * 60 * 1000)
     );
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/patient");
-    revalidatePath("/dashboard/doctor");
+    // Get baseline (average of recent normal vitals)
+    const baseline = {
+      systolicBP: 120,
+      diastolicBP: 80,
+      heartRate: 70,
+      temperature: 37,
+      oxygenSaturation: 98,
+    };
 
-    return {
-      success: true,
-      updated,
-      failed,
-      total: allVitals.length,
-      message: `Reclassification completed: ${updated}/${allVitals.length} vitals updated`,
-    };
-  } catch (error: any) {
-    console.error("[ReclassifyVitals] Error:", error);
-    return {
-      success: false,
-      error: "Erreur lors de la reclassification",
-      updated: 0,
-      failed: 0,
-    };
+    // Run AI risk analysis
+    const riskAnalysis = await analyzePatientRisk({
+      patientName: `${patient.user.firstName} ${patient.user.lastName}`,
+      age,
+      conditions: [],
+      baseline,
+      vitalHistory: vitalHistory.map((v) => ({
+        recordedAt: v.recordedAt,
+        systolicBP: v.systolicBP || undefined,
+        diastolicBP: v.diastolicBP || undefined,
+        heartRate: v.heartRate || undefined,
+        temperature: v.temperature || undefined,
+        oxygenSaturation: v.oxygenSaturation || undefined,
+        weight: v.weight || undefined,
+      })),
+      latestVitals: {
+        systolicBP: vitalData.systolicBP,
+        diastolicBP: vitalData.diastolicBP,
+        heartRate: vitalData.heartRate,
+        temperature: vitalData.temperature,
+        oxygenSaturation: vitalData.oxygenSaturation,
+        weight: vitalData.weight,
+      },
+    });
+
+    if (riskAnalysis.success && riskAnalysis.analysis) {
+      // Update vital record with AI analysis
+      await (prisma.vitalRecord as any).update({
+        where: { id: vitalRecordId },
+        data: {
+          aiAnalysis: riskAnalysis.analysis,
+          riskScore: riskAnalysis.analysis.riskScore,
+          trendIndicator: riskAnalysis.analysis.trendIndicator,
+          aiRecommendations: riskAnalysis.analysis.recommendations.join("; "),
+        },
+      });
+    } else {
+      // Fallback to rule-based risk score
+      const fallbackScore = calculateFallbackRiskScore(vitalData);
+      await (prisma.vitalRecord as any).update({
+        where: { id: vitalRecordId },
+        data: {
+          riskScore: fallbackScore,
+          trendIndicator: "stable",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("AI analysis error:", error);
   }
 }

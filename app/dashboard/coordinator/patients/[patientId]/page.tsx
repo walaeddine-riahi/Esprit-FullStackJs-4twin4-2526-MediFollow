@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Send,
-  Flag,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, Send, Flag, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,9 +31,9 @@ export default function CoordinatorPatientDetailPage() {
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [flagNote, setFlagNote] = useState("");
-  const [flagType, setFlagType] = useState<"INCOMPLETE" | "SUSPICIOUS" | "OTHER">(
-    "INCOMPLETE"
-  );
+  const [flagType, setFlagType] = useState<
+    "INCOMPLETE" | "SUSPICIOUS" | "OTHER"
+  >("INCOMPLETE");
   const [flagVitalId, setFlagVitalId] = useState<string>("");
   const [flagging, setFlagging] = useState(false);
   const [flagError, setFlagError] = useState<string | null>(null);
@@ -86,9 +80,13 @@ export default function CoordinatorPatientDetailPage() {
     if (res.success) {
       setSendSuccess(true);
       setTimeout(() => setSendSuccess(false), 3000);
-      setReminderMsg("Bonjour, merci de compléter vos constantes vitales pour aujourd'hui dans MediFollow.");
+      setReminderMsg(
+        "Bonjour, merci de compléter vos constantes vitales pour aujourd'hui dans MediFollow."
+      );
     } else {
-      setSendError(res.error || "Une erreur est survenue lors de l'envoi du rappel.");
+      setSendError(
+        res.error || "Une erreur est survenue lors de l'envoi du rappel."
+      );
     }
     setSending(false);
   }
@@ -116,9 +114,11 @@ export default function CoordinatorPatientDetailPage() {
     const res = await flagCoordinatorEntry(patientId, {
       vitalRecordId: flagVitalId || undefined,
       flagType,
-      note: flagNote.trim(),
+      note:
+        flagNote.trim() ||
+        "Signalement interne — Suspicion d'anomalie ou incomplétude.",
     });
-    
+
     if (res.success) {
       setFlagSuccess(true);
       setTimeout(() => setFlagSuccess(false), 3000);
@@ -143,9 +143,19 @@ export default function CoordinatorPatientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] text-center p-6">
         <Loader2 className="size-10 animate-spin text-red-600 mb-4" />
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chargement impossible</h3>
-        <p className="text-sm text-gray-500">Les données de ce patient sont introuvables ou une erreur est survenue.</p>
-        <button onClick={() => router.push("/dashboard/coordinator/patients")} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Retour</button>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Chargement impossible
+        </h3>
+        <p className="text-sm text-gray-500">
+          Les données de ce patient sont introuvables ou une erreur est
+          survenue.
+        </p>
+        <button
+          onClick={() => router.push("/dashboard/coordinator/patients")}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Retour
+        </button>
       </div>
     );
   }
@@ -188,7 +198,9 @@ export default function CoordinatorPatientDetailPage() {
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-            <p className="text-xs font-semibold text-gray-500">Symptômes (7 j.)</p>
+            <p className="text-xs font-semibold text-gray-500">
+              Symptômes (7 j.)
+            </p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
               {compliance.symptomCompliance7d}%
             </p>
@@ -196,10 +208,90 @@ export default function CoordinatorPatientDetailPage() {
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
             <p className="text-xs font-semibold text-gray-500">Quest. (7 j.)</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {compliance.questionnaireCount7d} · {compliance.questionnaireScore7d}%
+              {compliance.questionnaireCount7d} ·{" "}
+              {compliance.questionnaireScore7d}%
             </p>
           </div>
         </div>
+
+        {/* Vitals - NOW FIRST AS REQUESTED */}
+        <section className="mt-10">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+            Dernières mesures vitales
+          </h2>
+          <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900/80">
+                <tr>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2">TA</th>
+                  <th className="px-3 py-2">FC</th>
+                  <th className="px-3 py-2">Temp</th>
+                  <th className="px-3 py-2">SpO₂</th>
+                  <th className="px-3 py-2">Poids</th>
+                  <th className="px-3 py-2">F.R.</th>
+                  <th className="px-3 py-2">Complétude</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {vitalsWithCompleteness.map((v: any) => (
+                  <tr key={v.id}>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {formatDateTime(v.recordedAt)}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {v.systolicBP ?? "—"}/{v.diastolicBP ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {v.heartRate ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {v.temperature ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {v.oxygenSaturation ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center text-xs">
+                      {v.weight ? `${v.weight}kg` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center text-xs">
+                      {v.symptoms?.respiratoryRate ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          v.completeness.isComplete
+                            ? "text-emerald-600 font-semibold"
+                            : "text-amber-600 font-semibold"
+                        }
+                      >
+                        {v.completeness.score}%
+                      </span>
+                      {!v.completeness.isComplete && (
+                        <span className="block text-xs text-gray-500">
+                          {v.completeness.issues.join(", ")}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <VitalsAiAgent
+          vitals={vitalsWithCompleteness}
+          patientContext={{
+            age: patient.dateOfBirth
+              ? Math.floor(
+                  (Date.now() - new Date(patient.dateOfBirth).getTime()) /
+                    (365.25 * 24 * 60 * 60 * 1000)
+                )
+              : undefined,
+            pathology: patient.diagnosis,
+          }}
+        />
 
         {/* Rappel */}
         <section className="mt-10 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6">
@@ -207,6 +299,31 @@ export default function CoordinatorPatientDetailPage() {
             <Send className="size-5 text-blue-600" />
             Envoyer un rappel
           </h2>
+
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setReminderMsg(
+                  "Bonjour, merci de compléter vos constantes vitales pour aujourd'hui dans MediFollow."
+                )
+              }
+              className={`text-xs px-3 py-1.5 rounded-full border transition-all ${reminderMsg.includes("constantes vitales") ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-blue-400"}`}
+            >
+              Rappel Constantes
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setReminderMsg(
+                  "Bonjour, n'oubliez pas de soumettre votre questionnaire de suivi avant la date limite. C'est important pour votre équipe médicale."
+                )
+              }
+              className={`text-xs px-3 py-1.5 rounded-full border transition-all ${reminderMsg.includes("questionnaire") ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-blue-400"}`}
+            >
+              Rappel Questionnaire
+            </button>
+          </div>
           <textarea
             value={reminderMsg}
             onChange={(e) => setReminderMsg(e.target.value)}
@@ -281,9 +398,7 @@ export default function CoordinatorPatientDetailPage() {
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <select
               value={flagType}
-              onChange={(e) =>
-                setFlagType(e.target.value as typeof flagType)
-              }
+              onChange={(e) => setFlagType(e.target.value as typeof flagType)}
               className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-2 text-sm"
             >
               <option value="INCOMPLETE">Entrée incomplète</option>
@@ -298,7 +413,8 @@ export default function CoordinatorPatientDetailPage() {
               <option value="">— Mesure vitale (optionnel) —</option>
               {vitalsWithCompleteness.map((v: any) => (
                 <option key={v.id} value={v.id}>
-                  {formatDateTime(v.recordedAt)} — compl. {v.completeness.score}%
+                  {formatDateTime(v.recordedAt)} — compl. {v.completeness.score}
+                  %
                 </option>
               ))}
             </select>
@@ -337,68 +453,6 @@ export default function CoordinatorPatientDetailPage() {
             </p>
           )}
         </section>
-
-        {/* Vitals */}
-        <section className="mt-10">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-            Dernières mesures vitales
-          </h2>
-          <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/80">
-                <tr>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2">TA</th>
-                  <th className="px-3 py-2">FC</th>
-                  <th className="px-3 py-2">Temp</th>
-                  <th className="px-3 py-2">SpO₂</th>
-                  <th className="px-3 py-2">Complétude</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {vitalsWithCompleteness.map((v: any) => (
-                  <tr key={v.id}>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDateTime(v.recordedAt)}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      {v.systolicBP ?? "—"}/{v.diastolicBP ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-center">{v.heartRate ?? "—"}</td>
-                    <td className="px-3 py-2 text-center">{v.temperature ?? "—"}</td>
-                    <td className="px-3 py-2 text-center">
-                      {v.oxygenSaturation ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={
-                          v.completeness.isComplete
-                            ? "text-emerald-600 font-semibold"
-                            : "text-amber-600 font-semibold"
-                        }
-                      >
-                        {v.completeness.score}%
-                      </span>
-                      {!v.completeness.isComplete && (
-                        <span className="block text-xs text-gray-500">
-                          {v.completeness.issues.join(", ")}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <VitalsAiAgent 
-           vitals={vitalsWithCompleteness} 
-           patientContext={{
-             age: patient.dateOfBirth ? Math.floor((Date.now() - new Date(patient.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : undefined, 
-             pathology: patient.diagnosis
-           }} 
-        />
 
         {/* Questionnaires */}
         <section className="mt-10">

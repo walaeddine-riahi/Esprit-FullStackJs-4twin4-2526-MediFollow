@@ -122,6 +122,54 @@ function ReviewCard({
         <p className="text-xs text-gray-500 mt-1">
           {formatDateTime(review.createdAt)} • Protocole de suivi
         </p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          📧 {review.patientEmail}
+        </p>
+
+        {/* Status and Doctor Info */}
+        <div className="flex flex-col gap-2 mt-3">
+          {/* Alert Treatment Status */}
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                review.isResolved
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+              }`}
+            >
+              {review.isResolved ? "✓ Traitée" : "⏳ En attente"}
+            </span>
+            {review.isResolved && review.resolvedBy && (
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                par {review.resolvedBy.firstName} {review.resolvedBy.lastName}
+              </span>
+            )}
+          </div>
+
+          {/* Assigned Doctor */}
+          {review.assignedDoctor ? (
+            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                👨‍⚕️ Médecin :
+              </span>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-blue-900 dark:text-blue-300">
+                  {review.assignedDoctor.firstName}{" "}
+                  {review.assignedDoctor.lastName}
+                </span>
+                <span className="text-xs text-blue-700 dark:text-blue-400">
+                  {review.assignedDoctor.email}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900/30 rounded-lg border border-gray-300 dark:border-gray-700">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                ℹ️ Aucun médecin assigné
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-1">

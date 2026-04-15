@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, Mic } from "lucide-react";
+import { VoiceQuestionnaireForm } from "./VoiceQuestionnaireForm";
 
 interface Question {
   id: string;
@@ -66,6 +67,32 @@ export default function PatientQuestionnaire({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+
+  // Helper function to parse options from strings if needed
+  const parseOptions = (
+    options: any
+  ): Array<{ value: string; label: string }> => {
+    if (!options) return [];
+
+    return options.map((opt: any) => {
+      // If it's already an object with value and label, return as-is
+      if (typeof opt === "object" && opt.value && opt.label) {
+        return opt;
+      }
+      // If it's a JSON string, parse it
+      if (typeof opt === "string") {
+        try {
+          return JSON.parse(opt);
+        } catch (e) {
+          // If parse fails, return as fallback
+          return { value: opt, label: opt };
+        }
+      }
+      // Fallback
+      return opt;
+    });
+  };
 
   useEffect(() => {
     if (assignmentId) {
@@ -83,11 +110,26 @@ export default function PatientQuestionnaire({
       if (!response.ok) throw new Error("Failed to fetch questionnaire");
 
       const data = await response.json();
-      setAssignment(data.data[0]);
+      const assignmentData = data.data[0];
+
+      // Parse options for all questions
+      if (
+        assignmentData &&
+        assignmentData.template &&
+        assignmentData.template.questions
+      ) {
+        assignmentData.template.questions =
+          assignmentData.template.questions.map((q: Question) => ({
+            ...q,
+            options: parseOptions(q.options),
+          }));
+      }
+
+      setAssignment(assignmentData);
 
       // Initialize responses
       const initialResponses: Record<string, any> = {};
-      data.data[0].template.questions.forEach((q: Question) => {
+      assignmentData.template.questions.forEach((q: Question) => {
         initialResponses[q.id] = "";
       });
       setResponses(initialResponses);
@@ -139,62 +181,43 @@ export default function PatientQuestionnaire({
       const formattedResponses = assignment.template.questions.map(
         (question) => {
           const value = responses[question.id];
-          const baseResponse = {
-            questionId: question.id,
-            responseText: null as string | null,
-            responseNumber: null as number | null,
-            responseJson: null as string | null,
-          };
+          let answer: string | null = null;
 
           // Format based on question type
           switch (question.questionType) {
             case "YESNO":
               // Convert boolean to "Yes"/"No" string
-              return {
-                ...baseResponse,
-                responseText:
-                  value === true ? "Yes" : value === false ? "No" : null,
-              };
+              answer = value === true ? "Yes" : value === false ? "No" : null;
+              break;
 
             case "RATING":
             case "NUMBER":
-              // Store as number
-              return {
-                ...baseResponse,
-                responseNumber: value ? Number(value) : null,
-              };
+              // Store as string
+              answer = value ? String(value) : null;
+              break;
 
             case "CHECKBOX":
-              // Store as JSON array
-              return {
-                ...baseResponse,
-                responseJson:
-                  value && Array.isArray(value) ? JSON.stringify(value) : null,
-              };
+              // Store as JSON array string
+              answer =
+                value && Array.isArray(value) ? JSON.stringify(value) : null;
+              break;
 
             case "MULTIPLE_CHOICE":
-              // Store as text
-              return {
-                ...baseResponse,
-                responseText: value ? String(value) : null,
-              };
-
             case "DATE":
-              // Store as ISO string
-              return {
-                ...baseResponse,
-                responseText: value ? String(value) : null,
-              };
-
             case "TEXT":
             case "TEXTAREA":
             default:
               // Store as text
-              return {
-                ...baseResponse,
-                responseText: value ? String(value) : null,
-              };
+              answer = value ? String(value) : null;
+              break;
           }
+
+          return {
+            questionId: question.id,
+            responseText: answer, // Send as responseText to API compatibility
+            responseNumber: answer,
+            responseJson: answer,
+          };
         }
       );
 
@@ -235,11 +258,117 @@ export default function PatientQuestionnaire({
     }
   };
 
+  const handleVoiceSubmit = async (voiceData: Record<string, any>) => {
+    if (!assignment) return;
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      // Format voice responses based on question type
+      const formattedResponses = assignment.template.questions.map(
+        (question) => {
+          const value = voiceData[question.id];
+          let answer: string | null = null;
+
+          // Format based on question type
+          switch (question.questionType) {
+            case "YESNO":
+              // Convert boolean to "Yes"/"No" string
+              answer = value === true ? "Yes" : value === false ? "No" : null;
+              break;
+
+            case "RATING":
+            case "NUMBER":
+              // Store as string
+              answer = value ? String(value) : null;
+              break;
+
+            case "CHECKBOX":
+              // Store as JSON array string
+              answer =
+                value && Array.isArray(value) ? JSON.stringify(value) : null;
+              break;
+
+            case "MULTIPLE_CHOICE":
+            case "DATE":
+            case "TEXT":
+            case "TEXTAREA":
+            default:
+              // Store as text
+              answer = value ? String(value) : null;
+              break;
+          }
+
+          return {
+            questionId: question.id,
+            responseText: answer,
+            responseNumber: answer,
+            responseJson: answer,
+          };
+        }
+      );
+
+      const response = await fetch("/api/questionnaires/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId: assignment.id,
+          responses: formattedResponses,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Failed to submit" }));
+        throw new Error(errorData.error || "Failed to submit responses");
+      }
+
+      // Mark as submitted and update assignment status
+      setSubmitted(true);
+      setAssignment({
+        ...assignment,
+        status: "COMPLETED",
+      });
+
+      // Speak success message
+      const utterance = new SpeechSynthesisUtterance(
+        "Vos réponses ont été enregistrées avec succès!"
+      );
+      utterance.lang = "fr-FR";
+      window.speechSynthesis.speak(utterance);
+
+      // Call success callback after 2 seconds
+      setTimeout(() => {
+        onSubmitSuccess?.();
+      }, 2000);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to submit questionnaire";
+      setError(errorMessage);
+      console.error("Submission error:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
+    );
+  }
+
+  // Show voice form if voiceMode is enabled
+  if (voiceMode && assignment) {
+    return (
+      <VoiceQuestionnaireForm
+        questions={assignment.template.questions}
+        questionnaireName={assignment.template.title}
+        onSubmit={handleVoiceSubmit}
+        onCancel={() => setVoiceMode(false)}
+      />
     );
   }
 
@@ -270,7 +399,7 @@ export default function PatientQuestionnaire({
       {/* Header */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start mb-4">
             <div>
               <CardTitle>{template.title}</CardTitle>
               {template.description && (
@@ -279,6 +408,16 @@ export default function PatientQuestionnaire({
                 </CardDescription>
               )}
             </div>
+            {!isCompleted && (
+              <Button
+                onClick={() => setVoiceMode(true)}
+                variant="outline"
+                className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                <Mic className="h-4 w-4" />
+                Mode Vocal
+              </Button>
+            )}
             {isCompleted && (
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />

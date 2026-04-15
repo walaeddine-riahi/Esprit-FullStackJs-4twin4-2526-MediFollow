@@ -302,3 +302,131 @@ export async function getAlertStats() {
     return { success: false, error: "Erreur", stats: null };
   }
 }
+
+export async function getAlertsByDoctorSpecialty(
+  doctorId: string,
+  status?: AlertStatus
+) {
+  try {
+    // Get doctor's specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile) {
+      return { success: true, alerts: [] };
+    }
+
+    // Get alerts for patients with matching specialty
+    const where: any = {
+      patient: {
+        medicalProfile: {
+          specialty: doctorProfile.specialty,
+        },
+      },
+    };
+
+    if (status) where.status = status;
+
+    const alerts = await prisma.alert.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        patient: {
+          include: { user: true },
+        },
+        acknowledgedBy: true,
+        resolvedBy: true,
+      },
+    });
+
+    return { success: true, alerts };
+  } catch (error) {
+    console.error("Get alerts by doctor specialty error:", error);
+    return { success: false, error: "Erreur", alerts: [] };
+  }
+}
+
+export async function getAlertStatsByDoctorSpecialty(doctorId: string) {
+  try {
+    // Get doctor's specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile) {
+      return {
+        success: true,
+        stats: { total: 0, open: 0, acknowledged: 0, resolved: 0, critical: 0 },
+      };
+    }
+
+    const total = await prisma.alert.count({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const open = await prisma.alert.count({
+      where: {
+        status: AlertStatus.OPEN,
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const acknowledged = await prisma.alert.count({
+      where: {
+        status: AlertStatus.ACKNOWLEDGED,
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const resolved = await prisma.alert.count({
+      where: {
+        status: AlertStatus.RESOLVED,
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const critical = await prisma.alert.count({
+      where: {
+        severity: AlertSeverity.CRITICAL,
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      stats: { total, open, acknowledged, resolved, critical },
+    };
+  } catch (error) {
+    console.error("Get alert stats by doctor specialty error:", error);
+    return {
+      success: false,
+      error: "Erreur",
+      stats: { total: 0, open: 0, acknowledged: 0, resolved: 0, critical: 0 },
+    };
+  }
+}

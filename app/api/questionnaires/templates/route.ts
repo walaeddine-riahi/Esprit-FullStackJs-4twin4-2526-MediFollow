@@ -67,14 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      title,
-      description,
-      specialty,
-      questions,
-      isAiGenerated,
-      aiPrompt,
-    } = body;
+    const { title, description, specialty, questions } = body;
 
     if (!title || !specialty) {
       return NextResponse.json(
@@ -90,22 +83,30 @@ export async function POST(request: NextRequest) {
         title,
         description,
         specialty,
-        isAiGenerated,
-        aiPrompt,
         questions: {
           create:
-            questions?.map((q: any, index: number) => ({
-              questionNumber: index + 1,
-              questionText: q.questionText,
-              questionType: q.questionType,
-              helpText: q.helpText,
-              options: q.options,
-              isRequired: q.isRequired !== false,
-              minLength: q.minLength,
-              maxLength: q.maxLength,
-              minValue: q.minValue,
-              maxValue: q.maxValue,
-            })) || [],
+            questions?.map((q: any, index: number) => {
+              const questionData: any = {
+                questionNumber: index + 1,
+                questionText: q.questionText,
+                questionType: q.questionType,
+                required: q.isRequired !== false,
+              };
+              if (q.helpText) questionData.helpText = q.helpText;
+              if (q.options && Array.isArray(q.options)) {
+                // Convert options array to array of JSON strings
+                questionData.options = q.options.map((opt: any) =>
+                  typeof opt === "string" ? opt : JSON.stringify(opt)
+                );
+              }
+              if (q.minLength !== undefined)
+                questionData.minLength = q.minLength;
+              if (q.maxLength !== undefined)
+                questionData.maxLength = q.maxLength;
+              if (q.minValue !== undefined) questionData.minValue = q.minValue;
+              if (q.maxValue !== undefined) questionData.maxValue = q.maxValue;
+              return questionData;
+            }) || [],
         },
       },
       include: {

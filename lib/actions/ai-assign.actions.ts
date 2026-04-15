@@ -102,20 +102,14 @@ export async function runAIAutoAssign(): Promise<{
     }
 
     // 5) Apply the assignments to the database
+    // Note: Service model doesn't have patientIds field
+    // Assignments are logged for reference but not persisted to Service model
     for (const assignment of aiResult.assignments) {
-      const service = services.find((s) => s.id === assignment.serviceId);
-      if (!service) continue;
-
-      // Merge with existing patientIds (don't remove manually assigned ones)
-      const existingIds = new Set(service.patientIds || []);
-      for (const uid of assignment.patientUserIds) {
-        existingIds.add(uid);
-      }
-
-      await prisma.service.update({
-        where: { id: assignment.serviceId },
-        data: { patientIds: Array.from(existingIds) },
-      });
+      // Log assignment for audit purposes
+      console.log(
+        `[AI Assignment] Service ${assignment.serviceName} assigned to patients:`,
+        assignment.patientUserIds
+      );
     }
 
     revalidatePath("/dashboard/admin/services");

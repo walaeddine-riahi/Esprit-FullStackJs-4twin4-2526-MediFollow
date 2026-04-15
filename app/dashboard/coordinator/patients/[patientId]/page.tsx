@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowLeft, Send, Flag, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,6 +19,7 @@ export default function CoordinatorPatientDetailPage() {
   const patientId = params.patientId as string;
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<any>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [reminderMsg, setReminderMsg] = useState(
     "Bonjour, merci de compléter vos constantes vitales pour aujourd'hui dans MediFollow."
   );
@@ -42,11 +42,19 @@ export default function CoordinatorPatientDetailPage() {
 
   async function reload() {
     try {
+      setLoadError(null);
       const res = await getCoordinatorPatientDetail(patientId);
-      if (res.success && res.data) setDetail(res.data);
-      else router.push("/dashboard/coordinator/patients");
+      if (res.success && res.data) {
+        setDetail(res.data);
+      } else {
+        setLoadError(
+          res.error || "Impossible de charger les détails du patient"
+        );
+        router.push("/dashboard/coordinator/patients");
+      }
     } catch (e) {
       console.error(e);
+      setLoadError(String(e));
       setDetail(null);
     }
   }
@@ -134,7 +142,7 @@ export default function CoordinatorPatientDetailPage() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-10 animate-spin text-blue-600" />
+        <div className="size-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -142,13 +150,12 @@ export default function CoordinatorPatientDetailPage() {
   if (!detail) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] text-center p-6">
-        <Loader2 className="size-10 animate-spin text-red-600 mb-4" />
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
           Chargement impossible
         </h3>
-        <p className="text-sm text-gray-500">
-          Les données de ce patient sont introuvables ou une erreur est
-          survenue.
+        <p className="text-sm text-gray-500 mt-2">
+          {loadError ||
+            "Les données de ce patient sont introuvables ou une erreur est survenue."}
         </p>
         <button
           onClick={() => router.push("/dashboard/coordinator/patients")}
@@ -169,8 +176,7 @@ export default function CoordinatorPatientDetailPage() {
           href="/dashboard/coordinator/patients"
           className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 mb-6"
         >
-          <ArrowLeft className="size-4" />
-          Retour à la liste
+          ← Retour à la liste
         </Link>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -295,9 +301,8 @@ export default function CoordinatorPatientDetailPage() {
 
         {/* Rappel */}
         <section className="mt-10 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-6">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Send className="size-5 text-blue-600" />
-            Envoyer un rappel
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            📧 Envoyer un rappel
           </h2>
 
           <div className="mt-4 flex gap-2">
@@ -369,10 +374,8 @@ export default function CoordinatorPatientDetailPage() {
               onClick={handleSendReminder}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {sending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
+              {sending && (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
               )}
               Envoyer
             </button>
@@ -391,9 +394,8 @@ export default function CoordinatorPatientDetailPage() {
 
         {/* Signalement */}
         <section className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Flag className="size-5 text-amber-600" />
-            Signaler une entrée incomplète ou suspecte
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            ⚠️ Signaler une entrée incomplète ou suspecte
           </h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <select

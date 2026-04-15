@@ -4,7 +4,7 @@
  * Debug why dr.martin.leclerc@hosp.fr has 0 patients in API
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 async function main() {
   const doctorId = "69d614a88540bb0a26312b0d";

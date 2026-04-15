@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 type ServiceInput = {
@@ -67,14 +67,22 @@ export async function createService(data: ServiceInput) {
   }
 }
 
-export async function updateService(serviceId: string, data: Partial<ServiceInput>) {
+export async function updateService(
+  serviceId: string,
+  data: Partial<ServiceInput>
+) {
   try {
     const updateData: Record<string, unknown> = {};
-    if (data.serviceName !== undefined) updateData.serviceName = data.serviceName;
-    if (data.description !== undefined) updateData.description = data.description || null;
-    if (data.consultationFee !== undefined) updateData.consultationFee = data.consultationFee;
-    if (data.averageDuration !== undefined) updateData.averageDuration = data.averageDuration;
-    if (data.specializations !== undefined) updateData.specializations = data.specializations;
+    if (data.serviceName !== undefined)
+      updateData.serviceName = data.serviceName;
+    if (data.description !== undefined)
+      updateData.description = data.description || null;
+    if (data.consultationFee !== undefined)
+      updateData.consultationFee = data.consultationFee;
+    if (data.averageDuration !== undefined)
+      updateData.averageDuration = data.averageDuration;
+    if (data.specializations !== undefined)
+      updateData.specializations = data.specializations;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.patientIds !== undefined) updateData.patientIds = data.patientIds;
     if (data.teamIds !== undefined) updateData.teamIds = data.teamIds;
@@ -134,7 +142,13 @@ export async function getAssignableCareTeam() {
   try {
     const users = await prisma.user.findMany({
       where: { role: { in: ["DOCTOR", "NURSE"] } },
-      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
       orderBy: { lastName: "asc" },
     });
 

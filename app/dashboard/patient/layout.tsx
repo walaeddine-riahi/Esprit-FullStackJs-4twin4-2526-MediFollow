@@ -40,12 +40,18 @@ import {
 } from "@/lib/actions/notification.actions";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { AlertStatus } from "@/types/medifollow.types";
+import {
+  PatientSidebarGuide,
+  GuideTooltip,
+} from "@/components/PatientSidebarGuide";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   href: string;
   badge?: number;
+  guideId?: string;
 }
 
 export default function PatientLayout({ children }: { children: ReactNode }) {
@@ -72,13 +78,74 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeGuide, setActiveGuide] = useState<string | null>(null);
+  const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+  const tourCheckDoneRef = useRef(false);
 
   useEffect(() => {
     loadData();
     const sidebarHandler = () => setSidebarOpen(true);
     document.addEventListener("sidebar:open", sidebarHandler);
+
+    // Add debug function to window for resetting tour
+    (window as any).resetOnboardingTour = () => {
+      const keys = Object.keys(localStorage).filter((k) =>
+        k.startsWith("onboarding-tour-seen-")
+      );
+      keys.forEach((key) => {
+        localStorage.removeItem(key);
+        console.log("❌ Removed:", key);
+      });
+      tourCheckDoneRef.current = false;
+      console.log("✅ Tour reset! Page will need reload.");
+    };
+
     return () => document.removeEventListener("sidebar:open", sidebarHandler);
   }, []);
+
+  // Trigger onboarding tour after user data loads - DAILY
+  useEffect(() => {
+    if (!user?.id) {
+      console.log("⏭️  Waiting for user ID...");
+      return;
+    }
+
+    // Use ref to ensure this runs only once per session
+    if (tourCheckDoneRef.current) {
+      console.log("⏭️  Tour already checked this session, skipping");
+      return;
+    }
+
+    tourCheckDoneRef.current = true;
+
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
+    const tourKey = `onboarding-tour-seen-${user.id}-${today}`;
+    const tourSeen = localStorage.getItem(tourKey);
+
+    console.log("✅ Tour check:", {
+      userId: user.id,
+      today,
+      tourKey,
+      tourSeen,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (!tourSeen) {
+      // Delay to ensure page rendering is complete
+      const timer = setTimeout(() => {
+        console.log("✅ SHOWING TOUR NOW", { userId: user.id, tourKey });
+        setShowOnboardingTour(true);
+      }, 800);
+
+      return () => {
+        console.log("❌ Tour timer cancelled");
+        clearTimeout(timer);
+      };
+    } else {
+      console.log("⏭️  Tour already seen today by this user:", tourKey);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -214,57 +281,80 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
     }
   }
 
+  function handleTourComplete() {
+    setShowOnboardingTour(false);
+    if (user?.id) {
+      // Store with today's date so tour shows again tomorrow
+      const today = new Date().toISOString().split("T")[0];
+      localStorage.setItem(`onboarding-tour-seen-${user.id}-${today}`, "true");
+      console.log(
+        "✅ Tour completed. Saved:",
+        `onboarding-tour-seen-${user.id}-${today}`
+      );
+    }
+  }
+
   const navItems: NavItem[] = [
     {
       icon: LayoutDashboard,
       label: "Tableau de bord",
       href: "/dashboard/patient",
+      guideId: "tableau-de-bord",
     },
     {
       icon: Activity,
       label: "Signes vitaux",
       href: "/dashboard/patient/vitals",
+      guideId: "signes-vitaux",
     },
     {
       icon: Bell,
       label: "Alertes",
       href: "/dashboard/patient/alerts",
       badge: openAlertsCount,
+      guideId: "alertes",
     },
     {
       icon: Calendar,
       label: "Rendez-vous",
       href: "/dashboard/patient/appointments",
+      guideId: "rendez-vous",
     },
     {
       icon: FileText,
       label: "Rapports médicaux",
       href: "/dashboard/patient/reports",
+      guideId: "rapports-medicaux",
     },
     {
       icon: Clock,
       label: "Historique",
       href: "/dashboard/patient/history",
+      guideId: "historique",
     },
     {
       icon: Shield,
       label: "Accès médecins",
       href: "/dashboard/patient/access",
+      guideId: "accès-medecins",
     },
     {
       icon: ClipboardList,
       label: "Questionnaires",
       href: "/dashboard/patient/questionnaires",
+      guideId: "questionnaires",
     },
     {
       icon: Beaker,
       label: "Analyses Médicales",
       href: "/dashboard/patient/analyses",
+      guideId: "analyses-medicales",
     },
     {
       icon: BookOpen,
       label: "Guide de suivi",
       href: "/dashboard/patient/guide",
+      guideId: "guide-suivi",
     },
   ];
 
@@ -313,26 +403,32 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
-                <Link
+                <GuideTooltip
                   key={item.href}
-                  href={item.href}
-                  className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
+                  guideId={item.guideId || ""}
+                  onShowGuide={setActiveGuide}
                 >
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
-                  )}
-                  <Icon className="size-5 flex-shrink-0" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="rounded-full bg-gradient-to-r from-red-600 to-red-700 px-2 py-0.5 text-xs font-bold text-white shadow-sm shadow-red-500/50 animate-pulse">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
+                  <Link
+                    href={item.href}
+                    data-tour={item.guideId}
+                    className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
+                    )}
+                    <Icon className="size-5 flex-shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="rounded-full bg-gradient-to-r from-red-600 to-red-700 px-2 py-0.5 text-xs font-bold text-white shadow-sm shadow-red-500/50 animate-pulse">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                </GuideTooltip>
               );
             })}
           </div>
@@ -344,34 +440,38 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                 Paramètres
               </p>
             </div>
-            <Link
-              href="/dashboard/patient/profile"
-              className={`group flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                pathname === "/dashboard/patient/profile"
-                  ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              {pathname === "/dashboard/patient/profile" && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
-              )}
-              <User className="size-5" />
-              <span>Profil</span>
-            </Link>
-            <Link
-              href="/dashboard/patient/settings"
-              className={`group flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                pathname === "/dashboard/patient/settings"
-                  ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              {pathname === "/dashboard/patient/settings" && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
-              )}
-              <Settings className="size-5" />
-              <span>Paramètres</span>
-            </Link>
+            <GuideTooltip guideId="profil" onShowGuide={setActiveGuide}>
+              <Link
+                href="/dashboard/patient/profile"
+                className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                  pathname === "/dashboard/patient/profile"
+                    ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                {pathname === "/dashboard/patient/profile" && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
+                )}
+                <User className="size-5" />
+                <span>Profil</span>
+              </Link>
+            </GuideTooltip>
+            <GuideTooltip guideId="parametres" onShowGuide={setActiveGuide}>
+              <Link
+                href="/dashboard/patient/settings"
+                className={`group relative flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                  pathname === "/dashboard/patient/settings"
+                    ? "bg-gradient-to-r from-red-500/10 to-red-400/10 dark:from-red-500/20 dark:to-red-400/20 text-red-600 dark:text-red-400 shadow-sm"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                {pathname === "/dashboard/patient/settings" && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-gradient-to-b from-red-500 to-red-400 rounded-r-full"></div>
+                )}
+                <Settings className="size-5" />
+                <span>Paramètres</span>
+              </Link>
+            </GuideTooltip>
           </div>
         </nav>
 
@@ -603,6 +703,15 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
                     </div>
                   )}
                 </div>
+
+                {/* Tour guide button */}
+                <button
+                  onClick={() => setShowOnboardingTour(true)}
+                  className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title="Afficher le guide"
+                >
+                  <BookOpen className="size-5 text-red-600 dark:text-red-400" />
+                </button>
 
                 <div className="hidden sm:block h-8 w-px bg-gray-200 dark:bg-gray-800" />
 
@@ -841,6 +950,7 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
               <button
                 onClick={() => setSelectedNotif(null)}
                 className="p-2 rounded-xl bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all font-bold"
+                aria-label="Fermer détails notification"
               >
                 <X className="size-5" />
               </button>
@@ -889,6 +999,25 @@ function PatientLayoutInner({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Patient Sidebar Guide */}
+      {activeGuide && (
+        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm pointer-events-auto"
+            onClick={() => setActiveGuide(null)}
+          />
+          <div className="relative z-[101] pointer-events-auto max-w-md mx-4">
+            <PatientSidebarGuide isVisible={true} activeGuide={activeGuide} />
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        isOpen={showOnboardingTour}
+        onComplete={handleTourComplete}
+      />
     </div>
   );
 }

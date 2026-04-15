@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 
@@ -68,14 +68,22 @@ export async function createService(data: ServiceInput) {
   }
 }
 
-export async function updateService(serviceId: string, data: Partial<ServiceInput>) {
+export async function updateService(
+  serviceId: string,
+  data: Partial<ServiceInput>
+) {
   try {
     const updateData: Record<string, unknown> = {};
-    if (data.serviceName !== undefined) updateData.serviceName = data.serviceName;
-    if (data.description !== undefined) updateData.description = data.description || null;
-    if (data.consultationFee !== undefined) updateData.consultationFee = data.consultationFee;
-    if (data.averageDuration !== undefined) updateData.averageDuration = data.averageDuration;
-    if (data.specializations !== undefined) updateData.specializations = data.specializations;
+    if (data.serviceName !== undefined)
+      updateData.serviceName = data.serviceName;
+    if (data.description !== undefined)
+      updateData.description = data.description || null;
+    if (data.consultationFee !== undefined)
+      updateData.consultationFee = data.consultationFee;
+    if (data.averageDuration !== undefined)
+      updateData.averageDuration = data.averageDuration;
+    if (data.specializations !== undefined)
+      updateData.specializations = data.specializations;
     if (data.patientIds !== undefined) updateData.patientIds = data.patientIds;
     if (data.teamIds !== undefined) updateData.teamIds = data.teamIds;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
@@ -134,15 +142,22 @@ export async function getAssignablePatients() {
 export async function getAssignableCareTeam() {
   try {
     console.log("[Service] Fetching assignable care team (DOCTOR, NURSE)...");
-    
+
     const users = await prisma.user.findMany({
       where: { role: { in: [Role.DOCTOR, Role.NURSE] } },
-      select: { id: true, firstName: true, lastName: true, email: true, role: true, isActive: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
       orderBy: { lastName: "asc" },
     });
 
     console.log(`[Service] Found ${users.length} doctors/nurses`);
-    
+
     const team = users.map((u) => ({
       id: u.id,
       label: `${u.firstName} ${u.lastName}`.trim() || u.email,
@@ -150,7 +165,10 @@ export async function getAssignableCareTeam() {
       role: u.role,
     }));
 
-    console.log(`[Service] Returning ${team.length} team members:`, team.map(t => `${t.label} (${t.role})`));
+    console.log(
+      `[Service] Returning ${team.length} team members:`,
+      team.map((t) => `${t.label} (${t.role})`)
+    );
 
     return { success: true, team };
   } catch (error: any) {

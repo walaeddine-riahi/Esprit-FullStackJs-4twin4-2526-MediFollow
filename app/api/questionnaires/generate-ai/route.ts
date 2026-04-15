@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { QuestionType } from "@prisma/client";
 
 // Helper function to call AI API (configure with your provider)
 async function generateQuestionsWithAI(
@@ -15,12 +14,12 @@ async function generateQuestionsWithAI(
     CARDIOLOGY: [
       {
         questionText: "Do you experience any chest pain or discomfort at rest?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
         helpText: "Include any pain in the chest, shoulder, arm, or jaw",
       },
       {
         questionText: "How often do you experience shortness of breath?",
-        questionType: QuestionType.MULTIPLE_CHOICE,
+        questionType: "MULTIPLE_CHOICE",
         options: [
           { value: "never", label: "Never" },
           { value: "rarely", label: "Rarely (less than once a week)" },
@@ -31,16 +30,16 @@ async function generateQuestionsWithAI(
       {
         questionText:
           "Do you experience palpitations (racing or skipping heartbeats)?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Have you noticed any swelling in your legs or feet?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText:
           "How many flights of stairs can you climb without stopping?",
-        questionType: QuestionType.NUMBER,
+        questionType: "NUMBER",
         minValue: 0,
         maxValue: 100,
       },
@@ -48,11 +47,11 @@ async function generateQuestionsWithAI(
     NEUROLOGY: [
       {
         questionText: "Do you experience frequent headaches?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "How often do you experience dizziness or vertigo?",
-        questionType: QuestionType.MULTIPLE_CHOICE,
+        questionType: "MULTIPLE_CHOICE",
         options: [
           { value: "never", label: "Never" },
           { value: "rarely", label: "Rarely" },
@@ -63,26 +62,26 @@ async function generateQuestionsWithAI(
       {
         questionText:
           "Do you have any numbness or tingling in your extremities?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Rate your memory quality (1-10)",
-        questionType: QuestionType.RATING,
+        questionType: "RATING",
       },
       {
         questionText:
           "Do you experience any tremors or uncontrolled movements?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
     ],
     ORTHOPEDICS: [
       {
         questionText: "Do you have joint pain?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Which joints are affected?",
-        questionType: QuestionType.CHECKBOX,
+        questionType: "CHECKBOX",
         options: [
           { value: "knee", label: "Knee" },
           { value: "hip", label: "Hip" },
@@ -94,15 +93,15 @@ async function generateQuestionsWithAI(
       },
       {
         questionText: "Rate your pain level (1-10)",
-        questionType: QuestionType.RATING,
+        questionType: "RATING",
       },
       {
         questionText: "Does the pain affect your daily activities?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "How much can you walk without pain (in minutes)?",
-        questionType: QuestionType.NUMBER,
+        questionType: "NUMBER",
         minValue: 0,
         maxValue: 480,
       },
@@ -110,15 +109,15 @@ async function generateQuestionsWithAI(
     PULMONOLOGY: [
       {
         questionText: "Do you have a persistent cough?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Do you cough up blood or blood-tinged sputum?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "How often do you experience wheezing?",
-        questionType: QuestionType.MULTIPLE_CHOICE,
+        questionType: "MULTIPLE_CHOICE",
         options: [
           { value: "never", label: "Never" },
           { value: "rarely", label: "Rarely" },
@@ -128,34 +127,34 @@ async function generateQuestionsWithAI(
       },
       {
         questionText: "Do you have any chest pain when breathing?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Rate your breathing difficulty (1-10)",
-        questionType: QuestionType.RATING,
+        questionType: "RATING",
       },
     ],
     GENERAL_MEDICINE: [
       {
         questionText: "How have you been feeling overall?",
-        questionType: QuestionType.TEXTAREA,
+        questionType: "TEXTAREA",
         helpText: "Please describe any symptoms or concerns",
       },
       {
         questionText: "Are you taking all your medications as prescribed?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Rate your energy level (1-10)",
-        questionType: QuestionType.RATING,
+        questionType: "RATING",
       },
       {
         questionText: "Have you had any recent fever or infections?",
-        questionType: QuestionType.YESNO,
+        questionType: "YESNO",
       },
       {
         questionText: "Any other concerns or symptoms?",
-        questionType: QuestionType.TEXTAREA,
+        questionType: "TEXTAREA",
       },
     ],
   };

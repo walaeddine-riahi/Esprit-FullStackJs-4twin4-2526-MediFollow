@@ -5,7 +5,7 @@
  * Résout le problème: patients n'apparaissent pas car AccessGrants étaient pour ADMIN, pas DOCTOR
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 async function main() {
   console.log("\n" + "=".repeat(70));

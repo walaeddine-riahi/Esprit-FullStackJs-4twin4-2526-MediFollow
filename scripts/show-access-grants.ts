@@ -4,7 +4,7 @@
  * Show AccessGrants with detailed info for debugging
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 async function main() {
   console.log("\n" + "=".repeat(70));

@@ -1,11 +1,16 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { pusherServer } from "@/lib/pusher";
-import { sendDoctorCredentialsEmail, sendStaffCredentialsEmail, sendPatientApprovalEmail, sendPatientBannedEmail } from "@/lib/actions/notification.actions";
+import {
+  sendDoctorCredentialsEmail,
+  sendStaffCredentialsEmail,
+  sendPatientApprovalEmail,
+  sendPatientBannedEmail,
+} from "@/lib/actions/notification.actions";
 import crypto from "crypto";
 
 function generateRandomPassword(length = 12): string {
@@ -14,7 +19,7 @@ function generateRandomPassword(length = 12): string {
   const digits = "23456789";
   const special = "!@#$%&*";
   const all = upper + lower + digits + special;
-  
+
   const getRandomInt = (max: number) => Math.floor(Math.random() * max);
 
   // Ensure at least one of each type
@@ -47,7 +52,7 @@ export async function getAllUsers() {
         createdAt: "desc",
       },
     });
-    
+
     console.log("[getAllUsers] Found users:", users.length);
     console.log("[getAllUsers] Sample user:", users[0]);
     return users || [];
@@ -63,7 +68,7 @@ export async function getUserById(id: string) {
     const user = await prisma.user.findUnique({
       where: { id },
     });
-    
+
     return user;
   } catch (error) {
     console.error("Error getting user by ID:", error);
@@ -83,10 +88,9 @@ export async function updateUser(userId: string, data: any) {
         role: data.role as Role,
         isActive: data.isActive,
         phoneNumber: data.phoneNumber ?? undefined,
-
       },
     });
-    
+
     revalidatePath("/dashboard/admin/users");
     return { success: true, user: updatedUser };
   } catch (error) {
@@ -129,7 +133,7 @@ export async function deleteUser(userId: string) {
 
       await tx.user.delete({ where: { id: userId } });
     });
-    
+
     revalidatePath("/dashboard/admin/users");
     return { success: true };
   } catch (error) {
@@ -148,7 +152,7 @@ export async function createUser(data: any) {
     const isStaff = staffRoles.includes(data.role);
     const plainPassword = isStaff ? generateRandomPassword() : data.password;
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
-    
+
     const newUser = await prisma.user.create({
       data: {
         email: data.email,
@@ -158,7 +162,6 @@ export async function createUser(data: any) {
         role: data.role,
         isActive: data.isActive,
         phoneNumber: data.phoneNumber,
-
       },
     });
 
@@ -175,22 +178,36 @@ export async function createUser(data: any) {
     // Send credentials email to staff (doctor, nurse, coordinator)
     if (staffRoles.includes(data.role)) {
       try {
-        const emailResult = await sendStaffCredentialsEmail(data.email, data.firstName, plainPassword, data.role);
+        const emailResult = await sendStaffCredentialsEmail(
+          data.email,
+          data.firstName,
+          plainPassword,
+          data.role
+        );
         if (emailResult.success) {
           console.log(`✅ Credentials email sent to ${data.email}`);
         } else {
-          console.warn(`⚠️ Failed to send credentials email to ${data.email}:`, emailResult.error);
+          console.warn(
+            `⚠️ Failed to send credentials email to ${data.email}:`,
+            emailResult.error
+          );
         }
       } catch (emailError) {
-        console.error(`❌ Staff credentials email error for ${data.email}:`, emailError);
+        console.error(
+          `❌ Staff credentials email error for ${data.email}:`,
+          emailError
+        );
       }
     }
-    
+
     revalidatePath("/dashboard/admin/users");
     return { success: true, user: newUser };
   } catch (error: any) {
     console.error("Error creating user:", error);
-    return { success: false, error: `Failed to create user: ${error?.message || String(error)}` };
+    return {
+      success: false,
+      error: `Failed to create user: ${error?.message || String(error)}`,
+    };
   }
 }
 
@@ -201,7 +218,7 @@ export async function toggleUserStatus(userId: string, isActive: boolean) {
       where: { id: userId },
       data: { isActive },
     });
-    
+
     revalidatePath("/dashboard/admin/users");
     return { success: true, user: updatedUser };
   } catch (error) {
@@ -219,7 +236,7 @@ export async function getUsersByRole(role: string) {
         createdAt: "desc",
       },
     });
-    
+
     return users;
   } catch (error) {
     console.error("Error getting users by role:", error);
@@ -231,13 +248,21 @@ export async function getUsersByRole(role: string) {
 export async function getUserStats() {
   try {
     const totalUsers = await prisma.user.count();
-    const totalAdmins = await prisma.user.count({ where: { role: "ADMIN" as Role } });
-    const totalDoctors = await prisma.user.count({ where: { role: "DOCTOR" as Role } });
-    const totalPatients = await prisma.user.count({ where: { role: "PATIENT" as Role } });
-    
+    const totalAdmins = await prisma.user.count({
+      where: { role: "ADMIN" as Role },
+    });
+    const totalDoctors = await prisma.user.count({
+      where: { role: "DOCTOR" as Role },
+    });
+    const totalPatients = await prisma.user.count({
+      where: { role: "PATIENT" as Role },
+    });
+
     const activeUsers = await prisma.user.count({ where: { isActive: true } });
-    const inactiveUsers = await prisma.user.count({ where: { isActive: false } });
-    
+    const inactiveUsers = await prisma.user.count({
+      where: { isActive: false },
+    });
+
     return {
       totalUsers,
       totalAdmins,

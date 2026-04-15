@@ -557,19 +557,6 @@ export async function sendStaffCredentialsEmail(
   role: string
 ) {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false, // For development/Windows SSL issues
-      },
-    });
-
     const roleLabel = ROLE_LABELS[role] || role;
     const titlePrefix = ROLE_TITLES[role] ? `${ROLE_TITLES[role]} ` : "";
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`;
@@ -610,18 +597,97 @@ export async function sendStaffCredentialsEmail(
       </div>
     `;
 
-    const result = await transporter.sendMail({
-      from: `"MediFollow" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: "Vos identifiants MediFollow",
-      html,
-    });
+    // Try SMTP first (Nodemailer)
+    let smtpError: string | null = null;
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        console.log(
+          `📧 Attempting to send via SMTP: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`
+        );
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: Number(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === "true",
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
 
-    console.log(`✅ Email identifiants envoyé à ${email}`);
-    return { success: true, messageId: result.messageId };
+        // Verify connection (this catches most SMTP errors)
+        await transporter.verify();
+
+        const result = await transporter.sendMail({
+          from: `"MediFollow" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: "Vos identifiants MediFollow",
+          html,
+        });
+
+        console.log(`✅ Email credentials sent via SMTP to ${email}`);
+        return { success: true, messageId: result.messageId };
+      } catch (error) {
+        smtpError = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️  SMTP failed: ${smtpError}`);
+      }
+    }
+
+    // Fallback to Resend API if SMTP failed or not configured
+    try {
+      const apiKey = process.env.RESEND_API_KEY;
+      if (apiKey) {
+        console.log(`📧 Attempting to send via Resend API...`);
+        const resend = getResend();
+        const { error, data } = await resend.emails.send({
+          from: EMAIL_FROM,
+          to: email,
+          subject: "Vos identifiants MediFollow",
+          html,
+        });
+
+        if (error) {
+          console.error("❌ Resend API error:", error);
+          throw error;
+        }
+
+        console.log(
+          `✅ Email credentials sent via Resend to ${email}, id: ${data?.id}`
+        );
+        return { success: true, messageId: data?.id };
+      }
+    } catch (resendError) {
+      const resendErrorMsg =
+        resendError instanceof Error
+          ? resendError.message
+          : String(resendError);
+      console.error(`❌ Resend fallback failed: ${resendErrorMsg}`);
+    }
+
+    // If we get here, both methods failed
+    const errorSummary = smtpError
+      ? `SMTP error: ${smtpError}. No Resend API key configured.`
+      : "No email provider configured (missing SMTP credentials and RESEND_API_KEY)";
+
+    console.error(`❌ All email methods failed: ${errorSummary}`);
+    return {
+      success: false,
+      error: errorSummary,
+      hint: "Configure either SMTP (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS) or RESEND_API_KEY",
+    };
   } catch (error) {
-    console.error("❌ Erreur envoi email identifiants:", error);
-    return { success: false, error };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(
+      "❌ Unexpected error in sendStaffCredentialsEmail:",
+      errorMessage
+    );
+    return {
+      success: false,
+      error: errorMessage,
+      hint: "Check SMTP settings or Resend API configuration",
+    };
   }
 }
 

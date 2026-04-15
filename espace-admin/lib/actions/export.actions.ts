@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export async function getExportablePatients() {
   try {
@@ -10,7 +10,13 @@ export async function getExportablePatients() {
       },
       include: {
         user: {
-          select: { firstName: true, lastName: true, email: true, phoneNumber: true, role: true },
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phoneNumber: true,
+            role: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -59,7 +65,8 @@ export async function getExportableVitals(patientId?: string) {
       success: true,
       vitals: vitals.map((v) => ({
         id: v.id,
-        patient: `${v.patient.user.firstName} ${v.patient.user.lastName}`.trim(),
+        patient:
+          `${v.patient.user.firstName} ${v.patient.user.lastName}`.trim(),
         patientId: v.patientId,
         systolicBP: v.systolicBP,
         diastolicBP: v.diastolicBP,
@@ -95,7 +102,8 @@ export async function getExportableAlerts() {
       success: true,
       alerts: alerts.map((a) => ({
         id: a.id,
-        patient: `${a.patient.user.firstName} ${a.patient.user.lastName}`.trim(),
+        patient:
+          `${a.patient.user.firstName} ${a.patient.user.lastName}`.trim(),
         alertType: a.alertType,
         severity: a.severity,
         status: a.status,

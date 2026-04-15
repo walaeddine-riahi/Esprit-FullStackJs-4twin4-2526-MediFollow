@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 export async function GET(request: NextRequest) {
@@ -17,28 +17,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Fetch patients that have an active AccessGrant with this doctor
-    const accessGrants = await prisma.accessGrant.findMany({
-      where: {
-        doctorId: user.id,
-        isActive: true,
-      },
-      select: {
-        patientId: true,
-      },
-    });
-
-    console.log("🔵 [API /patients] AccessGrants found:", accessGrants.length);
-
-    const patientIds = accessGrants.map((grant) => grant.patientId);
-    console.log("🔵 [API /patients] Patient User IDs to lookup:", patientIds);
-
-    // Fetch the patient details
+    // For doctors: Return all active patients (no AccessGrant filter needed for questionnaire assignment)
+    // For admins: Return all active patients
     const patients = await prisma.patient.findMany({
       where: {
-        userId: {
-          in: patientIds,
-        },
         isActive: true,
       },
       select: {

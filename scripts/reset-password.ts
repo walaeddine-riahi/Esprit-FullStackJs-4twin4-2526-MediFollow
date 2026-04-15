@@ -4,7 +4,7 @@
  * Script pour changer le password d'un utilisateur
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
 async function main() {

@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { evaluateAndCreateAlert } from "@/lib/services/vitals-alert.service";
 import { classifyVitalsWithAI } from "@/lib/services/vitals-ai-status.service";
 import { NextRequest, NextResponse } from "next/server";

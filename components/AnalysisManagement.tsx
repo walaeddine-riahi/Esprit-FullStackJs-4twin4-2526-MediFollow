@@ -20,10 +20,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Search, Download } from "lucide-react";
+import { Loader2, Plus, Search, Download, Eye } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { uploadFileToAzure } from "@/lib/utils/file-upload";
 import { getBlobDownloadUrl } from "@/lib/utils/blob-utils";
+import {
+  extractTextFromDocument,
+  isExtractableFileType,
+} from "@/lib/utils/text-extraction";
 
 const ANALYSIS_TYPES = [
   { value: "BLOOD_TEST", label: "Analyse de sang (NFS, Biochimie)" },
@@ -39,6 +43,44 @@ const ANALYSIS_TYPES = [
   { value: "CULTURE", label: "Culture" },
   { value: "OTHER", label: "Autre" },
 ];
+
+// Helper function to get file type from filename
+const getFileType = (filename: string): string => {
+  if (!filename) return "Fichier inconnu";
+
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const fileTypeMap: Record<string, string> = {
+    // Images
+    jpg: "JPEG Image",
+    jpeg: "JPEG Image",
+    png: "PNG Image",
+    gif: "GIF Image",
+    bmp: "Bitmap Image",
+    svg: "SVG Image",
+    webp: "WebP Image",
+    tiff: "TIFF Image",
+    // Documents
+    pdf: "PDF Document",
+    doc: "Word Document",
+    docx: "Word Document",
+    xls: "Excel Spreadsheet",
+    xlsx: "Excel Spreadsheet",
+    ppt: "PowerPoint Presentation",
+    pptx: "PowerPoint Presentation",
+    txt: "Text File",
+    rtf: "Rich Text File",
+    // Medical
+    dicom: "DICOM Medical Image",
+    dcm: "DICOM Medical Image",
+    // Archives
+    zip: "ZIP Archive",
+    rar: "RAR Archive",
+    "7z": "7Z Archive",
+    // Default
+  };
+
+  return fileTypeMap[ext] || `${ext.toUpperCase()} File`;
+};
 
 interface Patient {
   id: string;
@@ -76,6 +118,12 @@ export default function AnalysisManagement() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+
+  // Text extraction states
+  const [extractionProgress, setExtractionProgress] = useState(0);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPatients();
@@ -292,6 +340,82 @@ export default function AnalysisManagement() {
   const handleViewDetails = (request: any) => {
     setSelectedRequest(request);
     setDetailsDialogOpen(true);
+    // Reset extraction state when opening new request
+    setExtractedText(null);
+    setExtractionError(null);
+    setExtractionProgress(0);
+  };
+
+  const handleExtractText = async () => {
+    if (
+      !selectedRequest?.submittedDocumentUrl ||
+      !selectedRequest?.submittedDocumentName
+    ) {
+      setExtractionError("Pas de document disponible");
+      return;
+    }
+
+    // Check if file type is supported
+    if (!isExtractableFileType(selectedRequest.submittedDocumentName)) {
+      setExtractionError(
+        `Format de fichier non supporté pour l'extraction: ${selectedRequest.submittedDocumentName.split(".").pop()?.toUpperCase()}`
+      );
+      return;
+    }
+
+    setIsExtracting(true);
+    setExtractionError(null);
+    setExtractedText(null);
+
+    try {
+      console.log(
+        "🔍 Starting text extraction from:",
+        selectedRequest.submittedDocumentName
+      );
+
+      const result = await extractTextFromDocument(
+        selectedRequest.submittedDocumentUrl,
+        selectedRequest.submittedDocumentName,
+        (progress) => {
+          setExtractionProgress(Math.round(progress * 100));
+          console.log(`📊 Extraction progress: ${Math.round(progress * 100)}%`);
+        }
+      );
+
+      if (result.success && result.text) {
+        setExtractedText(result.text);
+        console.log(
+          `✅ Text extracted successfully (${result.text.length} characters)`
+        );
+      } else {
+        setExtractionError("Une erreur est survenue lors de l'extraction");
+      }
+    } catch (error) {
+      let errorMsg = "Erreur lors de l'extraction";
+
+      if (error instanceof Error) {
+        console.error("❌ Text extraction failed:", error.message, error);
+        errorMsg = error.message;
+
+        // Better error messages for common issues
+        if (
+          error.message.includes("CORS") ||
+          error.message.includes("Failed to fetch")
+        ) {
+          errorMsg =
+            "Impossible de télécharger l'image. Vérifiez que le document est accessible.";
+        } else if (error.message.includes("Unsupported")) {
+          errorMsg = error.message;
+        }
+      } else {
+        console.error("❌ Text extraction failed:", error);
+      }
+
+      setExtractionError(errorMsg);
+    } finally {
+      setIsExtracting(false);
+      setExtractionProgress(0);
+    }
   };
 
   const handlePatientToggle = (patientId: string) => {
@@ -747,22 +871,85 @@ export default function AnalysisManagement() {
                       <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                         📋 Document Résultat
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleDownload(
-                            selectedRequest.submittedDocumentUrl,
-                            selectedRequest.submittedDocumentName,
-                            "Document Résultat"
-                          )
-                        }
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        {selectedRequest.submittedDocumentName ||
-                          "Télécharger le résultat"}
-                      </Button>
+                      <div className="flex gap-2 mb-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleDownload(
+                              selectedRequest.submittedDocumentUrl,
+                              selectedRequest.submittedDocumentName,
+                              "Document Résultat"
+                            )
+                          }
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          {selectedRequest.submittedDocumentName ||
+                            "Télécharger le résultat"}
+                        </Button>
+
+                        {/* Extract Text Button */}
+                        {isExtractableFileType(
+                          selectedRequest.submittedDocumentName || ""
+                        ) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExtractText}
+                            disabled={isExtracting}
+                            className="gap-2"
+                          >
+                            {isExtracting ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {extractionProgress}%
+                              </>
+                            ) : extractedText ? (
+                              <>
+                                <Eye className="h-4 w-4" />
+                                Texte extrait
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-4 w-4" />
+                                Extraire le texte
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Type :{" "}
+                        {getFileType(
+                          selectedRequest.submittedDocumentName || ""
+                        )}
+                      </p>
+
+                      {/* Extraction Error */}
+                      {extractionError && (
+                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400">
+                          {extractionError}
+                        </div>
+                      )}
+
+                      {/* Extracted Text Display */}
+                      {extractedText && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                          <p className="text-xs font-semibold text-blue-900 dark:text-blue-300 mb-2">
+                            📝 Texte extrait:
+                          </p>
+                          <div className="max-h-48 overflow-y-auto">
+                            <p className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap break-words font-mono">
+                              {extractedText}
+                            </p>
+                          </div>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                            {extractedText.length} caractères extraits
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 

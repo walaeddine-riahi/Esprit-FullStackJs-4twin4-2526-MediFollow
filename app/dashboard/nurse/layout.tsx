@@ -16,6 +16,7 @@ import {
   Bell,
   User,
   Clock,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -90,6 +91,12 @@ function NurseLayoutInner({ children }: { children: React.ReactNode }) {
       icon: Users,
       badge: badges.patientsNeedingData > 0 ? badges.patientsNeedingData : null,
       badgeColor: "orange",
+    },
+    {
+      href: "/dashboard/nurse/assign-patient",
+      label: "Assign to Doctor",
+      icon: UserPlus,
+      badge: null,
     },
     {
       href: "/dashboard/nurse/enter-data",

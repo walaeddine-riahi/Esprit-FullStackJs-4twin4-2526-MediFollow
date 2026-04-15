@@ -126,11 +126,14 @@ export async function getAssignedPatients(nurseId: string) {
 }
 
 /**
- * Assign a patient to a nurse
+ * Assign a patient to a nurse (and optionally to a doctor)
  */
-export async function assignPatientToNurse(input: NurseAssignmentInput) {
+export async function assignPatientToNurse(
+  input: NurseAssignmentInput & { doctorUserId?: string }
+) {
   try {
-    const assignment = await prisma.nurseAssignment.create({
+    // Create NurseAssignment
+    const nurseAssignment = await prisma.nurseAssignment.create({
       data: {
         nurseId: input.nurseId,
         patientId: input.patientId,
@@ -139,8 +142,41 @@ export async function assignPatientToNurse(input: NurseAssignmentInput) {
       },
     });
 
+    // If doctorUserId is provided, also create AccessGrant
+    let accessGrant = null;
+    if (input.doctorUserId) {
+      // Get patient's user ID
+      const patient = await prisma.patient.findUnique({
+        where: { id: input.patientId },
+        select: { userId: true },
+      });
+
+      if (patient?.userId) {
+        accessGrant = await prisma.accessGrant.upsert({
+          where: {
+            patientId_doctorId: {
+              patientId: patient.userId,
+              doctorId: input.doctorUserId,
+            },
+          },
+          update: { isActive: true },
+          create: {
+            patientId: patient.userId,
+            doctorId: input.doctorUserId,
+            isActive: true,
+            durationDays: 365,
+          },
+        });
+
+        console.log(
+          `✅ [Nurse + Doctor Assignment] NurseAssignment created: ${nurseAssignment.id}`
+        );
+        console.log(`✅ [AccessGrant Created/Updated] ID: ${accessGrant.id}`);
+      }
+    }
+
     revalidatePath("/dashboard/nurse/patients");
-    return { success: true, data: assignment };
+    return { success: true, data: { nurseAssignment, accessGrant } };
   } catch (error) {
     console.error("Error assigning patient to nurse:", error);
     return { success: false, error: "Failed to assign patient to nurse" };
@@ -389,7 +425,10 @@ export async function getNursePatientAlerts(nurseId: string) {
 /**
  * Acknowledge alert (nurse can see but not resolve)
  */
-export async function acknowledgeAlertAsNurse(alertId: string, nurseId: string) {
+export async function acknowledgeAlertAsNurse(
+  alertId: string,
+  nurseId: string
+) {
   try {
     const alert = await prisma.alert.update({
       where: { id: alertId },

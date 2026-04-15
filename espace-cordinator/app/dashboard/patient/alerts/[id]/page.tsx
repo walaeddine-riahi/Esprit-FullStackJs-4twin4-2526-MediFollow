@@ -10,7 +10,7 @@ import {
   Scale,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
 import AlertStatusForm from "./alert-status-form";
 
@@ -179,7 +179,8 @@ async function AlertDetailPage({ params }: { params: { id: string } }) {
 
               {/* Alert Data Details */}
               {alert.data &&
-                (alert.data.vitalType || alert.data.value !== undefined ||
+                (alert.data.vitalType ||
+                  alert.data.value !== undefined ||
                   alert.data.threshold) && (
                   <div className="mt-6 rounded-xl bg-white/5 p-4 border border-white/10">
                     <p className="text-sm font-semibold text-gray-300 mb-3">
@@ -213,7 +214,7 @@ async function AlertDetailPage({ params }: { params: { id: string } }) {
                       )}
                     </div>
                   </div>
-              )}
+                )}
             </div>
 
             {/* Vital Record Details */}
@@ -331,10 +332,7 @@ async function AlertDetailPage({ params }: { params: { id: string } }) {
 
           {/* Right Column - Status Update */}
           <div className="lg:col-span-1">
-            <AlertStatusForm
-              alertId={alert.id}
-              currentStatus={alert.status}
-            />
+            <AlertStatusForm alertId={alert.id} currentStatus={alert.status} />
           </div>
         </div>
       </div>

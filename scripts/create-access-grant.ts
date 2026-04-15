@@ -10,7 +10,7 @@
  * npx tsx scripts/create-access-grant.ts <doctorEmail> <patientEmail>
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import * as readline from "readline";
 
 const rl = readline.createInterface({

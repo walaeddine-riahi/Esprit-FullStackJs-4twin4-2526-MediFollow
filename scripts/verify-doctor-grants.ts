@@ -4,7 +4,7 @@
  * Vérifier que les AccessGrants ont été créés pour le docteur
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 async function main() {
   try {

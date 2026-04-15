@@ -45,6 +45,8 @@ model User {
   vitalRecordReviews VitalRecord[] @relation("VitalRecordReviews")  // Vitals reviewed by this doctor
   vitalRecordsEntered VitalRecord[] @relation("VitalRecordEnteredBy")  // Vitals entered by this user (nurse/patient)
   voiceTranscripts VoiceTranscript[] @relation("VoiceTranscripts")  // Voice entries by nurse
+  questionnaireTemplates QuestionnaireTemplate[] @relation("QuestionnaireTemplates")  // Templates created by doctor
+  analysisRequests AnalysisRequest[] @relation("AnalysisRequestDoctor")  // Analysis requests created by doctor
   sessions      Session[]
 
   @@map("users")
@@ -77,8 +79,10 @@ model Patient {
   dischargeDate         DateTime?
   diagnosis             String?
   medications           Medication[]
+  medicalProfile        MedicalProfile?  // Medical profile from questionnaire
   vitalThresholds       VitalThresholds?
   isActive              Boolean   @default(true)
+  questionnaireCompleted Boolean  @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -88,8 +92,10 @@ model Patient {
   symptoms              Symptom[]
   alerts                Alert[]
   questionnaires        Questionnaire[]
+  questionnaireAssignments QuestionnaireAssignment[] @relation("QuestionnaireAssignments")
   medicalDocuments      MedicalDocument[]
   medicalAnalyses       MedicalAnalysis[]
+  analysisRequests      AnalysisRequest[] @relation("AnalysisRequestPatient")
 
   @@map("patients")
 }
@@ -221,6 +227,24 @@ type VitalThresholds {
 type VitalRange {
   min Float
   max Float
+}
+
+type MedicalProfile {
+  hospital               String?
+  department             String?
+  specialty              String?
+  height                 Float?          // in cm
+  weight                 Float?          // in kg
+  medicalBackground      MedicalBackground?
+}
+
+type MedicalBackground {
+  diabetes               Boolean         @default(false)
+  hypertension           Boolean         @default(false)
+  cardiacDisease         Boolean         @default(false)
+  asthmaOuBpco           Boolean         @default(false)
+  cancer                 Boolean         @default(false)
+  otherConditions        String?
 }
 
 // ============================================
@@ -430,6 +454,115 @@ model Questionnaire {
   @@index([patientId])
   @@index([completedAt])
   @@map("questionnaires")
+}
+
+// ============================================
+// QUESTIONNAIRE TEMPLATES (Doctor-created)
+// ============================================
+
+model QuestionnaireTemplate {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String?
+  specialty       String?  // Medical specialty
+  doctorId        String   @db.ObjectId  // Doctor who created template
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  doctor          User     @relation("QuestionnaireTemplates", fields: [doctorId], references: [id], onDelete: Cascade)
+  questions       QuestionnaireQuestion[]
+  assignments     QuestionnaireAssignment[]
+
+  @@index([doctorId])
+  @@index([specialty])
+  @@index([isActive])
+  @@map("questionnaire_templates")
+}
+
+// ============================================
+// QUESTIONNAIRE QUESTIONS
+// ============================================
+
+model QuestionnaireQuestion {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  templateId        String   @db.ObjectId
+  questionNumber    Int      // Order of question
+  questionText      String
+  questionType      String   // TEXT, TEXTAREA, NUMBER, RATING, YESNO, CHOICE, MULTIPLE_CHOICE, DATE, TIME, DATETIME
+  description       String?
+  required          Boolean  @default(false)
+  options           String[] // For CHOICE and MULTIPLE_CHOICE types (stored as JSON strings for flexibility)
+  minValue          Int?     // For NUMBER type
+  maxValue          Int?     // For NUMBER type
+  minLength         Int?     // For TEXT types
+  maxLength         Int?     // For TEXT types
+  validationRegex   String?  // For custom validation
+  placeholder       String?
+  helpText          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  responses         QuestionnaireResponse[]
+
+  @@index([templateId])
+  @@index([questionNumber])
+  @@map("questionnaire_questions")
+}
+
+// ============================================
+// QUESTIONNAIRE ASSIGNMENTS
+// ============================================
+
+model QuestionnaireAssignment {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  templateId        String   @db.ObjectId
+  patientId         String   @db.ObjectId
+  status            String   @default("PENDING")  // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
+  dueDate           DateTime?
+  assignedAt        DateTime @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  template          QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  patient           Patient @relation("QuestionnaireAssignments", fields: [patientId], references: [id], onDelete: Cascade)
+  responses         QuestionnaireResponse[]
+
+  @@index([patientId, templateId])
+  @@index([patientId])
+  @@index([templateId])
+  @@index([status])
+  @@index([assignedAt])
+  @@index([dueDate])
+  @@map("questionnaire_assignments")
+}
+
+// ============================================
+// QUESTIONNAIRE RESPONSES
+// ============================================
+
+model QuestionnaireResponse {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  assignmentId      String   @db.ObjectId
+  questionId        String   @db.ObjectId
+  answer            String?  // Stored as JSON string for flexibility with different types
+  submittedAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  assignment        QuestionnaireAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  question          QuestionnaireQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@index([questionId])
+  @@index([submittedAt])
+  @@map("questionnaire_responses")
 }
 
 // ============================================
@@ -837,4 +970,39 @@ model AIAnalysisCache {
   @@index([nurseId, analysisType])
   @@index([expiresAt])
   @@map("ai_analysis_cache")
+}
+
+// ============================================
+// ANALYSIS REQUESTS
+// ============================================
+
+model AnalysisRequest {
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId                String   @db.ObjectId
+  patientId               String   @db.ObjectId
+  analysisType            String   // "general", "cardio", "labs", etc.
+  testName                String
+  status                  String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, REJECTED
+  description             String?
+  dueDate                 DateTime?
+  documentUrl             String?
+  documentName            String?
+  submittedAt             DateTime?
+  submittedDocumentUrl    String?
+  submittedDocumentName   String?
+  patientNotes            String?
+  results                 Json?
+  requestedAt             DateTime @default(now())
+  completedAt             DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  doctor                  User     @relation("AnalysisRequestDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient                 Patient  @relation("AnalysisRequestPatient", fields: [patientId], references: [id], onDelete: Cascade)
+  
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("analysis_requests")
 }

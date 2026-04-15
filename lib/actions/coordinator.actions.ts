@@ -17,6 +17,8 @@ import {
   PatientComplianceDetail,
   ComplianceStatus,
   AlertStatus,
+  AlertType,
+  AlertSeverity,
 } from "@/types/medifollow.types";
 
 /**
@@ -705,6 +707,7 @@ async function computeComplianceForPatient(patientId: string) {
     symptoms7d,
     questionnaires7d,
     questionnaires28d,
+    questionnaireAssignments7d,
   ] = await Promise.all([
     prisma.vitalRecord.findFirst({
       where: {
@@ -738,6 +741,13 @@ async function computeComplianceForPatient(patientId: string) {
         completedAt: { gte: subDays(now, 28), lte: now },
       },
     }),
+    prisma.questionnaireAssignment.findMany({
+      where: {
+        patientId,
+        assignedAt: { gte: sevenAgo, lte: now },
+      },
+      select: { status: true },
+    }),
   ]);
 
   const daysWithVital = new Set<number>();
@@ -761,6 +771,14 @@ async function computeComplianceForPatient(patientId: string) {
     Math.round((qMonth / 4) * 100)
   );
 
+  // Calculate resolved vs pending questionnaire assignments
+  const questionnaireResolved7d = questionnaireAssignments7d.filter(
+    (qa: any) => qa.status === "COMPLETED"
+  ).length;
+  const questionnairePending7d = questionnaireAssignments7d.filter(
+    (qa: any) => qa.status === "PENDING" || qa.status === "IN_PROGRESS"
+  ).length;
+
   const overallScore = Math.round(
     dailyCompliance7d * 0.45 +
       questionnaireScore7d * 0.35 +
@@ -774,6 +792,8 @@ async function computeComplianceForPatient(patientId: string) {
     questionnaireCount7d: qWeek,
     questionnaireScore7d,
     questionnaireCompletion30d,
+    questionnaireResolved7d,
+    questionnairePending7d,
     overallScore,
     missingVitalToday: !vitalsToday,
   };
@@ -807,19 +827,12 @@ export async function getCoordinatorDashboardOverview() {
       };
     }
 
-    const [compliances, alerts, flags] = await Promise.all([
+    const [compliances, alerts] = await Promise.all([
       Promise.all(patientIds.map((id) => computeComplianceForPatient(id))),
       prisma.alert.findMany({
         where: {
           patientId: { in: patientIds },
           status: { in: [AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED] },
-        },
-      }),
-      prisma.coordinatorEntryFlag.count({
-        where: {
-          coordinatorId,
-          status: "OPEN",
-          patientId: { in: patientIds },
         },
       }),
     ]);
@@ -897,7 +910,7 @@ export async function getCoordinatorDashboardOverview() {
         totalActiveAlerts: alerts.filter((a) =>
           validPatientIds.includes(a.patientId)
         ).length,
-        unresolvedFlags: flags,
+        unresolvedFlags: 0,
         avgCompliance,
         patients: list.sort((a, b) => a.overallScore - b.overallScore),
       },
@@ -905,5 +918,911 @@ export async function getCoordinatorDashboardOverview() {
   } catch (error) {
     console.error("[getCoordinatorDashboardOverview]", error);
     return { success: false, error: "Error loading dashboard." };
+  }
+}
+
+/**
+ * Get basic patient information (firstName, lastName)
+ */
+export async function getPatientBasicInfo(patientId: string) {
+  try {
+    const patientData = await prisma.patient.findUnique({
+      where: { id: patientId },
+      select: {
+        id: true,
+        userId: true,
+      },
+    });
+
+    if (!patientData || !patientData.userId) {
+      return { success: false, data: null };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: patientData.userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    return { success: true, data: user };
+  } catch (error) {
+    console.error("[getPatientBasicInfo]", error);
+    return {
+      success: false,
+      data: null,
+      error: "Failed to fetch patient info",
+    };
+  }
+}
+
+/**
+ * Get all alerts for the coordinator's patients
+ */
+export async function getCoordinatorAlerts() {
+  try {
+    const auth = await requireCoordinator();
+    if (!auth.ok || !auth.user) {
+      return { success: false, alerts: [], error: auth.error };
+    }
+
+    // Get all patients since coordinator manages all patients
+    const patientIds = await prisma.patient
+      .findMany({
+        select: { id: true },
+      })
+      .then((patients) => patients.map((p) => p.id));
+
+    if (patientIds.length === 0) {
+      return { success: true, alerts: [] };
+    }
+
+    const alerts = await prisma.alert.findMany({
+      where: { patientId: { in: patientIds } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            medicalRecordNumber: true,
+            userId: true,
+          },
+        },
+        acknowledgedBy: {
+          select: { firstName: true, lastName: true },
+        },
+        resolvedBy: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+    });
+
+    // Get user info for patients
+    const userIds = alerts
+      .map((a) => a.patient?.userId)
+      .filter((id): id is string => Boolean(id));
+    const users = userIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        })
+      : [];
+    const userById = Object.fromEntries(users.map((u) => [u.id, u]));
+
+    const validAlerts = alerts
+      .filter((alert) => alert.patient)
+      .map((alert) => ({
+        ...alert,
+        patient: {
+          ...alert.patient,
+          user: userById[alert.patient!.userId!],
+        },
+      }))
+      .filter((alert) => alert.patient.user);
+
+    return { success: true, alerts: validAlerts };
+  } catch (error) {
+    console.error("[getCoordinatorAlerts]", error);
+    return {
+      success: false,
+      alerts: [],
+      error: String((error as Error)?.message ?? error),
+    };
+  }
+}
+
+/**
+ * Get all patients with detailed compliance information for the coordinator
+ */
+export async function getCoordinatorPatientsDetailed() {
+  try {
+    const patients = await prisma.patient.findMany({
+      select: {
+        id: true,
+        medicalRecordNumber: true,
+        userId: true,
+      },
+      orderBy: { medicalRecordNumber: "asc" },
+    });
+
+    const userIds = patients.map((p: any) => p.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+      },
+    });
+    const userById = Object.fromEntries(users.map((u: any) => [u.id, u]));
+    const validPatients = patients.filter((p: any) => userById[p.userId]);
+
+    const detailed = await Promise.all(
+      validPatients.map(async (p: any) => {
+        const compliance = await computeComplianceForPatient(p.id);
+        return {
+          ...p,
+          user: userById[p.userId],
+          compliance,
+          assignmentNotes: null,
+          assignedAt: null,
+          department: "Général",
+          assignedDoctors: [],
+        };
+      })
+    );
+
+    return { success: true, patients: detailed };
+  } catch (error) {
+    console.error("[getCoordinatorPatientsDetailed]", error);
+    return {
+      success: false,
+      patients: [],
+      error: "Erreur lors du chargement des patients.",
+    };
+  }
+}
+
+/**
+ * Get all patient IDs (simplified - returns all patients since we don't have coordinatorPatient model)
+ */
+export async function getCoordinatorPatientIds(coordinatorId: string) {
+  try {
+    const patients = await prisma.patient.findMany({
+      select: { id: true },
+    });
+    return patients.map((p) => p.id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Escalate a coordinator alert to a higher severity level
+ */
+export async function escalateCoordinatorAlert(alertId: string, note: string) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+  const patientIds = await getCoordinatorPatientIds(auth.user.id);
+  const alert = await prisma.alert.findUnique({ where: { id: alertId } });
+  if (!alert || !patientIds.includes(alert.patientId)) {
+    return { success: false, error: "Alerte introuvable" };
+  }
+  const n = note.trim();
+  const newAlert = await prisma.alert.create({
+    data: {
+      patientId: alert.patientId,
+      alertType: AlertType.SYSTEM,
+      severity: AlertSeverity.HIGH,
+      message: `Escalade coordinateur : ${n}`,
+      status: AlertStatus.OPEN,
+      data: {
+        escalatedFromAlertId: alertId,
+        coordinatorId: auth.user.id,
+      },
+    },
+  });
+
+  try {
+    const { NotificationService } =
+      await import("@/lib/services/notification.service");
+    await NotificationService.notifyAlert(newAlert.id);
+  } catch (notificationError) {
+    console.error(
+      "[escalateCoordinatorAlert] failed to notify patient",
+      notificationError
+    );
+  }
+
+  revalidatePath("/dashboard/coordinator/alerts");
+  return { success: true, message: "Escalade enregistrée" };
+}
+
+/**
+ * Generate an escalation motif using AI or template fallback
+ */
+export async function generateEscalationMotif(alertId: string) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, motif: "", error: auth.error };
+  }
+
+  try {
+    const alert = await prisma.alert.findUnique({
+      where: { id: alertId },
+      include: {
+        patient: {
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
+      },
+    });
+
+    if (!alert) {
+      return { success: false, motif: "", error: "Alerte introuvable" };
+    }
+
+    function generateMotifFromAlert(
+      alertType: string,
+      severity: string,
+      message: string
+    ): string {
+      const severityMap: Record<string, string> = {
+        CRITICAL: "Critique",
+        HIGH: "Élevée",
+        MEDIUM: "Modérée",
+        LOW: "Basse",
+      };
+
+      const severityLabel = severityMap[severity] || severity;
+
+      const lowerMsg = message.toLowerCase();
+
+      if (lowerMsg.includes("temperature")) {
+        return `Alerte température ${severityLabel}: ${message}. Hospitalisation recommandée pour surveillance thermique.`;
+      }
+      if (
+        lowerMsg.includes("tension") ||
+        lowerMsg.includes("ta") ||
+        lowerMsg.includes("tension artérielle")
+      ) {
+        return `Alerte TA ${severityLabel}: ${message}. Cardiologue consulté pour ajustement thérapeutique.`;
+      }
+      if (
+        lowerMsg.includes("spo2") ||
+        lowerMsg.includes("oxygène") ||
+        lowerMsg.includes("saturation")
+      ) {
+        return `Alerte oxygénation ${severityLabel}: ${message}. Oxygénothérapie envisagée.`;
+      }
+      if (
+        lowerMsg.includes("fréquence cardiaque") ||
+        lowerMsg.includes("cœur") ||
+        lowerMsg.includes("tachycardie")
+      ) {
+        return `Alerte cardiaque ${severityLabel}: ${message}. Monitoring continu recommandé.`;
+      }
+      if (lowerMsg.includes("poids") || lowerMsg.includes("fluide")) {
+        return `Alerte métabolique ${severityLabel}: ${message}. Bilan sanguin demandé.`;
+      }
+
+      return `Alerte ${alertType.toLowerCase()} ${severityLabel}: ${message}. Intervention médicale requise selon protocole.`;
+    }
+
+    let generatedMotif = null;
+
+    try {
+      const token = process.env.HF_API_TOKEN || process.env.token;
+      if (token) {
+        const prompt = `Tu es un coordinateur médical. Génère un motif d'escalade court et professionnel (1-2 phrases) pour l'alerte suivante :
+- Type : ${alert.alertType}
+- Sévérité : ${alert.severity}
+- Message : ${alert.message}
+
+Réponds UNIQUEMENT avec le motif d'escalade.`;
+
+        const res = await fetch("https://router.huggingface.co/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            model: "mistralai/Mistral-7B-Instruct-v0.3",
+            input: prompt,
+            max_output_tokens: 150,
+            temperature: 0.3,
+          }),
+          cache: "no-store",
+        });
+
+        if (res.ok) {
+          const data: any = await res.json();
+          generatedMotif =
+            typeof data?.output_text === "string"
+              ? data.output_text.trim()
+              : Array.isArray(data?.output)
+                ? data.output
+                    .flatMap((o: any) =>
+                      Array.isArray(o?.content)
+                        ? o.content.map((c: any) => c?.text ?? "")
+                        : []
+                    )
+                    .join("")
+                    .trim()
+                : null;
+        }
+      }
+    } catch (hfError) {
+      console.log("[generateEscalationMotif HF fallback]");
+    }
+
+    if (!generatedMotif) {
+      generatedMotif = generateMotifFromAlert(
+        alert.alertType,
+        alert.severity,
+        alert.message
+      );
+    }
+
+    return { success: true, motif: generatedMotif, error: null };
+  } catch (error) {
+    console.error("[generateEscalationMotif]", error);
+    return {
+      success: false,
+      motif: "",
+      error: String(error),
+    };
+  }
+}
+
+/**
+ * Get coordinator reminder history
+ */
+export async function getCoordinatorReminderHistory(limit = 50) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, reminders: [] };
+  }
+
+  try {
+    // Get all notifications of type REMINDER
+    const reminderNotifications = await prisma.notification.findMany({
+      where: {
+        type: "REMINDER",
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    const remindersList = await Promise.all(
+      reminderNotifications.map(async (notif: any) => {
+        try {
+          const recipient = await prisma.user.findUnique({
+            where: { id: notif.recipientId },
+            select: { firstName: true, lastName: true, email: true },
+          });
+          // Transform to match expected structure: { patient: { user: { ... } }, channels: [ ... ], ... }
+          return {
+            id: notif.id,
+            message: notif.message,
+            createdAt: notif.createdAt,
+            channels: (notif.sentVia || []) as string[],
+            patient: {
+              user: recipient,
+            },
+          };
+        } catch {
+          return {
+            id: notif.id,
+            message: notif.message,
+            createdAt: notif.createdAt,
+            channels: (notif.sentVia || []) as string[],
+            patient: null,
+          };
+        }
+      })
+    );
+
+    return { success: true, reminders: remindersList };
+  } catch (error) {
+    console.error("[getCoordinatorReminderHistory error]", error);
+    return { success: false, reminders: [], error: String(error) };
+  }
+}
+
+/**
+ * Get unified reviews from flags and alerts
+ */
+export async function getUnifiedReviews() {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, reviews: [], stats: null };
+  }
+
+  try {
+    const patientIds = await getCoordinatorPatientIds(auth.user.id);
+
+    const alerts = await prisma.alert.findMany({
+      where: {
+        patientId: { in: patientIds },
+        status: { in: [AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED] },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        vitalRecord: true,
+        resolvedBy: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+      },
+      take: 50,
+    });
+
+    // Get doctor assignments for all patients
+    // Map Patient.id to User.id for access grant lookup
+    const patientUserIds = alerts
+      .map((a: any) => a.patient.user.id)
+      .filter((id): id is string => Boolean(id));
+
+    console.log(
+      "🔵 [getUnifiedReviews] Patient User IDs:",
+      patientUserIds.slice(0, 3)
+    );
+
+    const accessGrants = await prisma.accessGrant.findMany({
+      where: {
+        patientId: { in: patientUserIds },
+        isActive: true,
+      },
+      select: {
+        patientId: true,
+        doctorId: true,
+      },
+    });
+
+    console.log(
+      "🔵 [getUnifiedReviews] AccessGrants found:",
+      accessGrants.length
+    );
+
+    // Get doctor details
+    const doctorIds = [...new Set(accessGrants.map((ag: any) => ag.doctorId))];
+    const doctors = await prisma.user.findMany({
+      where: { id: { in: doctorIds } },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+
+    const doctorById = Object.fromEntries(doctors.map((d: any) => [d.id, d]));
+
+    const doctorByUserPatientId = Object.fromEntries(
+      accessGrants.map((ag: any) => [ag.patientId, doctorById[ag.doctorId]])
+    );
+
+    console.log("🔵 [getUnifiedReviews] Doctors found:", {
+      accessGrantsCount: accessGrants.length,
+      doctorsCount: doctors.length,
+      mappedCount: Object.keys(doctorByUserPatientId).length,
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let unifiedReviews: any[] = [];
+    let stats = {
+      total: alerts.length,
+      critiques: 0,
+      suspects: 0,
+      incomplets: 0,
+      closedToday: 0,
+    };
+
+    for (const a of alerts) {
+      stats.critiques++;
+
+      const patientUserIdKey = a.patient.user.id;
+      const assignedDoctor = doctorByUserPatientId[patientUserIdKey];
+
+      if (!assignedDoctor) {
+        console.log(
+          "⚠️ [getUnifiedReviews] No doctor found for patient:",
+          a.patient.user.email,
+          "User ID:",
+          patientUserIdKey
+        );
+      }
+
+      unifiedReviews.push({
+        id: a.id,
+        sourceType: "ALERT",
+        patientId: a.patientId,
+        patientName:
+          `${a.patient.user.firstName || ""} ${a.patient.user.lastName || ""}`.trim() ||
+          "Patient inconnu",
+        patientEmail: a.patient.user.email,
+        priority: a.severity === "CRITICAL" ? "haute" : "moyenne",
+        reviewType: "Alerte",
+        title: `Alerte ${a.severity} détectée`,
+        note: a.message,
+        createdAt: a.createdAt,
+        vitalRecord: a.vitalRecord,
+        alertStatus: a.status,
+        isResolved:
+          a.status === AlertStatus.RESOLVED || a.status === AlertStatus.CLOSED,
+        resolvedBy: a.resolvedBy,
+        resolvedAt: a.resolvedAt,
+        assignedDoctor: assignedDoctor,
+      } as any);
+    }
+
+    unifiedReviews.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+    return { success: true, reviews: unifiedReviews, stats };
+  } catch (error) {
+    console.error("[getUnifiedReviews]", error);
+    return { success: false, reviews: [], stats: null, error: String(error) };
+  }
+}
+
+/**
+ * Close a unified review (alert)
+ */
+export async function closeUnifiedReview(id: string, sourceType: string) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  try {
+    // Only handle ALERT type (flags don't exist in this schema)
+    if (sourceType === "ALERT") {
+      await prisma.alert.update({
+        where: { id },
+        data: {
+          status: "RESOLVED",
+          resolvedById: auth.user.id,
+          resolvedAt: new Date(),
+          resolution: "Clôturé par le coordinateur",
+        },
+      });
+    }
+
+    revalidatePath("/dashboard/coordinator/reviews");
+    return { success: true, message: "Signalement clôturé" };
+  } catch (error) {
+    return { success: false, error: "Impossible de clôturer l'élément." };
+  }
+}
+
+/**
+ * Request patient to re-measure vital signs
+ */
+export async function requestPatientReMeasure(patientId: string, note: string) {
+  const auth = await requireCoordinator();
+  if (!auth.ok || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  try {
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { user: true },
+    });
+
+    if (!patient || !patient.user) {
+      return { success: false, error: "Patient non trouvé" };
+    }
+
+    // Send notification to patient via IN_APP
+    await prisma.notification.create({
+      data: {
+        recipientId: patient.userId!,
+        type: "REMINDER",
+        title: "Demande de mesure",
+        message: `Veuillez refaire vos mesures de constantes vitales: ${note}`,
+        sentVia: ["IN_APP"],
+      },
+    });
+
+    revalidatePath("/dashboard/coordinator/reviews");
+    return { success: true, message: "Demande envoyée au patient" };
+  } catch (error) {
+    console.error("[requestPatientReMeasure]", error);
+    return { success: false, error: "Impossible d'envoyer la demande" };
+  }
+}
+
+/**
+ * Helper function to check vital record completeness
+ */
+function getVitalCompleteness(v: {
+  systolicBP?: number | null;
+  diastolicBP?: number | null;
+  heartRate?: number | null;
+  temperature?: number | null;
+  oxygenSaturation?: number | null;
+}) {
+  const issues: string[] = [];
+  if (v.systolicBP == null || v.diastolicBP == null) {
+    issues.push("Tension artérielle incomplète");
+  }
+  if (v.heartRate == null) issues.push("Fréquence cardiaque manquante");
+  if (v.temperature == null) issues.push("Température manquante");
+  if (v.oxygenSaturation == null) issues.push("Saturation O₂ manquante");
+  const filled = 5 - issues.length;
+  const score = Math.round((filled / 5) * 100);
+  return { score, issues, isComplete: issues.length === 0 };
+}
+
+/**
+ * Get detailed patient information for coordinator
+ */
+export async function getCoordinatorPatientDetail(patientId: string) {
+  try {
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+          },
+        },
+        vitalRecords: {
+          orderBy: { recordedAt: "desc" },
+          take: 20,
+        },
+        symptoms: {
+          orderBy: { occurredAt: "desc" },
+          take: 14,
+        },
+        questionnaires: {
+          orderBy: { completedAt: "desc" },
+          take: 10,
+        },
+      },
+    });
+
+    if (!patient || !patient.user) {
+      return { success: false, error: "Patient introuvable" };
+    }
+
+    const compliance = await computeComplianceForPatient(patientId);
+
+    const vitalsWithCompleteness = patient.vitalRecords.map((v: any) => ({
+      ...v,
+      completeness: getVitalCompleteness(v),
+    }));
+
+    return {
+      success: true,
+      data: {
+        patient,
+        compliance,
+        vitalsWithCompleteness,
+      },
+    };
+  } catch (error) {
+    console.error("[getCoordinatorPatientDetail]", error);
+    return {
+      success: false,
+      error: "Erreur lors du chargement des détails du patient",
+    };
+  }
+}
+
+/**
+ * Send coordinator reminder to patient
+ */
+export async function sendCoordinatorReminder(
+  patientId: string,
+  message: string,
+  channels: ("IN_APP" | "EMAIL" | "SMS")[]
+) {
+  try {
+    const auth = await requireCoordinator();
+    if (!auth.ok || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+    const patientRow = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { user: true },
+    });
+    if (!patientRow || !patientRow.user) {
+      return { success: false, error: "Patient introuvable" };
+    }
+
+    const trimmed = message.trim();
+    if (!trimmed) {
+      return { success: false, error: "Message vide" };
+    }
+
+    const ch: ("IN_APP" | "EMAIL" | "SMS")[] =
+      channels.length > 0 ? [...channels] : ["IN_APP"];
+
+    const patientUserId = patientRow.userId;
+    const title = "Rappel — suivi post-hospitalisation";
+
+    // Track which channels succeeded
+    const results: { channel: string; success: boolean; error?: string }[] = [];
+
+    // Always try to create IN_APP notification
+    try {
+      await prisma.notification.create({
+        data: {
+          recipientId: patientUserId,
+          type: "REMINDER",
+          title,
+          message: `[Coordinateur] ${trimmed}`,
+          sentVia: ["IN_APP"],
+        },
+      });
+      results.push({ channel: "IN_APP", success: true });
+    } catch (err) {
+      results.push({ channel: "IN_APP", success: false, error: String(err) });
+    }
+
+    // Try EMAIL and SMS via NotificationService if requested
+    if (ch.includes("EMAIL") || ch.includes("SMS")) {
+      try {
+        const { NotificationService } =
+          await import("@/lib/services/notification.service");
+
+        const emailSmsChannels = ch.filter((c) => c !== "IN_APP") as (
+          | "EMAIL"
+          | "SMS"
+        )[];
+        if (emailSmsChannels.length > 0) {
+          await NotificationService.send({
+            recipientId: patientUserId,
+            type: "REMINDER",
+            title,
+            message: `[Coordinateur] ${trimmed}`,
+            channels: emailSmsChannels,
+            smsMessage: trimmed.slice(0, 160),
+          });
+          emailSmsChannels.forEach((c) =>
+            results.push({ channel: c, success: true })
+          );
+        }
+      } catch (notifError) {
+        // Track which channels failed
+        const errorMsg =
+          notifError instanceof Error ? notifError.message : String(notifError);
+        ch.filter((c) => c !== "IN_APP").forEach((c) => {
+          results.push({ channel: c, success: false, error: errorMsg });
+        });
+        console.error(
+          "[sendCoordinatorReminder] notification service error:",
+          notifError
+        );
+      }
+    }
+
+    revalidatePath("/dashboard/coordinator");
+    revalidatePath("/dashboard/coordinator/reminders");
+
+    // Consider successful if at least IN_APP was sent
+    const hasSuccessful = results.some((r) => r.success);
+    if (hasSuccessful) {
+      const successChannels = results
+        .filter((r) => r.success)
+        .map((r) => r.channel);
+      const failedChannels = results
+        .filter((r) => !r.success)
+        .map((r) => r.channel);
+
+      let message = `Rappel envoyé via ${successChannels.join(", ")}`;
+      if (failedChannels.length > 0) {
+        message += ` (${failedChannels.join(", ")} non disponible)`;
+      }
+      return { success: true, message };
+    } else {
+      return { success: false, error: "Impossible d'envoyer le rappel" };
+    }
+  } catch (error) {
+    console.error("[sendCoordinatorReminder]", error);
+    return { success: false, error: "Erreur lors de l'envoi du rappel" };
+  }
+}
+
+/**
+ * Flag a coordinator entry (vital record or other)
+ */
+export async function flagCoordinatorEntry(
+  patientId: string,
+  payload: {
+    vitalRecordId?: string;
+    flagType: "INCOMPLETE" | "SUSPICIOUS" | "OTHER";
+    note: string;
+  }
+) {
+  try {
+    const auth = await requireCoordinator();
+    if (!auth.ok || !auth.user) {
+      return { success: false, error: auth.error };
+    }
+    const patientRow = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+    if (!patientRow) {
+      return { success: false, error: "Patient introuvable" };
+    }
+    const note = payload.note.trim();
+    if (!note) return { success: false, error: "Note requise" };
+
+    if (payload.flagType === "INCOMPLETE" && payload.vitalRecordId) {
+      const vital = await prisma.vitalRecord.findUnique({
+        where: { id: payload.vitalRecordId },
+        select: {
+          systolicBP: true,
+          diastolicBP: true,
+          heartRate: true,
+          temperature: true,
+          oxygenSaturation: true,
+          patientId: true,
+        },
+      });
+      if (!vital || vital.patientId !== patientId) {
+        return { success: false, error: "Entrée vitale introuvable" };
+      }
+      const completeness = getVitalCompleteness(vital);
+      if (completeness.score === 100) {
+        return {
+          success: false,
+          error:
+            "Impossible de signaler une entrée complète à 100% comme incomplète.",
+        };
+      }
+    }
+
+    await prisma.alert.create({
+      data: {
+        patientId,
+        alertType: AlertType.SYSTEM,
+        severity: AlertSeverity.MEDIUM,
+        message: `[Signalement coordinateur] ${note}`,
+        status: AlertStatus.OPEN,
+        data: {
+          sourceType: payload.flagType,
+          vitalRecordId: payload.vitalRecordId,
+          coordinatorId: auth.user.id,
+        },
+      },
+    });
+    revalidatePath("/dashboard/coordinator");
+    revalidatePath("/dashboard/coordinator/reviews");
+    revalidatePath(`/dashboard/coordinator/patients/${patientId}`);
+    return { success: true, message: "Signalement enregistré" };
+  } catch (error) {
+    console.error("[flagCoordinatorEntry]", error);
+    return { success: false, error: "Erreur lors du signalement" };
   }
 }

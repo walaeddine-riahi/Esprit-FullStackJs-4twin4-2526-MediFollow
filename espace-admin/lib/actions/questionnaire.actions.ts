@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 type QuestionInput = {
@@ -35,8 +35,10 @@ function normalizeQuestions(raw: unknown): QuestionInput[] {
     .map((q) => {
       const item = q as AIQuestionInput;
       const text = typeof item.text === "string" ? item.text.trim() : "";
-      const type = typeof item.type === "string" ? item.type.toUpperCase() : "TEXT";
-      const required = typeof item.required === "boolean" ? item.required : true;
+      const type =
+        typeof item.type === "string" ? item.type.toUpperCase() : "TEXT";
+      const required =
+        typeof item.required === "boolean" ? item.required : true;
       const options = Array.isArray(item.options)
         ? item.options
             .filter((o): o is string => typeof o === "string")
@@ -71,7 +73,8 @@ async function callAzureForServiceQuestionnaire(service: {
   const apiKey = process.env.AZURE_OPENAI_API_KEY;
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
-  const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+  const apiVersion =
+    process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
 
   if (!apiKey || !endpoint || !deployment) {
     return { success: false, error: "Azure OpenAI configuration is missing." };
@@ -185,7 +188,8 @@ export async function getTemplateById(id: string) {
     const template = await prisma.questionnaireTemplate.findUnique({
       where: { id },
     });
-    if (!template) return { success: false, template: null, error: "Not found" };
+    if (!template)
+      return { success: false, template: null, error: "Not found" };
     return { success: true, template };
   } catch (error) {
     console.error("Get template error:", error);
@@ -217,10 +221,13 @@ export async function updateTemplate(id: string, data: Partial<TemplateInput>) {
   try {
     const updateData: Record<string, unknown> = {};
     if (data.title !== undefined) updateData.title = data.title;
-    if (data.description !== undefined) updateData.description = data.description || null;
+    if (data.description !== undefined)
+      updateData.description = data.description || null;
     if (data.questions !== undefined) updateData.questions = data.questions;
-    if (data.assignedServiceIds !== undefined) updateData.assignedServiceIds = data.assignedServiceIds;
-    if (data.assignedPatientIds !== undefined) updateData.assignedPatientIds = data.assignedPatientIds;
+    if (data.assignedServiceIds !== undefined)
+      updateData.assignedServiceIds = data.assignedServiceIds;
+    if (data.assignedPatientIds !== undefined)
+      updateData.assignedPatientIds = data.assignedPatientIds;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     const template = await prisma.questionnaireTemplate.update({
@@ -275,7 +282,12 @@ export async function getAssignableOptions() {
     };
   } catch (error) {
     console.error("Get assignable options error:", error);
-    return { success: false, services: [], patients: [], error: "Failed to load options" };
+    return {
+      success: false,
+      services: [],
+      patients: [],
+      error: "Failed to load options",
+    };
   }
 }
 
@@ -285,11 +297,13 @@ export async function getAssignableOptions() {
 
 export async function getQuestionnaireStats() {
   try {
-    const [totalTemplates, activeTemplates, totalResponses] = await Promise.all([
-      prisma.questionnaireTemplate.count(),
-      prisma.questionnaireTemplate.count({ where: { isActive: true } }),
-      prisma.questionnaire.count(),
-    ]);
+    const [totalTemplates, activeTemplates, totalResponses] = await Promise.all(
+      [
+        prisma.questionnaireTemplate.count(),
+        prisma.questionnaireTemplate.count({ where: { isActive: true } }),
+        prisma.questionnaire.count(),
+      ]
+    );
 
     return {
       success: true,
@@ -297,11 +311,16 @@ export async function getQuestionnaireStats() {
     };
   } catch (error) {
     console.error("Get questionnaire stats error:", error);
-    return { success: false, stats: { totalTemplates: 0, activeTemplates: 0, totalResponses: 0 } };
+    return {
+      success: false,
+      stats: { totalTemplates: 0, activeTemplates: 0, totalResponses: 0 },
+    };
   }
 }
 
-export async function generateStandardQuestionnairesForAllServices(overwrite = false) {
+export async function generateStandardQuestionnairesForAllServices(
+  overwrite = false
+) {
   try {
     const services = await prisma.service.findMany({
       where: { isActive: true },
@@ -318,9 +337,21 @@ export async function generateStandardQuestionnairesForAllServices(overwrite = f
       return { success: false, error: "No active services found." };
     }
 
-    const createdOrUpdated: Array<{ serviceId: string; serviceName: string; templateId: string }> = [];
-    const skipped: Array<{ serviceId: string; serviceName: string; reason: string }> = [];
-    const failed: Array<{ serviceId: string; serviceName: string; reason: string }> = [];
+    const createdOrUpdated: Array<{
+      serviceId: string;
+      serviceName: string;
+      templateId: string;
+    }> = [];
+    const skipped: Array<{
+      serviceId: string;
+      serviceName: string;
+      reason: string;
+    }> = [];
+    const failed: Array<{
+      serviceId: string;
+      serviceName: string;
+      reason: string;
+    }> = [];
 
     for (const service of services) {
       const existingTemplate = await prisma.questionnaireTemplate.findFirst({
@@ -356,7 +387,12 @@ export async function generateStandardQuestionnairesForAllServices(overwrite = f
               description: ai.template.description,
               questions: ai.template.questions,
               isActive: true,
-              assignedServiceIds: Array.from(new Set([...(existingTemplate.assignedServiceIds || []), service.id])),
+              assignedServiceIds: Array.from(
+                new Set([
+                  ...(existingTemplate.assignedServiceIds || []),
+                  service.id,
+                ])
+              ),
             },
           });
 
@@ -387,7 +423,10 @@ export async function generateStandardQuestionnairesForAllServices(overwrite = f
         failed.push({
           serviceId: service.id,
           serviceName: service.serviceName,
-          reason: error instanceof Error ? error.message : "Failed to persist template",
+          reason:
+            error instanceof Error
+              ? error.message
+              : "Failed to persist template",
         });
       }
     }

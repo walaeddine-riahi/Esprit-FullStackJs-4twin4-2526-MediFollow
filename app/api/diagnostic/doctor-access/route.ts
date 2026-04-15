@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { diagnoseDoctorAccess } from "@/lib/actions/patient.actions";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {

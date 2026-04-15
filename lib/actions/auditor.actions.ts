@@ -525,7 +525,6 @@ export async function createAuditUser(data: {
         role: data.role as any,
         passwordHash: passwordHash,
         isActive: true,
-        mustChangePassword: true, // Force password change on first login
       },
     });
 

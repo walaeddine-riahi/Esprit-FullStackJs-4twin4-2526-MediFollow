@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import AlertDetailContent from "./alert-detail-content";
 
 async function getAlert(alertId: string) {

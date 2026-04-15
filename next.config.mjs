@@ -1,6 +1,10 @@
 // import { withSentryConfig } from "@sentry/nextjs";  // Temporarily disabled
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  swcMinify: false, // Disable SWC to avoid Windows binary issues
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
   images: {
     remotePatterns: [
       {

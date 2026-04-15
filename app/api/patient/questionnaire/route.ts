@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -34,49 +34,49 @@ export async function POST(req: NextRequest) {
       medications,
     } = body;
 
-    // Find patient by user ID
-    const patient = await prisma.patient.findUnique({
+    // Find or create patient by user ID
+    let patient = await prisma.patient.findUnique({
       where: { userId: user.id },
     });
 
+    // If patient doesn't exist, create one
     if (!patient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+      // Generate a unique medical record number
+      const medicalRecordNumber = `MR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      patient = await prisma.patient.create({
+        data: {
+          userId: user.id,
+          medicalRecordNumber,
+          dateOfBirth: new Date(), // Will be updated with proper value in questionnaire
+          gender: "OTHER", // Will be updated with proper value in questionnaire
+        },
+      });
     }
 
     // Update patient with medical information
-    // @ts-ignore - medicalBackground type is properly defined in schema
     const updateData = {
-      hospital: hospital || undefined,
-      department: department || undefined,
-      specialty: specialty || "GENERAL_MEDICINE",
-      height: height ? parseFloat(height) : undefined,
-      weight: weight ? parseFloat(weight) : undefined,
       questionnaireCompleted: true,
-      medicalBackground: {
-        diabetes: diabetes || false,
-        hypertension: hypertension || false,
-        cardiacDisease: cardiacDisease || false,
-        asthmaOuBpco: asthmaOuBpco || false,
-        cancer: cancer || false,
-        otherConditions: otherConditions || "",
-      },
-      // Clear existing medications and add new ones
-      currentMedications: {
-        deleteMany: {},
-        create: medications
-          .filter((med: any) => med.medication.trim())
-          .map((med: any) => ({
-            medication: med.medication,
-            dose: med.dose || "",
-            frequency: med.frequency || "",
-            reason: med.reason || "",
-          })),
+      medicalProfile: {
+        hospital: hospital || undefined,
+        department: department || undefined,
+        specialty: specialty || "GENERAL_MEDICINE",
+        height: height ? parseFloat(height) : undefined,
+        weight: weight ? parseFloat(weight) : undefined,
+        medicalBackground: {
+          diabetes: diabetes || false,
+          hypertension: hypertension || false,
+          cardiacDisease: cardiacDisease || false,
+          asthmaOuBpco: asthmaOuBpco || false,
+          cancer: cancer || false,
+          otherConditions: otherConditions || undefined,
+        },
       },
     };
 
     await prisma.patient.update({
       where: { id: patient.id },
-      data: updateData as any,
+      data: updateData,
     });
 
     return NextResponse.json({

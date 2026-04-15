@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 // POST - Assign questionnaire template to patient(s)

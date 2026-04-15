@@ -30,7 +30,7 @@ export async function login(formData: FormData) {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: validated.email },
-      include: { 
+      include: {
         patient: true,
         nurseProfile: true,
         coordinatorProfile: true,
@@ -166,6 +166,46 @@ export async function register(formData: FormData) {
       },
     });
 
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role as any,
+    });
+
+    const refreshToken = generateRefreshToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role as any,
+    });
+
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken,
+        expiresAt,
+      },
+    });
+
+    // Set cookies
+    cookies().set("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 15, // 15 minutes
+      path: "/",
+    });
+
+    cookies().set("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
     return {
       success: true,
       message: "Compte créé avec succès",
@@ -220,7 +260,7 @@ export async function getCurrentUser() {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { 
+      include: {
         patient: true,
         nurseProfile: true,
         coordinatorProfile: true,

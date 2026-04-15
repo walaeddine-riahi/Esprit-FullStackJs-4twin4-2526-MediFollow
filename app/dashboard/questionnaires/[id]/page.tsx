@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 interface PageProps {
   params: {

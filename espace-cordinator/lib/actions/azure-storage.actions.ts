@@ -6,7 +6,7 @@ import {
   generateBlobSASQueryParameters,
   StorageSharedKeyCredential,
 } from "@azure/storage-blob";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import {
   verifyDoctorAccess,
   logDataAccess,

@@ -29,6 +29,7 @@ import {
   SendIcon,
   Search,
   Eye,
+  AlertCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import CreateQuestionnaire from "@/components/CreateQuestionnaire";
@@ -95,6 +96,10 @@ export default function QuestionnaireManagement() {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<
     string | null
   >(null);
+  const [analysisMap, setAnalysisMap] = useState<Record<string, any>>({});
+  const [analysisLoading, setAnalysisLoading] = useState<Set<string>>(
+    new Set()
+  );
 
   useEffect(() => {
     fetchTemplates();
@@ -145,9 +150,62 @@ export default function QuestionnaireManagement() {
       if (!response.ok) throw new Error("Failed to fetch assignments");
 
       const data = await response.json();
-      setAssignments(data.data || []);
+      const assignments = data.data || [];
+      setAssignments(assignments);
+
+      // Fetch analysis for each completed assignment
+      assignments.forEach((assignment: Assignment) => {
+        if (assignment.status === "COMPLETED") {
+          fetchAnalysis(assignment.id);
+        }
+      });
     } catch (error) {
       console.error("Error fetching assignments:", error);
+    }
+  };
+
+  const fetchAnalysis = async (assignmentId: string) => {
+    try {
+      setAnalysisLoading((prev) => new Set([...prev, assignmentId]));
+      const response = await fetch(
+        `/api/questionnaires/analyze?assignmentId=${assignmentId}`
+      );
+
+      if (!response.ok) {
+        console.warn("Analysis fetch failed for assignment", assignmentId);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.data?.analysis) {
+        setAnalysisMap((prev) => ({
+          ...prev,
+          [assignmentId]: result.data.analysis,
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching analysis:", err);
+    } finally {
+      setAnalysisLoading((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(assignmentId);
+        return newSet;
+      });
+    }
+  };
+
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case "CRITICAL":
+        return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200";
+      case "HIGH":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200";
+      case "MEDIUM":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200";
+      case "LOW":
+        return "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200";
     }
   };
 
@@ -439,6 +497,9 @@ export default function QuestionnaireManagement() {
                         Status
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
+                        Urgency
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
                         Progress
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">
@@ -480,6 +541,22 @@ export default function QuestionnaireManagement() {
                           >
                             {assignment.status}
                           </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          {analysisMap[assignment.id] ? (
+                            <div
+                              className={`px-3 py-1 rounded text-xs font-bold ${getUrgencyColor(analysisMap[assignment.id].urgency)}`}
+                            >
+                              {analysisMap[assignment.id].urgency}
+                            </div>
+                          ) : analysisLoading.has(assignment.id) ? (
+                            <div className="flex items-center gap-1 text-xs text-blue-600">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Analyzing...
+                            </div>
+                          ) : assignment.status === "COMPLETED" ? (
+                            <span className="text-gray-400 text-xs">-</span>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
                           {assignment.status === "COMPLETED" ? (
@@ -636,7 +713,16 @@ export default function QuestionnaireManagement() {
       >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Questionnaire Responses</DialogTitle>
+            <div className="flex items-center justify-between w-full">
+              <DialogTitle>Questionnaire Responses</DialogTitle>
+              {selectedAssignmentId && analysisMap[selectedAssignmentId] && (
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${getUrgencyColor(analysisMap[selectedAssignmentId].urgency)}`}
+                >
+                  {analysisMap[selectedAssignmentId].urgency}
+                </div>
+              )}
+            </div>
           </DialogHeader>
           {selectedAssignmentId && (
             <ResponseViewer

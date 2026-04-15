@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlobServiceClient } from "@azure/storage-blob";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 export async function POST(request: NextRequest) {

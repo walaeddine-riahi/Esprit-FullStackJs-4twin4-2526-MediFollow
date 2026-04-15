@@ -11,12 +11,15 @@ import {
   Thermometer,
   TrendingUp,
   Wind,
+  Mic,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 import loading from "@/app/loading";
 import { SYMPTOM_TYPES } from "@/lib/utils/symptom-utils";
+import { VoiceVitalsForm } from "@/components/VoiceVitalsForm";
+import { Button } from "@/components/ui/button";
 import { div } from "three/src/nodes/math/OperatorNode.js";
 import { label } from "three/src/nodes/core/ContextNode.js";
 
@@ -53,6 +56,7 @@ export default function VitalsPage() {
   const [alertData, setAlertData] = useState<any>(null);
   const [evaluation, setEvaluation] = useState<any>(null);
   const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
 
   const [vitals, setVitals] = useState({
     temperature: "",
@@ -210,16 +214,196 @@ export default function VitalsPage() {
     );
   }
 
+  // Define fields for voice form
+  const voiceFields = [
+    {
+      name: "temperature",
+      label: "Température Corporelle",
+      question: "Quelle est votre température corporelle en degrés Celsius?",
+      type: "number" as const,
+      placeholder: "37.0",
+      min: 35,
+      max: 42,
+      step: 0.1,
+      unit: "°C",
+    },
+    {
+      name: "heartRate",
+      label: "Fréquence Cardiaque",
+      question: "Quel est votre rythme cardiaque en battements par minute?",
+      type: "number" as const,
+      placeholder: "75",
+      min: 40,
+      max: 200,
+      step: 1,
+      unit: "bpm",
+    },
+    {
+      name: "systolicBP",
+      label: "Tension Systolique",
+      question:
+        "Quelle est votre tension systolique en millimètres de mercure?",
+      type: "number" as const,
+      placeholder: "120",
+      min: 60,
+      max: 200,
+      step: 1,
+      unit: "mmHg",
+    },
+    {
+      name: "diastolicBP",
+      label: "Tension Diastolique",
+      question:
+        "Quelle est votre tension diastolique en millimètres de mercure?",
+      type: "number" as const,
+      placeholder: "80",
+      min: 40,
+      max: 130,
+      step: 1,
+      unit: "mmHg",
+    },
+    {
+      name: "oxygenSaturation",
+      label: "Saturation en Oxygène",
+      question: "Quel est votre taux de saturation en oxygène en pourcentage?",
+      type: "number" as const,
+      placeholder: "98",
+      min: 70,
+      max: 100,
+      step: 0.1,
+      unit: "%",
+    },
+    {
+      name: "weight",
+      label: "Poids",
+      question: "Quel est votre poids en kilogrammes?",
+      type: "number" as const,
+      placeholder: "70",
+      min: 20,
+      max: 300,
+      step: 0.1,
+      unit: "kg",
+    },
+    {
+      name: "respiratoryRate",
+      label: "Fréquence Respiratoire",
+      question: "Quel est votre nombre de respirations par minute?",
+      type: "number" as const,
+      placeholder: "16",
+      min: 8,
+      max: 60,
+      step: 1,
+      unit: "resp/min",
+    },
+  ];
+
+  // Handle voice form submission
+  const handleVoiceFormSubmit = async (voiceData: Record<string, any>) => {
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/patient/vitals-symptoms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          vitals: {
+            temperature: voiceData.temperature
+              ? parseFloat(voiceData.temperature)
+              : null,
+            heartRate: voiceData.heartRate
+              ? parseFloat(voiceData.heartRate)
+              : null,
+            systolicBP: voiceData.systolicBP
+              ? parseFloat(voiceData.systolicBP)
+              : null,
+            diastolicBP: voiceData.diastolicBP
+              ? parseFloat(voiceData.diastolicBP)
+              : null,
+            oxygenSaturation: voiceData.oxygenSaturation
+              ? parseFloat(voiceData.oxygenSaturation)
+              : null,
+            weight: voiceData.weight ? parseFloat(voiceData.weight) : null,
+            respiratoryRate: voiceData.respiratoryRate
+              ? parseFloat(voiceData.respiratoryRate)
+              : null,
+          },
+          symptoms: {
+            general: {
+              fatigue: 0,
+              fever: false,
+              lossOfAppetite: 0,
+            },
+            specialty: {},
+            advanced: {
+              glycemia: null,
+              crp: null,
+              diuresis: null,
+              hydration: "normal",
+            },
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "Erreur lors de la sauvegarde");
+        return;
+      }
+
+      setSuccess(true);
+      // Speak success message
+      const utterance = new SpeechSynthesisUtterance(
+        "Vos constantes vitales ont été enregistrées avec succès!"
+      );
+      utterance.lang = "fr-FR";
+      window.speechSynthesis.speak(utterance);
+
+      setTimeout(() => {
+        router.push("/dashboard/patient");
+      }, 3000);
+    } catch (err: any) {
+      setError("Une erreur est survenue");
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Show voice form if voice mode is enabled
+  if (voiceMode) {
+    return (
+      <VoiceVitalsForm
+        fields={voiceFields}
+        onSubmit={handleVoiceFormSubmit}
+        title="Saisie des Constantes Vitales par Voix"
+        description="Répondez aux questions en parlant. Vous pouvez aussi passer en mode manuel."
+        config={{ language: "fr-FR", rate: 1, pitch: 1 }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="size-8 text-red-600" />
-            <h1 className="text-3xl font-black text-gray-900">
-              Saisie des constantes vitales & symptômes
-            </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="size-8 text-red-600" />
+              <h1 className="text-3xl font-black text-gray-900">
+                Saisie des constantes vitales & symptômes
+              </h1>
+            </div>
+            <Button
+              onClick={() => setVoiceMode(true)}
+              variant="outline"
+              className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            >
+              <Mic className="h-4 w-4" />
+              Mode Vocal
+            </Button>
           </div>
           <p className="text-gray-600">
             Veuillez entrer vos mesures du jour et vos symptômes

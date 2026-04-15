@@ -4,7 +4,7 @@
  * Script pour tester l'API /api/patients directement
  */
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/actions/auth.actions";
 
 async function main() {

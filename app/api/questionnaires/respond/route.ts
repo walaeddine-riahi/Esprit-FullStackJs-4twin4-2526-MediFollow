@@ -85,36 +85,26 @@ export async function POST(request: NextRequest) {
         const data: any = {
           assignmentId,
           questionId: response.questionId,
-          answeredAt: new Date(),
         };
 
-        // Set appropriate field based on what's provided
+        // Set answer field - store as JSON string
         if (
           response.responseText !== undefined &&
           response.responseText !== null
         ) {
-          data.responseText = String(response.responseText);
-          data.responseNumber = null;
-          data.responseJson = null;
+          data.answer = String(response.responseText);
         } else if (
           response.responseNumber !== undefined &&
           response.responseNumber !== null
         ) {
-          data.responseNumber = Number(response.responseNumber);
-          data.responseText = null;
-          data.responseJson = null;
+          data.answer = String(response.responseNumber);
         } else if (
           response.responseJson !== undefined &&
           response.responseJson !== null
         ) {
-          data.responseJson = String(response.responseJson);
-          data.responseText = null;
-          data.responseNumber = null;
+          data.answer = String(response.responseJson);
         } else {
-          // No response provided - store as null text
-          data.responseText = null;
-          data.responseNumber = null;
-          data.responseJson = null;
+          data.answer = null;
         }
 
         return prisma.questionnaireResponse.create({ data });

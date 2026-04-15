@@ -1,6 +1,15 @@
 "use client";
 
-import { Search, ChevronRight, CheckCircle2, AlertCircle, Filter, Building2, Stethoscope, X } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  Filter,
+  Building2,
+  Stethoscope,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
@@ -16,10 +25,10 @@ const getDaysRemainingText = (date: any) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   dueDate.setHours(0, 0, 0, 0);
-  
+
   const diffTime = dueDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return "En retard";
   if (diffDays === 0) return "Aujourd'hui";
   if (diffDays === 1) return "Demain";
@@ -32,11 +41,12 @@ const getDeadlineColor = (date: any) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   dueDate.setHours(0, 0, 0, 0);
-  
+
   const diffTime = dueDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays < 0) return "text-red-500 dark:text-red-400 font-bold animate-pulse";
+
+  if (diffDays < 0)
+    return "text-red-500 dark:text-red-400 font-bold animate-pulse";
   if (diffDays <= 1) return "text-amber-500 dark:text-amber-400 font-bold";
   return "text-blue-600 dark:text-blue-400 font-medium";
 };
@@ -160,7 +170,9 @@ export default function CoordinatorPatientsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
               <Filter className="size-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Filtres</span>
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                Filtres
+              </span>
             </div>
 
             <div className="relative min-w-[160px]">
@@ -172,7 +184,9 @@ export default function CoordinatorPatientsPage() {
               >
                 <option value="">Tous les services</option>
                 {uniqueDepartments.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
                 ))}
               </select>
             </div>
@@ -186,7 +200,9 @@ export default function CoordinatorPatientsPage() {
               >
                 <option value="">Tous les docteurs</option>
                 {uniqueDoctors.map((doc) => (
-                  <option key={doc} value={doc}>{doc}</option>
+                  <option key={doc} value={doc}>
+                    {doc}
+                  </option>
                 ))}
               </select>
             </div>
@@ -268,12 +284,17 @@ export default function CoordinatorPatientsPage() {
                       <div className="flex flex-col gap-0.5 max-w-[150px]">
                         {p.assignedDoctors && p.assignedDoctors.length > 0 ? (
                           p.assignedDoctors.map((doc: string, idx: number) => (
-                            <span key={idx} className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                            <span
+                              key={idx}
+                              className="text-xs text-gray-600 dark:text-gray-400 truncate"
+                            >
                               Dr. {doc}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Non assigné</span>
+                          <span className="text-xs text-gray-400 italic">
+                            Non assigné
+                          </span>
                         )}
                       </div>
                     </td>
@@ -293,16 +314,27 @@ export default function CoordinatorPatientsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell text-gray-600 dark:text-gray-300">
-                      {p.compliance?.questionnaireCount7d ?? 0}
+                      <div className="flex flex-col space-y-1">
+                        <span className="text-sm font-medium">
+                          ✓ {p.compliance?.questionnaireResolved7d ?? 0}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          ⏳ {p.compliance?.questionnairePending7d ?? 0}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className={`text-[11px] uppercase tracking-wider font-extrabold ${getDeadlineColor(p.nextDeadline)}`}>
+                        <span
+                          className={`text-[11px] uppercase tracking-wider font-extrabold ${getDeadlineColor(p.nextDeadline)}`}
+                        >
                           {getDaysRemainingText(p.nextDeadline)}
                         </span>
                         {p.nextDeadline && (
                           <span className="text-[10px] text-gray-500 dark:text-gray-500">
-                            {format(new Date(p.nextDeadline), "dd MMM", { locale: fr })}
+                            {format(new Date(p.nextDeadline), "dd MMM", {
+                              locale: fr,
+                            })}
                           </span>
                         )}
                       </div>

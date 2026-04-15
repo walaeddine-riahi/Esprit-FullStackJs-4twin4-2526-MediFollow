@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { Prisma, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import {
@@ -589,6 +589,278 @@ export async function getDashboardStats() {
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des statistiques",
+      stats: null,
+    };
+  }
+}
+
+export async function getDashboardStatsByDoctorSpecialty(doctorId: string) {
+  try {
+    // Get doctor's specialty
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { userId: doctorId },
+      select: { specialty: true },
+    });
+
+    if (!doctorProfile) {
+      return {
+        success: true,
+        stats: {
+          patients: {
+            total: 0,
+            active: 0,
+            newThisWeek: 0,
+            newThisMonth: 0,
+          },
+          vitals: {
+            today: 0,
+            thisWeek: 0,
+          },
+          alerts: {
+            total: 0,
+            open: 0,
+            critical: 0,
+            resolved: 0,
+            resolutionRate: 0,
+            avgResponseTime: 0,
+          },
+          symptoms: {
+            today: 0,
+          },
+          bloodTypeDistribution: [],
+        },
+      };
+    }
+
+    // Get current date boundaries
+    const now = new Date();
+    const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+    const startOfWeek = new Date(now.setDate(now.getDate() - 7));
+    const startOfMonth = new Date(now.setMonth(now.getMonth() - 1));
+
+    // Total patients with matching specialty
+    const totalPatients = await prisma.patient.count({
+      where: {
+        medicalProfile: {
+          specialty: doctorProfile.specialty,
+        },
+        user: {
+          isActive: true,
+        },
+      },
+    });
+
+    // New patients this week with matching specialty
+    const newPatientsWeek = await prisma.patient.count({
+      where: {
+        medicalProfile: {
+          specialty: doctorProfile.specialty,
+        },
+        createdAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // New patients this month with matching specialty
+    const newPatientsMonth = await prisma.patient.count({
+      where: {
+        medicalProfile: {
+          specialty: doctorProfile.specialty,
+        },
+        createdAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    // Vital records today for matching specialty
+    const vitalsToday = await prisma.vitalRecord.count({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+        recordedAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    // Vital records this week for matching specialty
+    const vitalsWeek = await prisma.vitalRecord.count({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // Active patients (with vitals in last 7 days) for matching specialty
+    const activePatientsIds = await prisma.vitalRecord.findMany({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+        recordedAt: {
+          gte: startOfWeek,
+        },
+      },
+      select: {
+        patientId: true,
+      },
+      distinct: ["patientId"],
+    });
+    const activePatients = activePatientsIds.length;
+
+    // Alert statistics for matching specialty
+    const totalAlerts = await prisma.alert.count({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const openAlerts = await prisma.alert.count({
+      where: {
+        status: "OPEN",
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const criticalAlerts = await prisma.alert.count({
+      where: {
+        severity: "CRITICAL",
+        status: "OPEN",
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    const resolvedAlerts = await prisma.alert.count({
+      where: {
+        status: "RESOLVED",
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+    });
+
+    // Alert resolution rate
+    const resolutionRate =
+      totalAlerts > 0 ? Math.round((resolvedAlerts / totalAlerts) * 100) : 0;
+
+    // Average response time (in hours) for resolved alerts
+    const resolvedAlertsWithTime = await prisma.alert.findMany({
+      where: {
+        status: "RESOLVED",
+        resolvedAt: { not: null },
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+      },
+      select: {
+        createdAt: true,
+        resolvedAt: true,
+      },
+    });
+
+    let avgResponseTime = 0;
+    if (resolvedAlertsWithTime.length > 0) {
+      const totalTime = resolvedAlertsWithTime.reduce((sum, alert) => {
+        const diff = alert.resolvedAt!.getTime() - alert.createdAt.getTime();
+        return sum + diff;
+      }, 0);
+      avgResponseTime = Math.round(
+        totalTime / resolvedAlertsWithTime.length / (1000 * 60 * 60)
+      ); // Convert to hours
+    }
+
+    // Patients by blood type for matching specialty
+    const patientsByBloodType = await prisma.patient.groupBy({
+      by: ["bloodType"],
+      _count: {
+        id: true,
+      },
+      where: {
+        medicalProfile: {
+          specialty: doctorProfile.specialty,
+        },
+        bloodType: { not: null },
+      },
+    });
+
+    // Recent symptoms count for matching specialty
+    const symptomsToday = await prisma.symptom.count({
+      where: {
+        patient: {
+          medicalProfile: {
+            specialty: doctorProfile.specialty,
+          },
+        },
+        occurredAt: {
+          gte: startOfToday,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      stats: {
+        patients: {
+          total: totalPatients,
+          active: activePatients,
+          newThisWeek: newPatientsWeek,
+          newThisMonth: newPatientsMonth,
+        },
+        vitals: {
+          today: vitalsToday,
+          thisWeek: vitalsWeek,
+        },
+        alerts: {
+          total: totalAlerts,
+          open: openAlerts,
+          critical: criticalAlerts,
+          resolved: resolvedAlerts,
+          resolutionRate: resolutionRate,
+          avgResponseTime: avgResponseTime,
+        },
+        symptoms: {
+          today: symptomsToday,
+        },
+        bloodTypeDistribution: patientsByBloodType.map((bt) => ({
+          bloodType: bt.bloodType,
+          count: bt._count.id,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats by doctor specialty:", error);
     return {
       success: false,
       error: "Erreur lors de la récupération des statistiques",

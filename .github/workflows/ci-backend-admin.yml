@@ -46,13 +46,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4. Generate Prisma client (needed for imports to resolve)
+      # 4. Generate Prisma client
       - name: Generate Prisma client
         run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # 5. Run admin backend tests with coverage
       - name: Run admin backend tests
         run: npx jest --coverage --testPathPatterns="__tests__/backend/admin" --coverageReporters=lcov --coverageReporters=text --coverageDirectory=coverage/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       # 6. Display coverage summary in the logs
       - name: Show coverage report

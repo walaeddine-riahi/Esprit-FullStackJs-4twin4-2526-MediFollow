@@ -1,0 +1,81 @@
+# ============================================
+# MediFollow - CI Pipeline for Admin Frontend
+# ============================================
+# Triggers on push to any branch when frontend-related
+# files change. Runs Jest tests with coverage, then builds.
+
+name: CI - Frontend Admin
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "app/dashboard/admin/**"
+      - "components/admin/**"
+      - "__tests__/frontend/**"
+      - "package.json"
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "app/dashboard/admin/**"
+      - "components/admin/**"
+      - "__tests__/frontend/**"
+      - "package.json"
+
+jobs:
+  test-frontend-admin:
+    name: Frontend Admin Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js 18
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Generate Prisma client (needed for imports to resolve)
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # 5. Run admin frontend tests with coverage
+      - name: Run admin frontend tests
+        run: npx jest --coverage --testPathPatterns="__tests__/frontend/components/admin" --coverageReporters=lcov --coverageReporters=text --coverageDirectory=coverage/frontend
+
+      # 6. Display coverage summary in the logs
+      - name: Show coverage report
+        if: always()
+        run: |
+          echo "=== Frontend Admin Coverage Report ==="
+          if [ -f coverage/frontend/lcov.info ]; then
+            cat coverage/frontend/lcov.info | head -100
+            echo "..."
+            echo "Full report saved to coverage/frontend/lcov.info"
+          else
+            echo "No coverage file found."
+          fi
+
+      # 7. Build the Next.js project (ensures no build errors)
+      - name: Build Next.js project
+        run: npm run build
+
+      # 8. Upload coverage artifact for later use (SonarQube, etc.)
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-admin-coverage
+          path: coverage/frontend/
+          retention-days: 7

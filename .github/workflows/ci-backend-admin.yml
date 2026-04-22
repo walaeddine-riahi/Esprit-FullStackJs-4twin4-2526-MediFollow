@@ -1,9 +1,3 @@
-# ============================================
-# MediFollow - CI Pipeline for Admin Backend
-# ============================================
-# Triggers on push to any branch when backend-related
-# files change. Runs Jest tests with coverage for admin tests.
-
 name: CI - Backend Admin
 
 on:
@@ -15,6 +9,9 @@ on:
       - "lib/**"
       - "__tests__/backend/admin/**"
       - "package.json"
+      - "package-lock.json"
+      - "jest.config.js"
+      - ".github/workflows/ci-backend-admin.yml"
   pull_request:
     branches:
       - main
@@ -24,6 +21,9 @@ on:
       - "lib/**"
       - "__tests__/backend/admin/**"
       - "package.json"
+      - "package-lock.json"
+      - "jest.config.js"
+      - ".github/workflows/ci-backend-admin.yml"
 
 jobs:
   test-backend-admin:
@@ -31,47 +31,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js 18
       - name: Setup Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: "npm"
+          cache: npm
 
-      # 3. Install dependencies
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
-      # 4. Generate Prisma client
       - name: Generate Prisma client
         run: npx prisma generate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      # 5. Run admin backend tests with coverage
       - name: Run admin backend tests
         run: npx jest --coverage --testPathPatterns="__tests__/backend/admin" --coverageReporters=lcov --coverageReporters=text --coverageDirectory=coverage/backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      # 6. Display coverage summary in the logs
       - name: Show coverage report
         if: always()
         run: |
           echo "=== Backend Admin Coverage Report ==="
           if [ -f coverage/backend/lcov.info ]; then
-            cat coverage/backend/lcov.info | head -100
+            head -100 coverage/backend/lcov.info
             echo "..."
             echo "Full report saved to coverage/backend/lcov.info"
           else
             echo "No coverage file found."
           fi
 
-      # 7. Upload coverage artifact for later use (SonarQube, etc.)
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4

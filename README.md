@@ -286,11 +286,11 @@ medifollow/
 
 | Name | Role |
 |---|---|
-| [Arij Mahjoub] | Full-Stack Developer |
-| [Walaeddine Riahi] | Full-Stack Developer |
-| [Ons Jaouadi] | Full-Stack Developer |
-| [Eya Nefzi] | Full-Stack Developer |
-| [Nizar Chaieb] | Full-Stack Developer |
+| Arij Mahjoub | Full-Stack Developer |
+| Walaeddine Riahi | Full-Stack Developer |
+| Ons Jaouadi | Full-Stack Developer |
+| Eya Nefzi | Full-Stack Developer |
+| Nizar Chaieb | Full-Stack Developer |
 
 ---
 
@@ -298,7 +298,7 @@ medifollow/
 
 Developed at **Esprit School of Engineering – Tunisia**
 **PIDEV – 3rd Year Engineering Program** | Academic Year 2025–2026
-Supervisor: Dr. [Supervisor Name]
+Supervisor: Pr. Asma Ayari
 
 ---
 

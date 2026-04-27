@@ -11,7 +11,7 @@
 
 ## Overview
 
-This project was developed as part of the **PIDEV – 3rd Year Engineering Program** at **Esprit School of Engineering** (Academic Year 2025–2026).
+This project was developed as part of the **FullStackJs – 4th Year Engineering Program** at **Esprit School of Engineering** (Academic Year 2025–2026).
 
 **MediFollow** is a full-stack web platform for post-hospitalization remote patient monitoring. It bridges the gap between hospital discharge and complete recovery by enabling patients to record vital signs from home, triggering automated alerts to healthcare providers when abnormal values are detected, and storing a tamper-proof audit trail on the Aptos blockchain.
 

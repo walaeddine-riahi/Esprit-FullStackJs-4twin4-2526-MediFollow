@@ -286,8 +286,11 @@ medifollow/
 
 | Name | Role |
 |---|---|
-| [Your Name] | Full-Stack Developer |
-| [Teammate] | Full-Stack Developer |
+| [Arij Mahjoub] | Full-Stack Developer |
+| [Walaeddine Riahi] | Full-Stack Developer |
+| [Ons Jaouadi] | Full-Stack Developer |
+| [Eya Nefzi] | Full-Stack Developer |
+| [Nizar Chaieb] | Full-Stack Developer |
 
 ---
 

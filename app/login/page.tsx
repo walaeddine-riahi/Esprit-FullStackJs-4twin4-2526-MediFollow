@@ -81,6 +81,9 @@ export default function LoginPage() {
           router.push("/admin");
         } else if (role === "AUDITOR") {
           router.push("/dashboard/auditor");
+        } else if (role === "SUPERADMIN") {
+          // [NEW] SuperAdmin redirect
+          router.push("/superadmin");
         } else {
           // Default redirect
           router.push("/");

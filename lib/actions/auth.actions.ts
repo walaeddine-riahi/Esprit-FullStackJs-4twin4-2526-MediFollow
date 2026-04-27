@@ -42,6 +42,13 @@ export async function login(formData: FormData) {
     }
 
     if (!user.isActive) {
+      // [NEW - SuperAdmin] Check if account is suspended — show a specific message
+      if ((user as any).isSuspended) {
+        return {
+          success: false,
+          error: "Account suspended. Please contact support for assistance.",
+        };
+      }
       return { success: false, error: "Compte désactivé" };
     }
 
@@ -290,6 +297,11 @@ export async function getCurrentUser() {
     });
 
     if (!user || !user.isActive) {
+      return null;
+    }
+
+    // [NEW - SuperAdmin] Block soft-deleted users from session
+    if ((user as any).isDeleted) {
       return null;
     }
 

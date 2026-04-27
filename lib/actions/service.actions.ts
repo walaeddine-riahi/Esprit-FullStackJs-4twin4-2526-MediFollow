@@ -135,7 +135,7 @@ export async function getAssignablePatients() {
 
     const patients = users.map((u) => ({
       id: u.id,
-      label: `${u.firstName} ${u.lastName}`.trim() || u.email,
+      label: `${u.firstName} ${u.lastName} (${u.email})`.trim(),
       email: u.email,
     }));
 
@@ -162,7 +162,7 @@ export async function getAssignableCareTeam() {
 
     const team = users.map((u) => ({
       id: u.id,
-      label: `${u.firstName} ${u.lastName}`.trim() || u.email,
+      label: `${u.firstName} ${u.lastName} (${u.email})`.trim(),
       email: u.email,
       role: u.role,
     }));

@@ -65,6 +65,12 @@ export async function createService(data: ServiceInput) {
     });
 
     revalidatePath("/admin/services");
+    
+    // Sync AccessGrants for any assigned patients/doctors
+    if (service.patientIds.length > 0 && service.teamIds.length > 0) {
+      await syncServiceAccessGrants(service.id);
+    }
+    
     return { success: true, service };
   } catch (error: any) {
     console.error("Create service error:", error);
@@ -103,6 +109,12 @@ export async function updateService(
     revalidatePath("/admin/services");
     revalidatePath(`/admin/services/${serviceId}`);
     revalidatePath(`/admin/services/${serviceId}/edit`);
+    
+    // Sync AccessGrants when assignments change
+    if (data.patientIds !== undefined || data.teamIds !== undefined) {
+      await syncServiceAccessGrants(service.id);
+    }
+    
     return { success: true, service };
   } catch (error) {
     console.error("Update service error:", error);
@@ -121,14 +133,66 @@ export async function deleteService(serviceId: string) {
   }
 }
 
+async function syncServiceAccessGrants(serviceId: string) {
+  try {
+    const service = await prisma.service.findUnique({
+      where: { id: serviceId },
+    });
+    if (!service || !service.patientIds || !service.teamIds || service.patientIds.length === 0 || service.teamIds.length === 0) return;
+
+    const teamUsers = await prisma.user.findMany({
+      where: { id: { in: service.teamIds }, role: "DOCTOR" },
+      select: { id: true },
+    });
+    
+    if (teamUsers.length === 0) return;
+    
+    const doctorId = teamUsers[0].id; // Assign first doctor in the team
+
+    for (const patientId of service.patientIds) {
+      // Check if they already have an active primary doctor
+      const existing = await prisma.accessGrant.findFirst({
+        where: { patientId, isActive: true }
+      });
+      
+      if (!existing) {
+        // Create access grant (primary doctor assignment)
+        await prisma.accessGrant.upsert({
+          where: {
+            patientId_doctorId: {
+              patientId,
+              doctorId,
+            },
+          },
+          update: { isActive: true },
+          create: {
+            patientId,
+            doctorId,
+            isActive: true,
+            durationDays: 365,
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error syncing access grants:", error);
+  }
+}
+
 // ──────────────────────────────────────
 // Load patients & care-team for assignment
 // ──────────────────────────────────────
 
 export async function getAssignablePatients() {
   try {
+    const allServices = await prisma.service.findMany({ select: { patientIds: true } });
+    const assignedPatientIds = allServices.flatMap(s => s.patientIds || []);
+
     const users = await prisma.user.findMany({
-      where: { role: "PATIENT" },
+      where: { 
+        role: "PATIENT",
+        id: { notIn: assignedPatientIds }
+      },
       select: { id: true, firstName: true, lastName: true, email: true },
       orderBy: { lastName: "asc" },
     });

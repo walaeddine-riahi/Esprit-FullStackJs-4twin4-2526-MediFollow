@@ -428,7 +428,7 @@ export default function PatientProfile() {
                   <Move className="size-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-red-900 dark:text-gray-300">
                     <p className="font-semibold mb-1">Astuce :</p>
-                    <p className="text-red-700 dark:text-gray-400">
+                    <p className="text-red-800 dark:text-gray-400">
                       Cliquez et faites glisser pour déplacer l'image, utilisez
                       le curseur pour zoomer
                     </p>
@@ -579,7 +579,7 @@ export default function PatientProfile() {
                         Dr. {doc.name}
                       </h4>
                       {doc.specialty && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold uppercase tracking-wider">
+                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 text-xs font-bold uppercase tracking-wider">
                           {doc.specialty === "CARDIOLOGY"
                             ? "Cardiologue"
                             : doc.specialty === "GENERAL_MEDICINE"
@@ -647,7 +647,7 @@ export default function PatientProfile() {
               {!isEditingBio && bio && (
                 <button
                   onClick={() => setIsEditingBio(true)}
-                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 p-2"
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-500 p-2"
                   title="Modifier"
                 >
                   <Edit2 className="size-4" />
@@ -729,7 +729,7 @@ export default function PatientProfile() {
             {!isEditingContact && (
               <button
                 onClick={() => setIsEditingContact(true)}
-                className="text-red-600 hover:text-red-700 p-2"
+                className="text-red-600 hover:text-red-800 p-2"
                 title="Modifier"
               >
                 <Edit2 className="size-4" />
@@ -798,7 +798,7 @@ export default function PatientProfile() {
             {!isEditingAddress && (
               <button
                 onClick={() => setIsEditingAddress(true)}
-                className="text-red-600 hover:text-red-700 p-2"
+                className="text-red-600 hover:text-red-800 p-2"
                 title="Modifier"
               >
                 <Edit2 className="size-4" />
@@ -912,7 +912,7 @@ export default function PatientProfile() {
             {!isEditingMedical && (
               <button
                 onClick={() => setIsEditingMedical(true)}
-                className="text-red-600 hover:text-red-700 p-2"
+                className="text-red-600 hover:text-red-800 p-2"
                 title="Modifier"
               >
                 <Edit2 className="size-4" />
@@ -1052,7 +1052,7 @@ export default function PatientProfile() {
             {!isEditingEmergency && (
               <button
                 onClick={() => setIsEditingEmergency(true)}
-                className="text-red-600 hover:text-red-700 p-2"
+                className="text-red-600 hover:text-red-800 p-2"
                 title="Modifier"
               >
                 <Edit2 className="size-4" />
@@ -1220,7 +1220,7 @@ export default function PatientProfile() {
             {!isEditingMedicalProfile && (
               <button
                 onClick={() => setIsEditingMedicalProfile(true)}
-                className="text-red-600 hover:text-red-700 p-2"
+                className="text-red-600 hover:text-red-800 p-2"
                 title="Modifier"
               >
                 <Edit2 className="size-4" />

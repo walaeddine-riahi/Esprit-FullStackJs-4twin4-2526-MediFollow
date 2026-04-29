@@ -146,13 +146,13 @@ export default function SuperAdminUsersTable({
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             id="sa-user-search"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search name, email…"
-            className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-4 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-4 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           />
         </div>
         <div className="flex rounded-xl border border-white/10 overflow-hidden text-xs font-medium">
@@ -180,12 +180,12 @@ export default function SuperAdminUsersTable({
             <Loader2 size={24} className="animate-spin text-violet-400" />
           </div>
         ) : users.length === 0 ? (
-          <p className="py-16 text-center text-sm text-slate-500">No users found.</p>
+          <p className="py-16 text-center text-sm text-slate-400">No users found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-xs text-slate-500 uppercase tracking-wider">
+                <tr className="border-b border-white/5 text-xs text-slate-400 uppercase tracking-wider">
                   <th className="px-6 py-3 text-left">User</th>
                   <th className="px-4 py-3 text-left">Role</th>
                   <th className="px-4 py-3 text-left">Status</th>
@@ -206,7 +206,7 @@ export default function SuperAdminUsersTable({
                           <p className="font-medium text-slate-200">
                             {user.firstName} {user.lastName}
                           </p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
+                          <p className="text-xs text-slate-400">{user.email}</p>
                         </div>
                       </div>
                     </td>
@@ -216,10 +216,10 @@ export default function SuperAdminUsersTable({
                       </span>
                     </td>
                     <td className="px-4 py-3"><StatusBadge user={user} /></td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
+                    <td className="px-4 py-3 text-xs text-slate-400">
                       {new Date(user.createdAt).toLocaleDateString("en-GB")}
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">
+                    <td className="px-4 py-3 text-xs text-slate-400">
                       {user.lastLogin
                         ? new Date(user.lastLogin).toLocaleDateString("en-GB")
                         : "Never"}
@@ -229,6 +229,7 @@ export default function SuperAdminUsersTable({
                         <button
                           id={`sa-view-${user.id}`}
                           onClick={() => setDetailUser(user)}
+                          aria-label="View details"
                           title="View details"
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-violet-300 transition-colors"
                         >
@@ -238,6 +239,7 @@ export default function SuperAdminUsersTable({
                           <button
                             id={`sa-suspend-${user.id}`}
                             onClick={() => setSuspendTarget(user)}
+                            aria-label="Suspend user"
                             title="Suspend"
                             className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-500/10 hover:text-amber-400 transition-colors"
                           >
@@ -248,6 +250,7 @@ export default function SuperAdminUsersTable({
                           <button
                             id={`sa-reactivate-${user.id}`}
                             onClick={() => handleReactivate(user.id)}
+                            aria-label="Reactivate user"
                             title="Reactivate"
                             className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
                           >
@@ -258,6 +261,7 @@ export default function SuperAdminUsersTable({
                           <button
                             id={`sa-restore-${user.id}`}
                             onClick={() => handleRestore(user.id)}
+                            aria-label="Restore user"
                             title="Restore"
                             className="rounded-lg p-1.5 text-slate-400 hover:bg-teal-500/10 hover:text-teal-400 transition-colors"
                           >
@@ -267,6 +271,7 @@ export default function SuperAdminUsersTable({
                           <button
                             id={`sa-delete-${user.id}`}
                             onClick={() => setDeleteTarget(user)}
+                            aria-label="Delete user"
                             title="Delete (soft)"
                             className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
                           >
@@ -285,13 +290,15 @@ export default function SuperAdminUsersTable({
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-white/5 px-6 py-3">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               Page {page} of {totalPages} · {total} total
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
+                aria-label="Previous page"
+                title="Previous page"
                 className="rounded-lg border border-white/10 p-1.5 text-slate-400 hover:bg-white/5 disabled:opacity-30"
               >
                 <ChevronLeft size={14} />
@@ -299,6 +306,8 @@ export default function SuperAdminUsersTable({
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                aria-label="Next page"
+                title="Next page"
                 className="rounded-lg border border-white/10 p-1.5 text-slate-400 hover:bg-white/5 disabled:opacity-30"
               >
                 <ChevronRight size={14} />

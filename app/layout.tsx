@@ -5,6 +5,8 @@ import { ThemeProvider } from "next-themes";
 
 import { cn } from "@/lib/utils";
 
+import { LanguageProvider } from "./SettingsContext";
+
 const fontSans = FontSans({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
@@ -34,7 +36,9 @@ export default function RootLayout({
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark">
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

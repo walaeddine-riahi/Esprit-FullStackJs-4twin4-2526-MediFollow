@@ -4,6 +4,7 @@
  * Shows: role counts, recent signups, suspended accounts, failed logins, live audit feed.
  */
 
+import Link from "next/link";
 import { getSuperAdminStats } from "@/lib/actions/superadmin.actions";
 import {
   Users,
@@ -18,13 +19,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const ROLE_META: Record<string, { label: string; icon: any; color: string; bg: string }> = {
-  ADMIN:       { label: "Admins",       icon: UserCog,       color: "text-sky-400",     bg: "bg-sky-500/10" },
-  DOCTOR:      { label: "Doctors",      icon: Stethoscope,   color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  PATIENT:     { label: "Patients",     icon: HeartPulse,    color: "text-pink-400",    bg: "bg-pink-500/10" },
-  NURSE:       { label: "Nurses",       icon: ClipboardList, color: "text-amber-400",   bg: "bg-amber-500/10" },
-  COORDINATOR: { label: "Coordinators", icon: UserCheck,     color: "text-indigo-400",  bg: "bg-indigo-500/10" },
-  AUDITOR:     { label: "Auditors",     icon: Activity,      color: "text-violet-400",  bg: "bg-violet-500/10" },
+const ROLE_META: Record<string, { label: string; icon: any; color: string; bg: string; href: string }> = {
+  ADMIN:       { label: "Admins",       icon: UserCog,       color: "text-sky-400",     bg: "bg-sky-500/10", href: "/superadmin/users/admins" },
+  DOCTOR:      { label: "Doctors",      icon: Stethoscope,   color: "text-emerald-400", bg: "bg-emerald-500/10", href: "/superadmin/users/doctors" },
+  PATIENT:     { label: "Patients",     icon: HeartPulse,    color: "text-pink-400",    bg: "bg-pink-500/10", href: "/superadmin/users/patients" },
+  NURSE:       { label: "Nurses",       icon: ClipboardList, color: "text-amber-400",   bg: "bg-amber-500/10", href: "/superadmin/users/nurses" },
+  COORDINATOR: { label: "Coordinators", icon: UserCheck,     color: "text-indigo-400",  bg: "bg-indigo-500/10", href: "/superadmin/users/coordinators" },
+  AUDITOR:     { label: "Auditors",     icon: Activity,      color: "text-violet-400",  bg: "bg-violet-500/10", href: "/superadmin/users" },
 };
 
 const SEVERITY_BADGE: Record<string, string> = {
@@ -50,67 +51,68 @@ export default async function SuperAdminOverviewPage() {
       {/* Role stat cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {Object.entries(ROLE_META).map(([role, meta]) => (
-          <div
+          <Link
             key={role}
-            className="relative overflow-hidden rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur"
+            href={meta.href}
+            className="relative overflow-hidden rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur hover:bg-white/10 transition-colors group cursor-pointer"
           >
-            <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${meta.bg}`}>
+            <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${meta.bg}`}>
               <meta.icon size={20} className={meta.color} />
             </div>
             <p className="mt-3 text-3xl font-bold text-white tabular-nums">
               {data?.roleStats?.[role] ?? 0}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">{meta.label}</p>
-          </div>
+            <p className="mt-0.5 text-xs text-slate-400 group-hover:text-slate-300">{meta.label}</p>
+          </Link>
         ))}
       </div>
 
       {/* Info strip */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Recent signups */}
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur">
+        <Link href="/superadmin/users" className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur hover:bg-white/10 transition-colors group">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/10 transition-transform group-hover:scale-110">
               <TrendingUp size={20} className="text-teal-400" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white tabular-nums">
                 {data?.recentSignups ?? 0}
               </p>
-              <p className="text-xs text-slate-400">New users (last 7 days)</p>
+              <p className="text-xs text-slate-400 group-hover:text-slate-300">New users (last 7 days)</p>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Suspended accounts */}
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur">
+        <Link href="/superadmin/users/deleted" className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur hover:bg-white/10 transition-colors group">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 transition-transform group-hover:scale-110">
               <ShieldOff size={20} className="text-amber-400" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white tabular-nums">
                 {data?.suspended ?? 0}
               </p>
-              <p className="text-xs text-slate-400">Currently suspended</p>
+              <p className="text-xs text-slate-400 group-hover:text-slate-300">Currently suspended</p>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Failed logins */}
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur">
+        <Link href="/superadmin/audit" className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur hover:bg-white/10 transition-colors group">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 transition-transform group-hover:scale-110">
               <AlertTriangle size={20} className="text-red-400" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white tabular-nums">
                 {data?.recentFailedLogins ?? 0}
               </p>
-              <p className="text-xs text-slate-400">Failed logins (24h)</p>
+              <p className="text-xs text-slate-400 group-hover:text-slate-300">Failed logins (24h)</p>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Recent audit events */}
@@ -136,7 +138,7 @@ export default async function SuperAdminOverviewPage() {
                     <span className="font-medium text-violet-300">{log.targetName}</span>
                   ) : null}
                 </span>
-                <span className="text-xs text-slate-500 whitespace-nowrap">
+                <span className="text-xs text-slate-400 whitespace-nowrap">
                   {new Date(log.timestamp).toLocaleString("en-GB", {
                     day: "2-digit",
                     month: "short",
@@ -147,7 +149,7 @@ export default async function SuperAdminOverviewPage() {
               </div>
             ))
           ) : (
-            <p className="px-6 py-8 text-center text-sm text-slate-500">
+            <p className="px-6 py-8 text-center text-sm text-slate-400">
               No audit events yet.
             </p>
           )}

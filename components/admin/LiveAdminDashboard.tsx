@@ -558,8 +558,9 @@ export default function LiveAdminDashboard({
                 onClick={() => void askCopilot(aiQuery)}
                 disabled={aiLoading || !aiQuery.trim()}
                 className="glass-neon inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 px-3 text-white disabled:opacity-50"
+                aria-label="Envoyer la requête au Copilot"
               >
-                <Send size={15} />
+                <Send size={15} aria-hidden="true" />
               </button>
             </div>
 

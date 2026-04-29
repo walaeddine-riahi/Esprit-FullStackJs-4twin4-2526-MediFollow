@@ -83,7 +83,7 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
             const groupActive = item.children.some((c) => isActive(c.href));
             return (
               <div key={item.label} className="space-y-0.5">
-                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                   <item.icon size={14} />
                   {item.label}
                 </div>
@@ -123,7 +123,7 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
               <item.icon size={16} />
               {item.label}
               {(item as any).badge && (
-                <span className="ml-auto rounded-full bg-slate-700 px-2 py-0.5 text-[10px] text-slate-400">
+                <span className="ml-auto rounded-full bg-slate-700 px-2 py-0.5 text-[10px] text-slate-300 font-medium">
                   {(item as any).badge}
                 </span>
               )}
@@ -145,10 +145,10 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
             </p>
             <p className="truncate text-xs text-violet-400">SuperAdmin</p>
           </div>
-          <form action={logout}>
+          <form action={async () => { await logout(); }}>
             <button
               type="submit"
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-white/10 hover:text-red-400 transition-colors"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-red-400 transition-colors"
               title="Logout"
             >
               <LogOut size={15} />

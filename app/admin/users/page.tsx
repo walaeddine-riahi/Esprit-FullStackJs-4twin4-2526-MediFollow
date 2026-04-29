@@ -454,6 +454,7 @@ export default function AdminUsersPage() {
             value={roleFilter}
             onChange={(e) => updateURL("role", e.target.value)}
             className="glass-panel rounded-2xl px-4 py-3 text-xs font-bold text-slate-500 dark:text-slate-400 outline-none"
+            aria-label="Filtrer par rôle"
           >
             <option value="ALL">All roles</option>
             <option value="DOCTOR">Doctors</option>
@@ -483,16 +484,16 @@ export default function AdminUsersPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-800/50 border-b border-slate-200 dark:border-cyan-300/10">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
                   Identity
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
                   Role & Status
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
                   Contact
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest text-right">
                   Actions
                 </th>
               </tr>
@@ -561,14 +562,16 @@ export default function AdminUsersPage() {
                         <Link
                           href={`/admin/users/${user.id}`}
                           className="p-2 glass-panel rounded-xl text-slate-400 hover:text-cyan-500 transition-all hover:shadow-md"
+                          aria-label={`View details for ${user.name}`}
                         >
-                          <Eye size={16} />
+                          <Eye size={16} aria-hidden="true" />
                         </Link>
                         <Link
                           href={`/admin/users/${user.id}/edit`}
                           className="p-2 glass-panel rounded-xl text-slate-400 hover:text-amber-400 transition-all hover:shadow-md"
+                          aria-label={`Edit ${user.name}`}
                         >
-                          <Edit size={16} />
+                          <Edit size={16} aria-hidden="true" />
                         </Link>
                       </div>
                     </td>

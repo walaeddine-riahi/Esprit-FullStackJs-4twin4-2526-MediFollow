@@ -738,3 +738,75 @@ export async function deleteUser(userId: string) {
     return { success: false, error: "Failed to delete user" };
   }
 }
+
+/**
+ * Assign a patient to a doctor (via AccessGrant)
+ */
+export async function assignPatientToDoctor(
+  patientUserId: string,
+  doctorUserId: string | null
+) {
+  try {
+    if (doctorUserId) {
+      await prisma.accessGrant.upsert({
+        where: {
+          patientId_doctorId: {
+            patientId: patientUserId,
+            doctorId: doctorUserId,
+          },
+        },
+        update: { isActive: true },
+        create: {
+          patientId: patientUserId,
+          doctorId: doctorUserId,
+          isActive: true,
+          durationDays: 365,
+        },
+      });
+      // Deactivate other doctor access grants for this patient to ensure 1 primary doctor (if that's the intention)
+      await prisma.accessGrant.updateMany({
+        where: {
+          patientId: patientUserId,
+          NOT: { doctorId: doctorUserId }
+        },
+        data: { isActive: false }
+      });
+    } else {
+      // Remove assigned doctor
+      await prisma.accessGrant.updateMany({
+        where: { patientId: patientUserId },
+        data: { isActive: false }
+      });
+    }
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    console.error("Error assigning doctor:", error);
+    return { success: false, error: "Failed to assign doctor" };
+  }
+}
+
+export async function getActiveDoctors() {
+  try {
+    const doctors = await prisma.user.findMany({
+      where: { role: "DOCTOR", isActive: true },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+    return { success: true, data: doctors };
+  } catch (error) {
+    console.error("Error fetching doctors:", error);
+    return { success: false, data: [] };
+  }
+}
+
+export async function getAssignedDoctorForPatient(patientUserId: string) {
+  try {
+    const grant = await prisma.accessGrant.findFirst({
+      where: { patientId: patientUserId, isActive: true },
+    });
+    return { success: true, data: grant ? grant.doctorId : null };
+  } catch (error) {
+    console.error("Error getting assigned doctor:", error);
+    return { success: false, data: null };
+  }
+}

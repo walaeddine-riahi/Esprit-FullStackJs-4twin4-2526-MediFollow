@@ -21,6 +21,9 @@ import {
   getUserById,
   updateUser,
   deleteUser,
+  getActiveDoctors,
+  getAssignedDoctorForPatient,
+  assignPatientToDoctor,
 } from "@/lib/actions/admin.actions";
 
 export default function EditUserPage({ params }: { params: { id: string } }) {
@@ -34,6 +37,8 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   // Data states
   const [user, setUser] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [doctors, setDoctors] = useState<{id: string, firstName: string, lastName: string, email: string}[]>([]);
+  const [assignedDoctorId, setAssignedDoctorId] = useState<string>("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -65,6 +70,20 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
           isActive: userData.isActive,
           phoneNumber: userData.phoneNumber || "",
         });
+
+        // Load active doctors
+        const docsRes = await getActiveDoctors();
+        if (docsRes.success && docsRes.data) {
+          setDoctors(docsRes.data);
+        }
+        
+        // Load assigned doctor if PATIENT
+        if (userData.role === "PATIENT") {
+          const assignRes = await getAssignedDoctorForPatient(userData.id);
+          if (assignRes.success && assignRes.data) {
+            setAssignedDoctorId(assignRes.data);
+          }
+        }
       }
     } catch (error) {
       console.error("Loading error:", error);
@@ -84,6 +103,9 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
     try {
       const result = await updateUser(params.id, formData);
       if (result?.success) {
+        if (formData.role === "PATIENT") {
+          await assignPatientToDoctor(params.id, assignedDoctorId || null);
+        }
         router.push(`/admin/users/${params.id}`);
         router.refresh();
       }
@@ -302,6 +324,32 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
                 ))}
               </div>
             </section>
+
+            {/* Section: Assigned Doctor (Patient only) */}
+            {formData.role === "PATIENT" && (
+              <section className="rounded-[32px] border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 p-8">
+                <h3 className="mb-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-500 flex items-center gap-2">
+                  <UserCog size={14} className="text-teal-500" /> Assigned Doctor
+                </h3>
+                <div className="space-y-2">
+                  <label className="ml-1 text-[10px] font-black uppercase text-slate-400 dark:text-zinc-500">
+                    Primary Doctor
+                  </label>
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 px-5 py-4 font-bold outline-none focus:border-blue-500 transition-all appearance-none"
+                    value={assignedDoctorId}
+                    onChange={(e) => setAssignedDoctorId(e.target.value)}
+                  >
+                    <option value="">No doctor assigned</option>
+                    {doctors.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        Dr. {doc.firstName} {doc.lastName} ({doc.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+            )}
 
             {/* Action buttons */}
             <div className="flex items-center justify-end gap-6 pt-4">
